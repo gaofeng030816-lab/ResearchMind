@@ -6,9 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from researchmind.config import Settings, load_settings
+from researchmind.config import ConfigError, Settings, load_settings
 from researchmind.core import build_research_context, locate_selection
 from researchmind.llm import (
+    LlmError,
     LlmProvider,
     build_algorithm_prompt,
     build_concept_prompt,
@@ -18,7 +19,9 @@ from researchmind.llm import (
     create_llm_provider,
 )
 from researchmind.integration.obsidian import (
+    ObsidianError,
     VaultConfigurationError,
+    render_markdown,
     write_note_to_vault,
 )
 from researchmind.models import (
@@ -30,20 +33,31 @@ from researchmind.models import (
 )
 from researchmind.pdf import (
     OpenedDocument,
+    PdfError,
     TextMatch,
     extract_page,
     open_pdf as pdf_open_pdf,
+    render_figure_images,
     render_page_image,
     search_text as pdf_search_text,
 )
 from researchmind.translation import (
     LlmTranslationProvider,
+    TranslationError,
     TranslationProvider,
     translate_text,
 )
 
 
 ExplainMode = Literal["concept", "math", "algorithm", "contextual"]
+USER_FACING_ERRORS = (
+    ConfigError,
+    PdfError,
+    LlmError,
+    TranslationError,
+    ObsidianError,
+    ValueError,
+)
 
 
 @dataclass(frozen=True)
@@ -53,6 +67,7 @@ class PageView:
     page: Page
     image_png: bytes
     zoom: float
+    figure_images: tuple[bytes, ...] = ()
 
 
 _EXPLANATION_BUILDERS = {
@@ -85,10 +100,12 @@ def get_page_view(
 ) -> PageView:
     """Return the page image and extracted text used by the reader view."""
 
+    page = extract_page(document, page_number)
     return PageView(
-        page=extract_page(document, page_number),
+        page=page,
         image_png=render_page_image(document, page_number, zoom=zoom),
         zoom=float(zoom),
+        figure_images=render_figure_images(document, page_number),
     )
 
 
@@ -259,6 +276,12 @@ def save_note_to_vault(
         vault_path=resolved_settings.obsidian_vault_path,
         subdirectory=resolved_settings.obsidian_subdirectory,
     )
+
+
+def preview_note_markdown(note: KnowledgeNote) -> str:
+    """Render a note for UI preview through the application API."""
+
+    return render_markdown(note)
 
 
 def _knowledge_title(

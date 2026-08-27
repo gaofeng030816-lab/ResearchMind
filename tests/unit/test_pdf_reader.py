@@ -16,6 +16,7 @@ from researchmind.pdf import (
     PdfValidationError,
     extract_page,
     open_pdf,
+    render_figure_images,
     render_page_image,
 )
 from tests.fixtures.pdf_factory import create_text_pdf
@@ -51,6 +52,38 @@ def test_open_pdf_preserves_one_based_page_order(multi_page_pdf: Path) -> None:
     assert "Page one" in opened.pages[0].text
     assert "Page two" in opened.pages[1].text
     assert "Page three" in opened.pages[2].text
+
+
+def test_two_column_text_is_copyable_in_reading_order(
+    two_column_pdf: Path,
+) -> None:
+    page = open_pdf(two_column_pdf).pages[0]
+    block_texts = [block.text for block in page.blocks]
+
+    assert block_texts[:5] == [
+        "Two Column Study",
+        "Left first paragraph continues here.",
+        "Left second block.",
+        "Right first block.",
+        "Right second block.",
+    ]
+    assert page.text.index("Left second block.") < page.text.index(
+        "Right first block."
+    )
+    assert "para-\ngraph" not in page.text
+
+
+def test_embedded_chart_region_is_available_for_page_view(
+    two_column_pdf: Path,
+) -> None:
+    opened = open_pdf(two_column_pdf)
+    page = opened.pages[0]
+
+    assert len(page.figures) == 1
+    assert page.figures[0].bbox == pytest.approx((320.0, 340.0, 550.0, 455.0))
+    figure_images = render_figure_images(opened, 1)
+    assert len(figure_images) == 1
+    assert figure_images[0].startswith(b"\x89PNG\r\n\x1a\n")
 
 
 def test_open_pdf_uses_filename_when_metadata_title_is_empty(tmp_path: Path) -> None:

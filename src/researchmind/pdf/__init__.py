@@ -13,6 +13,7 @@ from researchmind.pdf.reader import (
     OpenedDocument,
     extract_page,
     open_pdf,
+    render_figure_images,
     render_page_image,
 )
 from researchmind.pdf.search import TextMatch, search_text
@@ -29,6 +30,7 @@ __all__ = [
     "TextMatch",
     "extract_page",
     "open_pdf",
+    "render_figure_images",
     "render_page_image",
     "search_text",
 ]

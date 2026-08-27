@@ -7,6 +7,7 @@ from pathlib import Path
 from researchmind.models import (
     Conversation,
     Document,
+    FigureRegion,
     KnowledgeNote,
     Message,
     Page,
@@ -19,6 +20,7 @@ from researchmind.models import (
 def test_all_shared_models_are_dataclasses() -> None:
     model_types = (
         Document,
+        FigureRegion,
         Page,
         TextBlock,
         ReadingSelection,
@@ -40,12 +42,16 @@ def test_mutable_defaults_are_not_shared() -> None:
     second_note = KnowledgeNote(title="Second", source="pdf")
 
     first_page.blocks.append(TextBlock(block_index=0, text="block"))
+    first_page.figures.append(
+        FigureRegion(figure_index=0, bbox=(0.0, 0.0, 10.0, 10.0))
+    )
     first_conversation.messages.append(
         Message(role="user", task="followup", content="Why?")
     )
     first_note.tags.append("optimization")
 
     assert second_page.blocks == []
+    assert second_page.figures == []
     assert second_conversation.messages == []
     assert second_note.tags == []
 

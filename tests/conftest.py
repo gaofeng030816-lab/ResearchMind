@@ -9,6 +9,7 @@ from researchmind.llm import ChatMessage
 from tests.fixtures.pdf_factory import (
     create_corrupt_pdf,
     create_text_pdf,
+    create_two_column_pdf,
     create_unicode_math_pdf,
 )
 
@@ -91,6 +92,11 @@ def blank_page_pdf(tmp_path: Path) -> Path:
 @pytest.fixture
 def unicode_math_pdf(tmp_path: Path) -> Path:
     return create_unicode_math_pdf(tmp_path / "unicode-math.pdf")
+
+
+@pytest.fixture
+def two_column_pdf(tmp_path: Path) -> Path:
+    return create_two_column_pdf(tmp_path / "two-column.pdf")
 
 
 @pytest.fixture

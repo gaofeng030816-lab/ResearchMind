@@ -69,6 +69,73 @@ def create_unicode_math_pdf(path: Path) -> Path:
     return path
 
 
+def create_two_column_pdf(path: Path) -> Path:
+    """Create a two-column page with a wrapped paragraph and embedded chart."""
+
+    document = pymupdf.open()
+    try:
+        page = document.new_page(width=600, height=800)
+        page.insert_textbox(
+            pymupdf.Rect(50, 30, 550, 60),
+            "Two Column Study",
+            fontname="helv",
+            fontsize=14,
+        )
+        page.insert_textbox(
+            pymupdf.Rect(50, 100, 280, 180),
+            "Left first para-\ngraph continues here.",
+            fontname="helv",
+            fontsize=11,
+        )
+        page.insert_textbox(
+            pymupdf.Rect(50, 150, 280, 210),
+            "Left second block.",
+            fontname="helv",
+            fontsize=11,
+        )
+        page.insert_textbox(
+            pymupdf.Rect(320, 100, 550, 180),
+            "Right first block.",
+            fontname="helv",
+            fontsize=11,
+        )
+        page.insert_textbox(
+            pymupdf.Rect(320, 150, 550, 210),
+            "Right second block.",
+            fontname="helv",
+            fontsize=11,
+        )
+        chart_bytes = (
+            b"P6\n4 2\n255\n"
+            + bytes(
+                [
+                    220, 40, 40,
+                    220, 40, 40,
+                    40, 80, 220,
+                    40, 80, 220,
+                    220, 40, 40,
+                    220, 40, 40,
+                    40, 80, 220,
+                    40, 80, 220,
+                ]
+            )
+        )
+        page.insert_image(
+            pymupdf.Rect(320, 340, 550, 455),
+            stream=chart_bytes,
+        )
+        page.insert_textbox(
+            pymupdf.Rect(50, 750, 550, 780),
+            "Page footer",
+            fontname="helv",
+            fontsize=10,
+        )
+        document.save(path)
+    finally:
+        document.close()
+    return path
+
+
 def create_corrupt_pdf(path: Path) -> Path:
     """Create a file with a PDF signature but invalid document structure."""
 

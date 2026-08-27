@@ -187,6 +187,7 @@ V1 继续选择 Streamlit：
 | `Document` | id、title、authors、source_type、path、num_pages | 一篇被阅读的文档 | V1 仅 "pdf" 来源；统一使用 `Document` 命名 |
 | `Page` | page_number、text、blocks | 一个页面及其提取文本 | 内存对象，不持久化 |
 | `TextBlock` | block_index、text、bbox | 页面内的文本块，上下文组装的原材料 | bbox 为未来定位/高亮预留，V1 不实现定位功能 |
+| `FigureRegion` | figure_index、bbox | 页面中可检测到的嵌入位图区域 | 仅定位、裁剪、预览和下载；不做语义识别 |
 | `ReadingSelection` | text、source_type、locator、created_at | 通用的"阅读内容选择"抽象（第 8 节） | V1 仅 PDF locator |
 | `ResearchContext` | 见第 7.2 节字段表 | AI 理解的核心上下文对象（第 7 节） | 每次 AI 调用前构建 |
 | `Conversation` | document_id、messages、created_at | 围绕一篇文档的问答会话 | 内存对象；每篇文档一个会话 |
@@ -256,6 +257,9 @@ ResearchMind 自己实现 PDF 阅读，以减少对小绿鲸等第三方阅读�
 
 - 打开本地 PDF；
 - PDF 页面显示（页面图像 + 该页提取文本）；
+- 双栏等常见数字版论文使用基于空白切分的几何阅读顺序；
+- 文本块去除视觉换行后按块显示，可逐块或整页复制；
+- 检测、裁剪、预览和下载页面中的嵌入位图/图表区域；
 - 页面跳转（翻页、页码导航）；
 - 缩放（按倍率重新渲染页面图像）；
 - 文本选择（文本面板复制/输入 + 定位，第 8 节）；
@@ -266,7 +270,7 @@ ResearchMind 自己实现 PDF 阅读，以减少对小绿鲸等第三方阅读�
 
 ### 9.3 明确不在 V1 的能力（Future Work）
 
-PDF 标注、高亮、书签、OCR、图片处理、表格识别、公式识别。这些都不是 V1 的核心目标，确需时再按第 21 节原则引入。
+PDF 标注、高亮、书签、OCR、语义表格识别、公式识别、图表内容理解。这些都不是 V1 的核心目标，确需时再按第 21 节原则引入。V1 的图表能力仅限 PyMuPDF 能报告的嵌入位图区域，不识别图表含义，也不保证检测由矢量线条绘制的图表。
 
 ### 9.4 实现选型与设计要点
 
@@ -281,9 +285,11 @@ PDF 标注、高亮、书签、OCR、图片处理、表格识别、公式识别�
 设计要点：
 
 1. **页面图像与文本分离**：UI 显示"页面图像"（视觉对照）+ "该页提取文本"（可复制/检索）。这是 Streamlit 下 V1 选择体验的最优解，也为未来页面级划词留好数据基础（blocks 带坐标）；
-2. **文本块是上下文的基本单位**：解释一句话时取同页相邻块而非整页/全文，控制 token 成本并保证相关性；
-3. **PDF Engine 保持独立**：全部 PyMuPDF 调用封装在 `pdf/` 内，UI 与 Domain 不得直接调用 PDF 库；提取异常在边界统一转换为项目异常 `PdfExtractionError`；
-4. **已知局限**（诚实声明，Future Work 解决）：公式、双栏排版、扫描版 PDF 的文本提取质量有限；提取异常统一转成 `PdfExtractionError` 抛给调用层。
+2. **布局感知阅读顺序**：`pdf/layout.py` 使用文本块 bbox 和递归空白切分处理常见双栏页面，并把视觉断行整理成复制友好的段落。设计参考了本地 OpenDataLoader PDF 的 XY-Cut++ 思路，但使用 ResearchMind 自己的 Python/PyMuPDF 实现，不引入其 Java/JAR 或混合服务；审查记录见 `OPENDATALOADER_PDF_REVIEW.md`；
+3. **文本块是上下文的基本单位**：解释一句话时取同页相邻块而非整页/全文，控制 token 成本并保证相关性；
+4. **轻量图表区域**：`Page.figures` 只保存嵌入位图 bbox；页面查看时再从源 PDF 裁剪为 PNG，不把全部图片二进制长期留在会话模型中；
+5. **PDF Engine 保持独立**：全部 PyMuPDF 调用封装在 `pdf/` 内，UI 与 Domain 不得直接调用 PDF 库；提取异常在边界统一转换为项目异常 `PdfExtractionError`；
+6. **已知局限**（诚实声明，Future Work 解决）：复杂混排、公式、扫描版 PDF、矢量图表和语义表格的提取质量仍有限；提取异常统一转成 `PdfExtractionError` 抛给调用层。
 
 ## 10. Translation 模块
 
@@ -467,7 +473,7 @@ V1 共 **4 个视图**，全部只做展示与事件委托：
 
 | 视图 | 文件 | 组成 |
 |------|------|------|
-| 1. 阅读器 | `app/views/reader.py` | 打开本地 PDF（路径/文件选择器）；页面图像 + 该页文本面板；翻页/页码跳转；缩放；文本搜索 |
+| 1. 阅读器 | `app/views/reader.py` | 打开本地 PDF（路径/文件选择器）；页面图像；按阅读顺序逐块/整页复制；嵌入图表区域预览与下载；翻页/页码跳转；缩放；文本搜索 |
 | 2. 操作面板 | `app/views/actions.py` | "选中文本"输入框；翻译按钮；AI 解释（模式下拉：概念/数学/算法/上下文） |
 | 3. 对话面板 | `app/views/conversation.py` | 消息流（区分 user/assistant 与任务类型）；追问输入框；"沉淀为知识"按钮 |
 | 4. 知识沉淀面板 | `app/views/knowledge.py` | 勾选要保存的内容（原文/翻译/问答）、填写自己的理解与标签、预览生成的 Markdown、保存到 Obsidian Vault |
@@ -505,7 +511,7 @@ V1 共 **4 个视图**，全部只做展示与事件委托：
 - `src/researchmind/`
   - `__init__.py`
   - `config.py`：配置与密钥唯一入口（LLM、目标语言、Vault 路径、上下文/历史预算、PDF 大小上限）
-  - `models/`：纯 dataclass（document / page / text_block / reading_selection / research_context / conversation / message / knowledge_note）
+  - `models/`：纯 dataclass（document / page / text_block / figure_region / reading_selection / research_context / conversation / message / knowledge_note）
   - `app/`
     - `app.py`：Streamlit 入口，组装视图
     - `state.py`：会话状态集中管理
@@ -516,7 +522,8 @@ V1 共 **4 个视图**，全部只做展示与事件委托：
     - `selection.py`：选中文本定位（纯函数）
     - `conversation.py`：对话历史裁剪（纯函数）
   - `pdf/`
-    - `reader.py`：打开、元数据、页面/文本块提取、页面图像渲染（含缩放）
+    - `reader.py`：打开、元数据、页面/文本块/嵌入位图区域提取、页面与图表裁剪渲染（含缩放）
+    - `layout.py`：文本块阅读顺序和复制友好的断行整理
     - `search.py`：文档内文本搜索
     - `errors.py`：PdfExtractionError 等
   - `translation/`
@@ -550,7 +557,7 @@ V1 共 **4 个视图**，全部只做展示与事件委托：
 | Integration | tests/integration/ | 完整用例流（FakeLlmProvider + fixture PDF + 临时 Vault 目录）：打开→选择→翻译→解释→追问→沉淀知识→写入 Vault | UI 渲染 |
 | E2E | tests/e2e/ | Streamlit AppTest 冒烟：启动→打开→翻页→选择→按钮→对话→知识面板出现→保存到临时 Vault；其余用手动验收清单兜底 | 视觉细节 |
 
-PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、损坏文件、不存在路径、空白页、Unicode（中文/希腊字母）、数学符号、页码顺序。
+PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、双栏、嵌入位图、损坏文件、不存在路径、空白页、Unicode（中文/希腊字母）、数学符号、页码顺序。
 
 铁律（来自 testing-review skill）：实现→测试→复查→修复→再测→报告；未经真实运行不得声称"能用"；失败的测试必须出现在报告里。
 
@@ -602,7 +609,7 @@ PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、�
 | VS Code / 代码阅读 | ResearchContext 与 ReadingSelection 的内容源抽象（第 7.4、8 节）；未来新增 VS Code Context Provider 即可接入 | 不实现 |
 | 网页等其他内容源 | 同上 | 不实现 |
 | 页面级划词/高亮/标注 | TextBlock 已带 bbox 坐标，届时只需在 UI 层实现 | 不实现 |
-| OCR / 表格 / 公式识别 | 在 `pdf/` 内新增能力，不影响其他模块 | 不实现 |
+| OCR / 语义表格 / 公式 / 图表内容识别 | 在 `pdf/` 内新增能力，不影响其他模块 | 不实现；V1 仅裁剪嵌入位图 |
 | 跨会话对话/论文库持久化 | 按第 3.3 节触发条件引入 SQLite（`database/` 新模块） | 不实现 |
 | 跨论文搜索/复杂 RAG | 需要时新增模块；V1 上下文模型不依赖向量库 | 不实现 |
 | 换 LLM / 翻译服务商 | LlmProvider / TranslationProvider 接口 + factory，新 provider 一个文件 | 接口已实现 |

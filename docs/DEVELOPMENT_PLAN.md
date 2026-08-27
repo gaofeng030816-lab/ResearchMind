@@ -95,6 +95,18 @@
 - **测试**：AppTest 冒烟（打开→翻页→选择→按钮→对话→知识面板→保存到临时 Vault）；手动验收清单（真实 PDF + 真实 API 一次）。
 - **DoD**：冒烟测试通过；手动验收清单全部打勾；检查确认 UI 无一处直接 import pdf/llm/translation/integration。
 
+### M5.1 PDF 阅读质量回访
+
+- **目标**：根据真实双栏论文的人工验收，改善阅读顺序、段落复制和嵌入图表访问。
+- **任务**：
+  1. `pdf/layout.py`：基于 bbox 空白切分的常见双栏阅读顺序和视觉断行整理；
+  2. `Page.figures` + PDF reader：轻量检测嵌入位图区域，按需裁剪 PNG；
+  3. reader view：逐文本块复制、整页复制、图表预览和下载；
+  4. launcher：自动打开默认浏览器，同时关闭 Email 提示与 Streamlit 遥测。
+- **依赖决定**：审查 OpenDataLoader PDF 后不引入其 Java/JAR、Docling、OCR 或混合服务；继续只使用既有 PyMuPDF。
+- **测试**：双栏/断词/图表 fixture 单测、Streamlit AppTest、真实双栏论文顺序抽查、全量回归。
+- **DoD**：测试通过；真实双栏首页按左栏后右栏排列；明确记录矢量图表、扫描件和复杂混排限制。
+
 ### M6 收尾
 
 - **目标**：闭环交付。

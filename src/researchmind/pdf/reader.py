@@ -10,7 +10,7 @@ from pathlib import Path
 import pymupdf
 
 from researchmind.config import DEFAULT_PDF_MAX_SIZE_MB
-from researchmind.models import Document, Page, TextBlock
+from researchmind.models import Document, FigureRegion, Page, TextBlock
 from researchmind.pdf.errors import (
     PdfError,
     PdfExtractionError,
@@ -18,11 +18,13 @@ from researchmind.pdf.errors import (
     PdfRenderError,
     PdfValidationError,
 )
+from researchmind.pdf.layout import normalize_block_text, order_text_blocks
 
 
 DEFAULT_PDF_MAX_SIZE_BYTES = DEFAULT_PDF_MAX_SIZE_MB * 1024 * 1024
 PDF_MAGIC = b"%PDF-"
 MAX_RENDER_ZOOM = 5.0
+MIN_FIGURE_DIMENSION = 24.0
 
 
 @dataclass(frozen=True)
@@ -132,6 +134,43 @@ def render_page_image(
         ) from exc
 
 
+def render_figure_images(
+    opened_document: OpenedDocument,
+    page_number: int,
+    *,
+    zoom: float = 2.0,
+) -> tuple[bytes, ...]:
+    """Render detected embedded figure regions as standalone PNG images."""
+
+    page_model = extract_page(opened_document, page_number)
+    if not page_model.figures:
+        return ()
+
+    normalized_zoom = _validate_zoom(zoom)
+    source_path = _validate_pdf_file(
+        opened_document.document.path,
+        max_size_bytes=opened_document.max_size_bytes,
+    )
+    try:
+        with pymupdf.open(source_path) as source:
+            source_page = source.load_page(page_number - 1)
+            return tuple(
+                source_page.get_pixmap(
+                    matrix=pymupdf.Matrix(normalized_zoom, normalized_zoom),
+                    clip=pymupdf.Rect(figure.bbox),
+                    alpha=False,
+                ).tobytes("png")
+                for figure in page_model.figures
+            )
+    except PdfError:
+        raise
+    except Exception as exc:
+        raise PdfRenderError(
+            f"Could not render figure regions on page {page_number} of "
+            f"{source_path.name}."
+        ) from exc
+
+
 def _validate_pdf_file(path: Path, *, max_size_bytes: int) -> Path:
     if max_size_bytes <= 0:
         raise PdfValidationError("PDF size limit must be greater than zero.")
@@ -175,8 +214,8 @@ def _validate_pdf_file(path: Path, *, max_size_bytes: int) -> Path:
 
 def _extract_loaded_page(source_page: pymupdf.Page, page_number: int) -> Page:
     try:
-        text = source_page.get_text("text", sort=True).rstrip()
-        raw_blocks = source_page.get_text("blocks", sort=True)
+        raw_blocks = source_page.get_text("blocks", sort=False)
+        raw_images = source_page.get_image_info()
     except Exception as exc:
         raise PdfExtractionError(
             f"Could not extract text from page {page_number}."
@@ -185,19 +224,56 @@ def _extract_loaded_page(source_page: pymupdf.Page, page_number: int) -> Page:
     blocks: list[TextBlock] = []
     for raw_block in raw_blocks:
         block_type = int(raw_block[6])
-        block_text = str(raw_block[4]).strip()
-        if block_type != 0 or not block_text:
+        bbox = tuple(float(value) for value in raw_block[:4])
+        if block_type != 0:
+            continue
+
+        block_text = normalize_block_text(str(raw_block[4]))
+        if not block_text:
             continue
 
         blocks.append(
             TextBlock(
                 block_index=int(raw_block[5]),
                 text=block_text,
-                bbox=tuple(float(value) for value in raw_block[:4]),
+                bbox=bbox,
             )
         )
 
-    return Page(page_number=page_number, text=text, blocks=blocks)
+    ordered_blocks = order_text_blocks(blocks)
+    page_text = "\n\n".join(block.text for block in ordered_blocks)
+    figures = _extract_figure_regions(raw_images)
+    return Page(
+        page_number=page_number,
+        text=page_text,
+        blocks=ordered_blocks,
+        figures=figures,
+    )
+
+
+def _is_meaningful_figure(bbox: tuple[float, float, float, float]) -> bool:
+    width = bbox[2] - bbox[0]
+    height = bbox[3] - bbox[1]
+    return width >= MIN_FIGURE_DIMENSION and height >= MIN_FIGURE_DIMENSION
+
+
+def _extract_figure_regions(
+    raw_images: list[dict[str, object]],
+) -> list[FigureRegion]:
+    regions: list[FigureRegion] = []
+    for image_info in raw_images:
+        raw_bbox = image_info.get("bbox")
+        if not isinstance(raw_bbox, (list, tuple)) or len(raw_bbox) != 4:
+            continue
+        try:
+            bbox = tuple(float(value) for value in raw_bbox)
+        except (TypeError, ValueError):
+            continue
+        if _is_meaningful_figure(bbox):
+            regions.append(
+                FigureRegion(figure_index=len(regions), bbox=bbox)
+            )
+    return regions
 
 
 def _metadata_title(metadata: dict[str, object], path: Path) -> str:
