@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Callable
 import math
+from typing import Any
 
 from openai import (
     APIConnectionError,
     APIError,
     APIStatusError,
     APITimeoutError,
+    DefaultHttpxClient,
     OpenAI,
     OpenAIError,
 )
@@ -164,18 +166,42 @@ def _build_completion_create(
                 max_retries=max_retries,
             )
         else:
+            http_client = DefaultHttpxClient(
+                event_hooks={
+                    "request": [
+                        _custom_api_key_request_hook(
+                            api_key_header=api_key_header,
+                            api_key=api_key,
+                        )
+                    ]
+                }
+            )
             client = OpenAI(
                 api_key="custom-header-auth",
                 base_url=base_url,
                 timeout=timeout_seconds,
                 max_retries=max_retries,
-                default_headers={api_key_header: api_key},
+                http_client=http_client,
             )
     except (OpenAIError, TypeError, ValueError):
         raise LlmConfigurationError(
             "Could not initialize the configured LLM provider."
         ) from None
     return client.chat.completions.create
+
+
+def _custom_api_key_request_hook(
+    *,
+    api_key_header: str,
+    api_key: str,
+) -> Callable[[Any], None]:
+    """Replace the SDK Bearer header immediately before an HTTP request."""
+
+    def apply_custom_header(request: Any) -> None:
+        request.headers.pop("Authorization", None)
+        request.headers[api_key_header] = api_key
+
+    return apply_custom_header
 
 
 def _validate_configuration(

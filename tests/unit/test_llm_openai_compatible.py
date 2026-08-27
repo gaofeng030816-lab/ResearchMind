@@ -182,6 +182,7 @@ def test_provider_maps_custom_api_key_header_to_sdk_default_headers(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured: dict[str, object] = {}
+    http_client_arguments: dict[str, object] = {}
 
     class FakeCompletions:
         @staticmethod
@@ -196,7 +197,18 @@ def test_provider_maps_custom_api_key_header_to_sdk_default_headers(
         captured.update(kwargs)
         return fake_client
 
+    fake_http_client = object()
+
+    def fake_default_httpx_client(**kwargs: object) -> object:
+        http_client_arguments.update(kwargs)
+        return fake_http_client
+
     monkeypatch.setattr(provider_module, "OpenAI", fake_openai)
+    monkeypatch.setattr(
+        provider_module,
+        "DefaultHttpxClient",
+        fake_default_httpx_client,
+    )
 
     provider = OpenAiCompatibleProvider(
         api_key="test-secret",
@@ -211,7 +223,19 @@ def test_provider_maps_custom_api_key_header_to_sdk_default_headers(
         "base_url": "https://note3-prev-api.askdiandian.com/v1",
         "timeout": DEFAULT_LLM_TIMEOUT_SECONDS,
         "max_retries": DEFAULT_LLM_MAX_RETRIES,
-        "default_headers": {"api-key": "test-secret"},
+        "http_client": fake_http_client,
+    }
+    event_hooks = cast(Any, http_client_arguments["event_hooks"])
+    request = SimpleNamespace(
+        headers={
+            "Authorization": "Bearer custom-header-auth",
+            "Content-Type": "application/json",
+        }
+    )
+    event_hooks["request"][0](request)
+    assert request.headers == {
+        "Content-Type": "application/json",
+        "api-key": "test-secret",
     }
     assert "test-secret" not in repr(provider)
 
