@@ -6,6 +6,7 @@ import pytest
 
 from researchmind.config import (
     ConfigError,
+    DEFAULT_LLM_API_KEY_HEADER,
     DEFAULT_CONTEXT_TOKEN_BUDGET,
     DEFAULT_HISTORY_TOKEN_BUDGET,
     DEFAULT_LLM_BASE_URL,
@@ -21,6 +22,7 @@ def test_load_settings_uses_safe_defaults() -> None:
 
     assert settings.llm_base_url == DEFAULT_LLM_BASE_URL
     assert settings.llm_api_key is None
+    assert settings.llm_api_key_header == DEFAULT_LLM_API_KEY_HEADER
     assert settings.llm_model is None
     assert settings.target_language == DEFAULT_TARGET_LANGUAGE
     assert settings.obsidian_vault_path is None
@@ -40,6 +42,7 @@ def test_load_settings_reads_dotenv_without_leaking_key_in_repr(
             (
                 "LLM_BASE_URL=http://localhost:11434/v1",
                 "LLM_API_KEY=test-secret-value",
+                "LLM_API_KEY_HEADER=api-key",
                 "LLM_MODEL=local-model",
                 "TRANSLATION_TARGET_LANGUAGE=zh-TW",
                 f"OBSIDIAN_VAULT_PATH={tmp_path.as_posix()}",
@@ -56,6 +59,7 @@ def test_load_settings_reads_dotenv_without_leaking_key_in_repr(
 
     assert settings.llm_base_url == "http://localhost:11434/v1"
     assert settings.llm_api_key == "test-secret-value"
+    assert settings.llm_api_key_header == "api-key"
     assert settings.llm_model == "local-model"
     assert settings.target_language == "zh-TW"
     assert settings.obsidian_vault_path == tmp_path

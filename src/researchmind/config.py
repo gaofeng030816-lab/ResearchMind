@@ -11,6 +11,7 @@ from dotenv import dotenv_values
 
 
 DEFAULT_LLM_BASE_URL = "https://api.openai.com/v1"
+DEFAULT_LLM_API_KEY_HEADER = "Authorization"
 DEFAULT_TARGET_LANGUAGE = "zh-CN"
 DEFAULT_OBSIDIAN_SUBDIRECTORY = "ResearchMind"
 DEFAULT_CONTEXT_TOKEN_BUDGET = 6_000
@@ -33,6 +34,7 @@ class Settings:
 
     llm_base_url: str = DEFAULT_LLM_BASE_URL
     llm_api_key: str | None = field(default=None, repr=False)
+    llm_api_key_header: str = DEFAULT_LLM_API_KEY_HEADER
     llm_model: str | None = None
     target_language: str = DEFAULT_TARGET_LANGUAGE
     obsidian_vault_path: Path | None = None
@@ -71,6 +73,11 @@ def load_settings(
             DEFAULT_LLM_BASE_URL,
         ),
         llm_api_key=_optional_text(values, "LLM_API_KEY"),
+        llm_api_key_header=_text_or_default(
+            values,
+            "LLM_API_KEY_HEADER",
+            DEFAULT_LLM_API_KEY_HEADER,
+        ),
         llm_model=_optional_text(values, "LLM_MODEL"),
         target_language=_text_or_default(
             values,
