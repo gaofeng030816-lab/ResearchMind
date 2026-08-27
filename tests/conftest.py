@@ -1,8 +1,16 @@
 """Shared pytest fixtures for ResearchMind."""
 
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
+
+from researchmind.llm import ChatMessage
+from tests.fixtures.pdf_factory import (
+    create_corrupt_pdf,
+    create_text_pdf,
+    create_unicode_math_pdf,
+)
 
 
 CONFIG_ENVIRONMENT_KEYS = (
@@ -19,6 +27,24 @@ CONFIG_ENVIRONMENT_KEYS = (
 )
 
 
+class FakeLlmProvider:
+    """Deterministic provider recording every request without network access."""
+
+    def __init__(self, responses: list[str] | None = None) -> None:
+        self.responses = list(responses or ["Fake LLM response"])
+        self.calls: list[tuple[list[ChatMessage], dict[str, object]]] = []
+
+    def complete(
+        self,
+        messages: list[ChatMessage],
+        **kwargs: object,
+    ) -> str:
+        self.calls.append((messages, kwargs))
+        if not self.responses:
+            raise AssertionError("FakeLlmProvider has no response left.")
+        return self.responses.pop(0)
+
+
 @pytest.fixture
 def clean_config_environment(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Remove ResearchMind configuration variables for an isolated test."""
@@ -26,3 +52,47 @@ def clean_config_environment(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     for key in CONFIG_ENVIRONMENT_KEYS:
         monkeypatch.delenv(key, raising=False)
     yield
+
+
+@pytest.fixture
+def fake_llm_provider() -> FakeLlmProvider:
+    """Return a deterministic provider for unit and integration tests."""
+
+    return FakeLlmProvider()
+
+
+@pytest.fixture
+def single_page_pdf(tmp_path: Path) -> Path:
+    return create_text_pdf(
+        tmp_path / "single-page.pdf",
+        [["ResearchMind introduction", "Second context block"]],
+        title="Fixture Research Paper",
+        author="Ada Researcher; Grace Scientist",
+    )
+
+
+@pytest.fixture
+def multi_page_pdf(tmp_path: Path) -> Path:
+    return create_text_pdf(
+        tmp_path / "multi-page.pdf",
+        [
+            ["Page one unique text", "Shared optimization method"],
+            ["Page two unique text", "Shared Optimization result"],
+            ["Page three conclusion"],
+        ],
+    )
+
+
+@pytest.fixture
+def blank_page_pdf(tmp_path: Path) -> Path:
+    return create_text_pdf(tmp_path / "blank-page.pdf", [[]])
+
+
+@pytest.fixture
+def unicode_math_pdf(tmp_path: Path) -> Path:
+    return create_unicode_math_pdf(tmp_path / "unicode-math.pdf")
+
+
+@pytest.fixture
+def corrupt_pdf(tmp_path: Path) -> Path:
+    return create_corrupt_pdf(tmp_path / "corrupt.pdf")
