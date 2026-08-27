@@ -110,6 +110,8 @@
 ### M6 收尾
 
 - **目标**：闭环交付。
+- **状态**：代码、安全、文档与自动化回归已完成；最终人工视觉复核状态见
+  [M6_RELEASE_VALIDATION.md](./M6_RELEASE_VALIDATION.md)。
 - **任务**：
   1. 安全清单逐项核对（ARCHITECTURE.md 第 20 节）；
   2. README（安装、配置 LLM Key/目标语言/Vault 路径、启动与备份提示）；

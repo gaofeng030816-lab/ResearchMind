@@ -48,17 +48,25 @@ def load_settings(
     env_file: Path | None = None,
     *,
     env: Mapping[str, str] | None = None,
+    secrets: Mapping[str, object] | None = None,
 ) -> Settings:
-    """Load settings with process environment values overriding .env values.
+    """Load settings with process environment values taking highest priority.
 
     Passing ``env`` makes the function deterministic for tests and callers that
     already own a configuration mapping. When it is omitted, the process
-    environment is used and a project ``.env`` file is discovered automatically.
+    environment is used, a project ``.env`` file is discovered automatically,
+    and root-level Streamlit secrets are read when available. Precedence is
+    process environment, Streamlit secrets, then ``.env``.
     """
 
     file_values = _load_env_file(env_file, skip_default_search=env is not None)
+    secret_values = (
+        _load_streamlit_secrets()
+        if env is None and secrets is None
+        else _normalize_config_values(secrets or {})
+    )
     process_values = os.environ if env is None else env
-    values = {**file_values, **process_values}
+    values = {**file_values, **secret_values, **process_values}
 
     pdf_max_size_mb = _positive_int(
         values,
@@ -116,6 +124,28 @@ def _load_env_file(
     return {
         key: value
         for key, value in raw_values.items()
+        if value is not None
+    }
+
+
+def _load_streamlit_secrets() -> dict[str, str]:
+    """Read root-level Streamlit secrets without requiring a secrets file."""
+
+    try:
+        from streamlit import secrets as streamlit_secrets
+        from streamlit.errors import StreamlitSecretNotFoundError
+
+        return _normalize_config_values(streamlit_secrets)
+    except (ImportError, StreamlitSecretNotFoundError):
+        return {}
+
+
+def _normalize_config_values(
+    values: Mapping[str, object],
+) -> dict[str, str]:
+    return {
+        str(key): str(value)
+        for key, value in values.items()
         if value is not None
     }
 

@@ -1,6 +1,6 @@
-# ResearchMind 系统架构（V1 草案）
+# ResearchMind 系统架构（V1 实现基线）
 
-版本：V1 草案 · 日期：2026-08-26 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)
+版本：V1 实现基线 · 日期：2026-08-27 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)
 
 > 术语说明：本文档、PRODUCT_SPEC.md 与 DEVELOPMENT_PLAN.md 均使用 "V1" 指代当前实现范围；三份文档的一致性状态见第 22 节。
 

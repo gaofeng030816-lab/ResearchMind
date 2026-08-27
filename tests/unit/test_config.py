@@ -79,6 +79,29 @@ def test_process_environment_overrides_dotenv(tmp_path: Path) -> None:
     assert settings.llm_model == "environment-model"
 
 
+def test_streamlit_secrets_override_dotenv_but_environment_wins(
+    tmp_path: Path,
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "LLM_API_KEY=file-key\nLLM_MODEL=file-model\n",
+        encoding="utf-8",
+    )
+
+    settings = load_settings(
+        env_file,
+        env={"LLM_MODEL": "environment-model"},
+        secrets={
+            "LLM_API_KEY": "streamlit-key",
+            "LLM_MODEL": "streamlit-model",
+        },
+    )
+
+    assert settings.llm_api_key == "streamlit-key"
+    assert settings.llm_model == "environment-model"
+    assert "streamlit-key" not in repr(settings)
+
+
 @pytest.mark.parametrize(
     ("key", "value"),
     (

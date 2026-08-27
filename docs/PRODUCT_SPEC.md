@@ -1,6 +1,6 @@
 # ResearchMind 产品规格说明书
 
-版本：V1 草案 · 日期：2026-08-26 · 状态：待评审
+版本：V1 实现基线 · 日期：2026-08-27 · 状态：Release Candidate
 配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)
 
 ## 1. 产品概述
