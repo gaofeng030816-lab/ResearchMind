@@ -5,10 +5,12 @@ from pathlib import Path
 
 from researchmind.app.use_cases import (
     ask_followup,
+    capture_knowledge,
     create_selection,
     explain_selection,
     get_page_view,
     open_pdf,
+    save_note_to_vault,
     search_text,
     translate_selection,
 )
@@ -19,6 +21,7 @@ from researchmind.translation import LlmTranslationProvider
 
 def test_open_select_translate_explain_and_follow_up_without_network(
     single_page_pdf: Path,
+    temporary_vault: Path,
     fake_llm_provider: object,
 ) -> None:
     fake_llm_provider.responses = [
@@ -28,6 +31,8 @@ def test_open_select_translate_explain_and_follow_up_without_network(
     ]
     settings = Settings(
         target_language="zh-CN",
+        obsidian_vault_path=temporary_vault,
+        obsidian_subdirectory="ResearchMind",
         context_token_budget=200,
         history_token_budget=200,
     )
@@ -58,14 +63,35 @@ def test_open_select_translate_explain_and_follow_up_without_network(
         settings=settings,
     )
     conversation.messages.extend([explanation_question, explanation])
+    followup_question = Message(
+        role="user",
+        task="followup",
+        content="Why does the next inference depend on it?",
+    )
     followup = ask_followup(
-        "Why does the next inference depend on it?",
+        followup_question.content,
         document=opened,
         selection=selection,
         conversation=conversation,
         llm_provider=fake_llm_provider,
         settings=settings,
     )
+    note = capture_knowledge(
+        opened,
+        selection,
+        [
+            translation,
+            explanation_question,
+            explanation,
+            followup_question,
+            followup,
+        ],
+        "The evidence connects the local claim to the next inference.",
+        ["research-reading", "evidence"],
+        title="Evidence chain",
+    )
+    saved_path = save_note_to_vault(note, settings=settings)
+    saved_markdown = saved_path.read_text(encoding="utf-8")
 
     assert page_view.page.page_number == 1
     assert page_view.image_png.startswith(b"\x89PNG\r\n\x1a\n")
@@ -87,3 +113,15 @@ def test_open_select_translate_explain_and_follow_up_without_network(
     assert "Why is this block relevant?" in followup_prompt
     assert escape(explanation.content) in followup_prompt
     assert "Why does the next inference depend on it?" in followup_prompt
+
+    assert saved_path.parent == temporary_vault / "ResearchMind"
+    assert saved_path.suffix == ".md"
+    assert "# Evidence chain" in saved_markdown
+    assert "Fixture Research Paper" in saved_markdown
+    assert "> Second context block" in saved_markdown
+    assert translation.content in saved_markdown
+    assert explanation_question.content in saved_markdown
+    assert explanation.content in saved_markdown
+    assert followup_question.content in saved_markdown
+    assert followup.content in saved_markdown
+    assert "The evidence connects" in saved_markdown

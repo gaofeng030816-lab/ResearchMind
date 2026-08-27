@@ -17,7 +17,17 @@ from researchmind.llm import (
     build_math_prompt,
     create_llm_provider,
 )
-from researchmind.models import Conversation, Message, Page, ReadingSelection
+from researchmind.integration.obsidian import (
+    VaultConfigurationError,
+    write_note_to_vault,
+)
+from researchmind.models import (
+    Conversation,
+    KnowledgeNote,
+    Message,
+    Page,
+    ReadingSelection,
+)
 from researchmind.pdf import (
     OpenedDocument,
     TextMatch,
@@ -181,3 +191,135 @@ def ask_followup(
     )
     response = provider.complete(build_followup_prompt(context))
     return Message(role="assistant", task="followup", content=response)
+
+
+def capture_knowledge(
+    document: OpenedDocument,
+    selection: ReadingSelection | None,
+    messages: list[Message],
+    user_notes: str,
+    tags: list[str],
+    *,
+    title: str | None = None,
+) -> KnowledgeNote:
+    """Assemble selected reading and conversation content into a KnowledgeNote."""
+
+    return KnowledgeNote(
+        title=_knowledge_title(title, document, selection),
+        source=document.document.title,
+        authors=list(document.document.authors),
+        page_number=_selection_page_number(selection),
+        selected_text=_optional_text(None if selection is None else selection.text),
+        translation=_joined_message_content(
+            messages,
+            role="assistant",
+            tasks={"translate"},
+        ),
+        question=_joined_message_content(
+            messages,
+            role="user",
+            tasks={
+                "explain:concept",
+                "explain:math",
+                "explain:algorithm",
+                "explain:contextual",
+                "followup",
+            },
+        ),
+        ai_explanation=_joined_message_content(
+            messages,
+            role="assistant",
+            tasks={
+                "explain:concept",
+                "explain:math",
+                "explain:algorithm",
+                "explain:contextual",
+                "followup",
+            },
+        ),
+        user_notes=_optional_text(user_notes),
+        tags=_normalized_tags(tags),
+    )
+
+
+def save_note_to_vault(
+    note: KnowledgeNote,
+    *,
+    settings: Settings | None = None,
+) -> Path:
+    """Write a note through the sole Obsidian Vault integration boundary."""
+
+    resolved_settings = settings or load_settings()
+    if resolved_settings.obsidian_vault_path is None:
+        raise VaultConfigurationError(
+            "OBSIDIAN_VAULT_PATH is not configured. Add it before saving notes."
+        )
+    return write_note_to_vault(
+        note,
+        vault_path=resolved_settings.obsidian_vault_path,
+        subdirectory=resolved_settings.obsidian_subdirectory,
+    )
+
+
+def _knowledge_title(
+    title: str | None,
+    document: OpenedDocument,
+    selection: ReadingSelection | None,
+) -> str:
+    requested_title = _single_line(title)
+    if requested_title:
+        return requested_title
+
+    if selection is not None:
+        selection_title = _single_line(selection.text)
+        if selection_title:
+            return selection_title[:80].rstrip()
+    return _single_line(document.document.title) or "Research note"
+
+
+def _selection_page_number(selection: ReadingSelection | None) -> int | None:
+    if selection is None or selection.locator is None:
+        return None
+    page_number = selection.locator.get("page_number")
+    if isinstance(page_number, int) and not isinstance(page_number, bool):
+        return page_number
+    return None
+
+
+def _joined_message_content(
+    messages: list[Message],
+    *,
+    role: str,
+    tasks: set[str],
+) -> str | None:
+    selected_content = [
+        content
+        for message in messages
+        if message.role == role
+        and message.task in tasks
+        and (content := message.content.strip())
+    ]
+    return "\n\n".join(selected_content) or None
+
+
+def _normalized_tags(tags: list[str]) -> list[str]:
+    normalized_tags: list[str] = []
+    seen: set[str] = set()
+    for tag in tags:
+        normalized = _single_line(tag)
+        identity = normalized.casefold()
+        if normalized and identity not in seen:
+            normalized_tags.append(normalized)
+            seen.add(identity)
+    return normalized_tags
+
+
+def _optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def _single_line(value: str | None) -> str:
+    return "" if value is None else " ".join(value.split())

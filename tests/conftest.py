@@ -96,3 +96,12 @@ def unicode_math_pdf(tmp_path: Path) -> Path:
 @pytest.fixture
 def corrupt_pdf(tmp_path: Path) -> Path:
     return create_corrupt_pdf(tmp_path / "corrupt.pdf")
+
+
+@pytest.fixture
+def temporary_vault(tmp_path: Path) -> Path:
+    """Return an isolated directory standing in for the user's Obsidian Vault."""
+
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    return vault
