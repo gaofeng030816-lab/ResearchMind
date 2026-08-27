@@ -1,0 +1,1 @@
+"""Independent translation capability package."""
