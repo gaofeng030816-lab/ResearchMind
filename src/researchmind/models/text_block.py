@@ -1,9 +1,11 @@
 """Extracted text block model."""
 
 from dataclasses import dataclass
+from typing import Literal
 
 
 BoundingBox = tuple[float, float, float, float]
+TextBlockRole = Literal["body", "heading", "caption"]
 
 
 @dataclass
@@ -13,3 +15,4 @@ class TextBlock:
     block_index: int
     text: str
     bbox: BoundingBox | None = None
+    role: TextBlockRole = "body"

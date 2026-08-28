@@ -8,7 +8,7 @@ from researchmind.models.message import Message, MessageRole, MessageTask
 from researchmind.models.page import Page
 from researchmind.models.reading_selection import ReadingSelection
 from researchmind.models.research_context import ResearchContext
-from researchmind.models.text_block import BoundingBox, TextBlock
+from researchmind.models.text_block import BoundingBox, TextBlock, TextBlockRole
 
 __all__ = [
     "BoundingBox",
@@ -23,4 +23,5 @@ __all__ = [
     "ReadingSelection",
     "ResearchContext",
     "TextBlock",
+    "TextBlockRole",
 ]

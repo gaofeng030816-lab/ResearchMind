@@ -39,6 +39,20 @@ def render_reader() -> None:
         f"{document.document.num_pages} 页  ·  "
         f"作者：{', '.join(document.document.authors) or '未提供'}"
     )
+    text_coverage = use_cases.get_document_text_coverage(document)
+    if text_coverage.is_limited:
+        if text_coverage.pages_with_text == 0:
+            coverage_message = "整篇文档未提取到可用文本"
+        else:
+            coverage_message = (
+                f"仅 {text_coverage.pages_with_text}/"
+                f"{text_coverage.total_pages} 页提取到文本"
+            )
+        st.warning(
+            f"PDF 文本可提取性较低：{coverage_message}。"
+            "这通常意味着文档是扫描版或以图像为主；V1 不包含 OCR。"
+            "你仍可查看页面图像，或手动输入文字进行翻译和解释。"
+        )
 
     previous_column, next_column = st.columns(2)
     current_page = state.get_current_page_number()

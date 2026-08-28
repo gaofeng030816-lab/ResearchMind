@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 import struct
+from unittest.mock import patch
 
+import pymupdf
 import pytest
 
 from researchmind.models import Page, TextBlock
@@ -19,7 +21,27 @@ from researchmind.pdf import (
     render_figure_images,
     render_page_image,
 )
+from researchmind.pdf.layout import classify_block_role
 from tests.fixtures.pdf_factory import create_text_pdf
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_role"),
+    (
+        ("2.3 Proposed Method", "heading"),
+        ("Introduction", "heading"),
+        ("结论", "heading"),
+        ("Figure 2. Accuracy by training step", "caption"),
+        ("Table IV: Ablation results", "caption"),
+        ("图 3 消融实验结果", "caption"),
+        ("The method improves accuracy on all datasets.", "body"),
+    ),
+)
+def test_text_block_role_classifier_is_conservative(
+    text: str,
+    expected_role: str,
+) -> None:
+    assert classify_block_role(text) == expected_role
 
 
 def test_open_pdf_extracts_metadata_pages_text_and_blocks(
@@ -86,6 +108,22 @@ def test_embedded_chart_region_is_available_for_page_view(
     assert figure_images[0].startswith(b"\x89PNG\r\n\x1a\n")
 
 
+def test_repeated_figure_render_reuses_revision_aware_cache(
+    two_column_pdf: Path,
+) -> None:
+    opened = open_pdf(two_column_pdf)
+
+    with patch(
+        "researchmind.pdf.reader.pymupdf.open",
+        wraps=pymupdf.open,
+    ) as pymupdf_open:
+        first_images = render_figure_images(opened, 1)
+        second_images = render_figure_images(opened, 1)
+
+    assert first_images == second_images
+    assert pymupdf_open.call_count == 1
+
+
 def test_open_pdf_uses_filename_when_metadata_title_is_empty(tmp_path: Path) -> None:
     path = create_text_pdf(tmp_path / "fallback-title.pdf", [["content"]])
 
@@ -141,6 +179,22 @@ def test_render_page_image_returns_zoomed_png(single_page_pdf: Path) -> None:
     )
 
 
+def test_repeated_page_render_reuses_revision_aware_cache(
+    single_page_pdf: Path,
+) -> None:
+    opened = open_pdf(single_page_pdf)
+
+    with patch(
+        "researchmind.pdf.reader.pymupdf.open",
+        wraps=pymupdf.open,
+    ) as pymupdf_open:
+        first_png = render_page_image(opened, 1, zoom=1.25)
+        second_png = render_page_image(opened, 1, zoom=1.25)
+
+    assert first_png == second_png
+    assert pymupdf_open.call_count == 1
+
+
 @pytest.mark.parametrize("zoom", (0.0, -1.0, float("inf"), MAX_RENDER_ZOOM + 0.1))
 def test_render_page_image_rejects_unsafe_zoom(
     single_page_pdf: Path,
@@ -192,6 +246,7 @@ def test_render_maps_changed_corrupt_source_to_project_error(
     single_page_pdf: Path,
 ) -> None:
     opened = open_pdf(single_page_pdf)
+    render_page_image(opened, 1)
     single_page_pdf.write_bytes(b"%PDF-1.7\ncorrupt replacement")
 
     with pytest.raises(PdfRenderError) as error:

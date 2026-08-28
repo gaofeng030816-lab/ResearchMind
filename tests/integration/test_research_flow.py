@@ -10,6 +10,8 @@ from researchmind.app.use_cases import (
     explain_selection,
     get_page_view,
     open_pdf,
+    preview_explanation_context,
+    preview_followup_context,
     save_note_to_vault,
     search_text,
     translate_selection,
@@ -53,6 +55,14 @@ def test_open_select_translate_explain_and_follow_up_without_network(
         task="explain:contextual",
         content="Why is this block relevant?",
     )
+    explanation_preview = preview_explanation_context(
+        selection,
+        "contextual",
+        document=opened,
+        conversation=conversation,
+        question=explanation_question.content,
+        settings=settings,
+    )
     explanation = explain_selection(
         selection,
         "contextual",
@@ -67,6 +77,13 @@ def test_open_select_translate_explain_and_follow_up_without_network(
         role="user",
         task="followup",
         content="Why does the next inference depend on it?",
+    )
+    followup_preview = preview_followup_context(
+        followup_question.content,
+        document=opened,
+        selection=selection,
+        conversation=conversation,
+        settings=settings,
     )
     followup = ask_followup(
         followup_question.content,
@@ -107,12 +124,20 @@ def test_open_select_translate_explain_and_follow_up_without_network(
     assert "<paper_context>" in explanation_prompt
     assert "Second context block" in explanation_prompt
     assert "Why is this block relevant?" in explanation_prompt
+    assert explanation_preview.request_character_count == sum(
+        len(message.content)
+        for message in fake_llm_provider.calls[1][0]
+    )
 
     followup_prompt = fake_llm_provider.calls[2][0][1].content
     assert "<conversation_history>" in followup_prompt
     assert "Why is this block relevant?" in followup_prompt
     assert escape(explanation.content) in followup_prompt
     assert "Why does the next inference depend on it?" in followup_prompt
+    assert followup_preview.request_character_count == sum(
+        len(message.content)
+        for message in fake_llm_provider.calls[2][0]
+    )
 
     assert saved_path.parent == temporary_vault / "ResearchMind"
     assert saved_path.suffix == ".md"
@@ -125,3 +150,26 @@ def test_open_select_translate_explain_and_follow_up_without_network(
     assert followup_question.content in saved_markdown
     assert followup.content in saved_markdown
     assert "The evidence connects" in saved_markdown
+
+
+def test_pdf_structure_reaches_the_grounded_explanation_prompt(
+    structured_pdf: Path,
+    fake_llm_provider: object,
+) -> None:
+    settings = Settings(context_token_budget=200, history_token_budget=200)
+    opened = open_pdf(structured_pdf, settings=settings)
+    selection = create_selection(opened, "Second context block", current_page=1)
+
+    explain_selection(
+        selection,
+        "contextual",
+        document=opened,
+        conversation=Conversation(document_id=opened.document.id),
+        question="How does the figure relate?",
+        llm_provider=fake_llm_provider,
+        settings=settings,
+    )
+
+    prompt = fake_llm_provider.calls[0][0][1].content
+    assert "<section_heading>2 Proposed Method</section_heading>" in prompt
+    assert "<related_caption>Figure 3. Update overview</related_caption>" in prompt

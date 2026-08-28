@@ -1,8 +1,12 @@
 # ResearchMind 系统架构（V1 实现基线）
 
-版本：V1 实现基线 · 日期：2026-08-27 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)
+版本：V1 内部实现基线 · 日期：2026-08-28 · 状态：持续优化，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md)
 
 > 术语说明：本文档、PRODUCT_SPEC.md 与 DEVELOPMENT_PLAN.md 均使用 "V1" 指代当前实现范围；三份文档的一致性状态见第 22 节。
+>
+> 发布策略：V1 及当前中间版本只作为内部能力基线。代码识别、
+> Paper ↔ Mathematics ↔ Code ↔ Notes 联动和更高阶智能化属于后续独立架构
+> 阶段，不因长期目标而提前进入 V1 模块。
 
 ## 1. 产品定位与系统边界
 
@@ -186,7 +190,7 @@ V1 继续选择 Streamlit：
 |------|----------|------|---------|
 | `Document` | id、title、authors、source_type、path、num_pages | 一篇被阅读的文档 | V1 仅 "pdf" 来源；统一使用 `Document` 命名 |
 | `Page` | page_number、text、blocks | 一个页面及其提取文本 | 内存对象，不持久化 |
-| `TextBlock` | block_index、text、bbox | 页面内的文本块，上下文组装的原材料 | bbox 为未来定位/高亮预留，V1 不实现定位功能 |
+| `TextBlock` | block_index、text、bbox、role | 页面内的文本块，上下文组装的原材料 | role 仅为 body / heading / caption 的保守规则分类；bbox 为未来定位/高亮预留 |
 | `FigureRegion` | figure_index、bbox | 页面中可检测到的嵌入位图区域 | 仅定位、裁剪、预览和下载；不做语义识别 |
 | `ReadingSelection` | text、source_type、locator、created_at | 通用的"阅读内容选择"抽象（第 8 节） | V1 仅 PDF locator |
 | `ResearchContext` | 见第 7.2 节字段表 | AI 理解的核心上下文对象（第 7 节） | 每次 AI 调用前构建 |
@@ -210,18 +214,26 @@ ResearchContext 表示用户**当前正在阅读、选择、理解或讨论的�
 |------|------|------|
 | selected_text | ReadingSelection | 用户选中的文本 |
 | surrounding_text | 选中位置附近的文本块（同页相邻块优先） | 按 token 预算截断；块不可用时整页回退 |
+| section_heading | 当前选择之前最近的高置信度章节标题 | 可从当前页或之前页面继承；最多 160 字符；无法可靠识别时为空 |
+| related_caption | 当前选择附近的高置信度图/表说明 | 仅限同页相距不超过 2 个文本块；最多 500 字符；无法可靠识别时为空 |
 | page_number | PDF locator | 选中内容所在页；未定位时为空 |
 | document_id / document_title / author | Document | 文档标识与元数据（PDF 元数据缺失时回退文件名） |
 | source | source_type | "pdf"（未来："vscode"、"web" 等） |
 | user_question | 用户当前输入 | 追问时是新问题 |
 | conversation_history | Conversation 中最近的消息 | 按预算保留最近消息；模型自己的回答同样视为数据 |
 
-示例：用户在论文中选中一个数学公式时，发送给 AI 的不只是公式本身，而是：公式 + 公式附近的文字 + 当前页面 + 论文标题 + 用户的问题 + 当前对话历史。
+示例：用户在论文中选中一个数学公式时，发送给 AI 的不只是公式本身，而是：
+公式 + 公式附近的文字 + 最近章节标题 + 邻近图表说明 + 当前页面 + 论文标题 +
+用户的问题 + 当前对话历史。结构线索来自确定性规则，不代表系统已经理解图表
+或论文层级。
 
 ### 7.3 组装规则（core/research_context.py，纯函数）
 
 - 输入：ReadingSelection + Document + 用户问题 + Conversation 历史 + 预算配置；
 - surrounding_text：从选中块向上下扩展取相邻文本块，直到预算上限；单页无块时用整页文本；
+- section_heading：从锚点向前寻找最近的 heading 块，当前页没有时再向之前页面查找；
+- related_caption：只在锚点前后 2 个文本块内选择最近的 caption 块，避免跨页或远距离误关联；
+- 标题/说明由 `pdf/layout.py` 的保守中英文规则识别，并各自设定长度上限；选中文本无法定位到具体块时不附加结构线索；
 - conversation_history：只保留最近 N 条（预算截断），超长不报错；
 - 所有注入 LLM 的论文内容包裹在 `<paper_context>` 标签内，系统提示声明标签内是**数据而非指令**（第 20.3 节）；
 - 组装是纯函数：可单测、不依赖 UI、不依赖具体 provider。
@@ -231,6 +243,22 @@ ResearchContext 表示用户**当前正在阅读、选择、理解或讨论的�
 ResearchContext **不与 PDF 强绑定**：`source`、`document_id`、`locator` 都是抽象字段。未来的内容源——VS Code 中的 Python/Julia/R 代码、网页、Jupyter Notebook——都通过"把该来源的内容转换成一个 ResearchContext"接入，AI、知识沉淀、Obsidian 联动这些下游能力完全不用改。
 
 V1 只实现 PDF 这一种内容源。**不为未来功能提前实现 VS Code 插件或浏览器插件。**
+
+### 7.5 上下文证据预览
+
+解释和追问在调用 LLM 前，由应用层使用与真实调用相同的 ResearchContext 和
+prompt builder 生成 `ContextEvidencePreview`。预览展示文档、页码、章节、
+邻近图表说明、当前问题、选中文本、周边文本、预算内历史消息数量和请求体量
+估算。
+
+- 预览是只读应用 DTO，不写入 session state，不持久化；
+- 生成预览不创建 provider、不调用网络，也不显示 API Key 或完整内部系统提示；
+- 请求字符数按真实待发送 `ChatMessage.content` 计算，token 数按
+  4 字符/token 近似；这不是服务商计费承诺；
+- 翻译不使用 ResearchContext，因此不显示该预览，并继续只发送选中文本与
+  目标语言；
+- 视图只负责调用预览用例并展示结果，ResearchContext 组装仍由 `core/`
+  负责。
 
 ## 8. ReadingSelection：通用的阅读内容选择
 
@@ -259,6 +287,7 @@ ResearchMind 自己实现 PDF 阅读，以减少对小绿鲸等第三方阅读�
 - PDF 页面显示（页面图像 + 该页提取文本）；
 - 双栏等常见数字版论文使用基于空白切分的几何阅读顺序；
 - 文本块去除视觉换行后按块显示，可逐块或整页复制；
+- 对常见中英文编号章节标题和 Figure / Fig. / Table / 图 / 表说明做高置信度文本角色分类；
 - 检测、裁剪、预览和下载页面中的嵌入位图/图表区域；
 - 页面跳转（翻页、页码导航）；
 - 缩放（按倍率重新渲染页面图像）；
@@ -286,10 +315,13 @@ PDF 标注、高亮、书签、OCR、语义表格识别、公式识别、图表�
 
 1. **页面图像与文本分离**：UI 显示"页面图像"（视觉对照）+ "该页提取文本"（可复制/检索）。这是 Streamlit 下 V1 选择体验的最优解，也为未来页面级划词留好数据基础（blocks 带坐标）；
 2. **布局感知阅读顺序**：`pdf/layout.py` 使用文本块 bbox 和递归空白切分处理常见双栏页面，并把视觉断行整理成复制友好的段落。设计参考了本地 OpenDataLoader PDF 的 XY-Cut++ 思路，但使用 ResearchMind 自己的 Python/PyMuPDF 实现，不引入其 Java/JAR 或混合服务；审查记录见 `OPENDATALOADER_PDF_REVIEW.md`；
-3. **文本块是上下文的基本单位**：解释一句话时取同页相邻块而非整页/全文，控制 token 成本并保证相关性；
-4. **轻量图表区域**：`Page.figures` 只保存嵌入位图 bbox；页面查看时再从源 PDF 裁剪为 PNG，不把全部图片二进制长期留在会话模型中；
-5. **PDF Engine 保持独立**：全部 PyMuPDF 调用封装在 `pdf/` 内，UI 与 Domain 不得直接调用 PDF 库；提取异常在边界统一转换为项目异常 `PdfExtractionError`；
-6. **已知局限**（诚实声明，Future Work 解决）：复杂混排、公式、扫描版 PDF、矢量图表和语义表格的提取质量仍有限；提取异常统一转成 `PdfExtractionError` 抛给调用层。
+3. **轻量结构角色**：`pdf/layout.py` 只以确定性文本模式标记高置信度 heading / caption；不建立全文目录树，不声称理解图表内容，也不新增模型或依赖；
+4. **文本块是上下文的基本单位**：解释一句话时取同页相邻块，并附加有界的最近章节/说明线索，而非整页/全文，控制 token 成本并保证相关性；
+5. **轻量图表区域**：`Page.figures` 只保存嵌入位图 bbox；页面查看时再从源 PDF 裁剪为 PNG，不把全部图片二进制长期留在会话模型中；
+6. **PDF Engine 保持独立**：全部 PyMuPDF 调用封装在 `pdf/` 内，UI 与 Domain 不得直接调用 PDF 库；提取异常在边界统一转换为项目异常 `PdfExtractionError`；
+7. **有界渲染缓存**：页面和嵌入图像 PNG 在 `pdf/` 内按文件修订、页码和缩放缓存，缓存条目有上限；源文件大小、时间或文件标识变化后自动重新渲染，仍保留每次调用的扩展名、魔数和大小校验；
+8. **文本可提取性诊断**：应用层统计有文本页面比例；不超过 10% 时，UI 明示扫描版/图像型 PDF 的 OCR 限制，避免用户误以为 AI 已获得论文正文；
+9. **已知局限**（诚实声明，Future Work 解决）：复杂混排、非标准标题、公式、扫描版 PDF、矢量图表和语义表格的提取质量仍有限；提取异常统一转成 `PdfExtractionError` 抛给调用层。
 
 ## 10. Translation 模块
 
@@ -437,12 +469,16 @@ V1 没有独立后端进程，没有 REST API。**应用层用例函数就是 AP
 open_pdf(path: Path) -> OpenedDocument                        # 打开 + 元数据 + 页数
 get_page_view(doc: OpenedDocument, page_number: int,
               zoom: float = 1.0) -> PageView                  # 页面图像 + 该页文本
+get_document_text_coverage(doc: OpenedDocument) -> DocumentTextCoverage
 search_text(doc: OpenedDocument, query: str) -> list[TextMatch]  # 文本搜索（页/块级命中）
 create_selection(doc: OpenedDocument, text: str,
                  current_page: int | None) -> ReadingSelection
 translate_selection(selection: ReadingSelection) -> Message
+preview_explanation_context(selection: ReadingSelection,
+                            mode: ExplainMode) -> ContextEvidencePreview
 explain_selection(selection: ReadingSelection,
                   mode: ExplainMode) -> Message   # concept | math | algorithm | contextual
+preview_followup_context(question: str) -> ContextEvidencePreview
 ask_followup(question: str) -> Message
 capture_knowledge(doc: OpenedDocument, selection: ReadingSelection | None,
                   messages: list[Message], user_notes: str,
@@ -452,6 +488,8 @@ save_note_to_vault(note: KnowledgeNote) -> Path               # 写入 config �
 
 - `OpenedDocument`：内存中的已打开文档（Document + 已提取页面/文本块）；
 - `PageView`：页面图像与文本的视图对象；
+- `DocumentTextCoverage`：总页数、有文本页数、覆盖率与低覆盖诊断；
+- `ContextEvidencePreview`：一次解释/追问调用的只读证据与近似请求体量；
 - `TextMatch`：搜索命中（页码 + 文本块摘录）。
 
 未来 REST 对照（仅作对照，不实现）：
@@ -473,9 +511,9 @@ V1 共 **4 个视图**，全部只做展示与事件委托：
 
 | 视图 | 文件 | 组成 |
 |------|------|------|
-| 1. 阅读器 | `app/views/reader.py` | 打开本地 PDF（路径/文件选择器）；页面图像；按阅读顺序逐块/整页复制；嵌入图表区域预览与下载；翻页/页码跳转；缩放；文本搜索 |
-| 2. 操作面板 | `app/views/actions.py` | "选中文本"输入框；翻译按钮；AI 解释（模式下拉：概念/数学/算法/上下文） |
-| 3. 对话面板 | `app/views/conversation.py` | 消息流（区分 user/assistant 与任务类型）；追问输入框；"沉淀为知识"按钮 |
+| 1. 阅读器 | `app/views/reader.py` | 打开本地 PDF（路径/文件选择器）；低文本覆盖提示；页面图像；按阅读顺序逐块/整页复制；嵌入图表区域预览与下载；翻页/页码跳转；缩放；文本搜索 |
+| 2. 操作面板 | `app/views/actions.py` | "选中文本"输入框；翻译按钮；AI 解释（模式下拉：概念/数学/算法/上下文）；解释上下文发送前预览 |
+| 3. 对话面板 | `app/views/conversation.py` | 消息流（区分 user/assistant 与任务类型）；追问输入框与发送前上下文预览；"沉淀为知识"按钮 |
 | 4. 知识沉淀面板 | `app/views/knowledge.py` | 勾选要保存的内容（原文/翻译/问答）、填写自己的理解与标签、预览生成的 Markdown、保存到 Obsidian Vault |
 
 规则：视图不直接碰 PDF/LLM/翻译/Vault，全部经 use_cases；任何 st.session_state 写入只发生在 state.py。
@@ -490,7 +528,7 @@ V1 共 **4 个视图**，全部只做展示与事件委托：
 4. ResearchMind 可以获得用户选择的文本；
 5. 用户可以获得选中文本的翻译；
 6. 用户可以要求 AI 解释当前内容；
-7. ResearchMind 自动构建 ResearchContext；
+7. ResearchMind 自动构建 ResearchContext，用户可在发送前检查上下文证据；
 8. AI 可以结合论文上下文回答问题；
 9. 用户可以继续进行多轮提问；
 10. 用户可以选择需要保存的内容；
@@ -523,7 +561,7 @@ V1 共 **4 个视图**，全部只做展示与事件委托：
     - `conversation.py`：对话历史裁剪（纯函数）
   - `pdf/`
     - `reader.py`：打开、元数据、页面/文本块/嵌入位图区域提取、页面与图表裁剪渲染（含缩放）
-    - `layout.py`：文本块阅读顺序和复制友好的断行整理
+    - `layout.py`：文本块阅读顺序、复制友好的断行整理和轻量结构角色分类
     - `search.py`：文档内文本搜索
     - `errors.py`：PdfExtractionError 等
   - `translation/`
@@ -593,7 +631,8 @@ PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、�
 ### 20.5 用户数据与 Vault 写入
 
 - 论文与数据全部本机处理，无遥测（除用户主动选择的 LLM/翻译调用）；
-- 每次 LLM 调用只发送：选中文本 + 最小必要上下文 + 必要历史；UI 中明示这一行为；
+- 每次 LLM 调用只发送：选中文本 + 最小必要上下文 + 必要历史；解释和追问可在
+  发送前查看证据与近似请求体量，打开预览本身不触发网络；
 - 支持本地模型（Ollama 等 OpenAI 兼容端点）供不愿外发数据的用户选择；
 - Vault 写入：路径来自用户自己的配置；文件名净化（拒绝路径分隔符等非法字符）；只写 `.md` 纯文本；不覆盖已有文件；写入失败明确报错，不静默丢弃。
 

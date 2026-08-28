@@ -110,7 +110,8 @@
 ### M6 收尾
 
 - **目标**：闭环交付。
-- **状态**：代码、安全、文档与自动化回归已完成；最终人工视觉复核状态见
+- **状态**：V1 技术收尾已完成；根据 2026-08-28 的产品决定，本版本仅作
+  内部实现基线，不作为 Release Candidate。人工视觉复核状态见
   [M6_RELEASE_VALIDATION.md](./M6_RELEASE_VALIDATION.md)。
 - **任务**：
   1. 安全清单逐项核对（ARCHITECTURE.md 第 20 节）；
@@ -130,7 +131,7 @@
 | pytest | 测试 | 标准测试框架 |
 | （可选）anthropic | LLM | 第二个 provider，需要时再加 |
 
-## 4. V1 发布验收标准
+## 4. V1 内部验收标准
 
 1. PRODUCT_SPEC.md 中 FR1–FR10 全部通过验收（有真实测试/手动记录支撑）；
 2. `pytest` 全量通过（unit + integration + e2e）；
@@ -138,3 +139,6 @@
 4. 真实 PDF + 真实 LLM 的手动验收记录存在；
 5. 代码分层检查通过：UI 不直接碰 pdf/llm/translation/integration；Domain 不 import UI；
 6. README 能让另一个初/中级开发者装好、配好 Key 与 Vault、跑起来。
+
+这些标准证明 V1 闭环可用，不代表允许公开发布。后续内部优化与最终发布路线见
+[POST_V1_DEVELOPMENT_PLAN.md](./POST_V1_DEVELOPMENT_PLAN.md)。

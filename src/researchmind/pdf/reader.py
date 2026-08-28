@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import lru_cache
 import hashlib
 import math
 from pathlib import Path
@@ -18,13 +19,20 @@ from researchmind.pdf.errors import (
     PdfRenderError,
     PdfValidationError,
 )
-from researchmind.pdf.layout import normalize_block_text, order_text_blocks
+from researchmind.pdf.layout import (
+    classify_block_role,
+    normalize_block_text,
+    order_text_blocks,
+)
 
 
 DEFAULT_PDF_MAX_SIZE_BYTES = DEFAULT_PDF_MAX_SIZE_MB * 1024 * 1024
 PDF_MAGIC = b"%PDF-"
 MAX_RENDER_ZOOM = 5.0
 MIN_FIGURE_DIMENSION = 24.0
+RENDER_CACHE_SIZE = 32
+
+PdfFileRevision = tuple[int, int, int, int]
 
 
 @dataclass(frozen=True)
@@ -108,6 +116,22 @@ def render_page_image(
         opened_document.document.path,
         max_size_bytes=opened_document.max_size_bytes,
     )
+    return _render_page_image_cached(
+        source_path,
+        _file_revision(source_path),
+        page_number,
+        normalized_zoom,
+    )
+
+
+@lru_cache(maxsize=RENDER_CACHE_SIZE)
+def _render_page_image_cached(
+    source_path: Path,
+    _source_revision: PdfFileRevision,
+    page_number: int,
+    zoom: float,
+) -> bytes:
+    """Render once per file revision, page, and zoom within this process."""
 
     try:
         with pymupdf.open(source_path) as source:
@@ -122,7 +146,7 @@ def render_page_image(
 
             page = source.load_page(page_number - 1)
             pixmap = page.get_pixmap(
-                matrix=pymupdf.Matrix(normalized_zoom, normalized_zoom),
+                matrix=pymupdf.Matrix(zoom, zoom),
                 alpha=False,
             )
             return pixmap.tobytes("png")
@@ -151,16 +175,44 @@ def render_figure_images(
         opened_document.document.path,
         max_size_bytes=opened_document.max_size_bytes,
     )
+    figure_bboxes = tuple(figure.bbox for figure in page_model.figures)
+    return _render_figure_images_cached(
+        source_path,
+        _file_revision(source_path),
+        page_number,
+        normalized_zoom,
+        figure_bboxes,
+    )
+
+
+@lru_cache(maxsize=RENDER_CACHE_SIZE)
+def _render_figure_images_cached(
+    source_path: Path,
+    _source_revision: PdfFileRevision,
+    page_number: int,
+    zoom: float,
+    figure_bboxes: tuple[tuple[float, float, float, float], ...],
+) -> tuple[bytes, ...]:
+    """Render figure crops once while keeping the cache revision-aware."""
+
     try:
         with pymupdf.open(source_path) as source:
+            if source.needs_pass:
+                raise PdfRenderError(
+                    f"Password-protected PDF files are not supported: {source_path.name}"
+                )
+            if page_number > source.page_count:
+                raise PdfPageError(
+                    f"Page {page_number} is no longer available in {source_path.name}."
+                )
             source_page = source.load_page(page_number - 1)
             return tuple(
                 source_page.get_pixmap(
-                    matrix=pymupdf.Matrix(normalized_zoom, normalized_zoom),
-                    clip=pymupdf.Rect(figure.bbox),
+                    matrix=pymupdf.Matrix(zoom, zoom),
+                    clip=pymupdf.Rect(bbox),
                     alpha=False,
                 ).tobytes("png")
-                for figure in page_model.figures
+                for bbox in figure_bboxes
             )
     except PdfError:
         raise
@@ -212,6 +264,23 @@ def _validate_pdf_file(path: Path, *, max_size_bytes: int) -> Path:
     return resolved_path
 
 
+def _file_revision(path: Path) -> PdfFileRevision:
+    """Return a cheap cache key that changes when the source file changes."""
+
+    try:
+        status = path.stat()
+    except OSError:
+        raise PdfValidationError(
+            f"PDF file is not readable: {path.name}"
+        ) from None
+    return (
+        status.st_size,
+        status.st_mtime_ns,
+        status.st_ctime_ns,
+        status.st_ino,
+    )
+
+
 def _extract_loaded_page(source_page: pymupdf.Page, page_number: int) -> Page:
     try:
         raw_blocks = source_page.get_text("blocks", sort=False)
@@ -237,6 +306,7 @@ def _extract_loaded_page(source_page: pymupdf.Page, page_number: int) -> Page:
                 block_index=int(raw_block[5]),
                 text=block_text,
                 bbox=bbox,
+                role=classify_block_role(block_text),
             )
         )
 

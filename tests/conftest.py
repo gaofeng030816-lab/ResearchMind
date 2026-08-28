@@ -73,6 +73,20 @@ def single_page_pdf(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
+def structured_pdf(tmp_path: Path) -> Path:
+    return create_text_pdf(
+        tmp_path / "structured.pdf",
+        [[
+            "2 Proposed Method",
+            "Second context block",
+            "Figure 3. Update overview",
+        ]],
+        title="Structured Research Paper",
+        author="Ada Researcher",
+    )
+
+
+@pytest.fixture
 def multi_page_pdf(tmp_path: Path) -> Path:
     return create_text_pdf(
         tmp_path / "multi-page.pdf",

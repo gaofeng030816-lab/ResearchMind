@@ -3,6 +3,7 @@
 import streamlit as st
 
 from researchmind.app import state, use_cases
+from researchmind.app.views.context_evidence import render_context_evidence
 
 
 _MODE_LABELS: dict[use_cases.ExplainMode, str] = {
@@ -63,9 +64,18 @@ def render_actions() -> None:
         key="explanation_question_input",
         placeholder="例如：作者为什么在这里引入这个参数？",
     )
-    st.caption(
-        "隐私提示：点击翻译或解释后，选中文本及最小必要上下文将发送到配置的 LLM 服务。"
-    )
+    st.caption("翻译仅发送选中文本和目标语言，不使用 ResearchContext。")
+    try:
+        preview = use_cases.preview_explanation_context(
+            selection,
+            mode,
+            document=document,
+            conversation=state.get_current_conversation(),
+            question=question.strip() or None,
+        )
+        render_context_evidence(preview, action_label="AI 解释")
+    except use_cases.USER_FACING_ERRORS as exc:
+        st.error(str(exc))
 
     translation_column, explanation_column = st.columns(2)
     with translation_column:

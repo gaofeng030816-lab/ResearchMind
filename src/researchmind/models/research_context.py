@@ -17,4 +17,6 @@ class ResearchContext:
     source: str
     user_question: str
     page_number: int | None = None
+    section_heading: str = ""
+    related_caption: str = ""
     conversation_history: list[Message] = field(default_factory=list)

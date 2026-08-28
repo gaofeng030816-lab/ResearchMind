@@ -79,6 +79,76 @@ def test_unlocated_selection_does_not_attach_arbitrary_document_text() -> None:
 
     assert context.page_number is None
     assert context.surrounding_text == ""
+    assert context.section_heading == ""
+    assert context.related_caption == ""
+
+
+def test_context_adds_nearest_section_heading_and_local_caption() -> None:
+    pages = [
+        Page(
+            page_number=1,
+            text="3 Results",
+            blocks=[TextBlock(block_index=1, text="3 Results", role="heading")],
+        ),
+        Page(
+            page_number=2,
+            text="Evidence block Figure 2. Accuracy by training step",
+            blocks=[
+                TextBlock(block_index=4, text="Earlier evidence"),
+                TextBlock(block_index=8, text="The selected evidence is decisive."),
+                TextBlock(
+                    block_index=9,
+                    text="Figure 2. Accuracy by training step",
+                    role="caption",
+                ),
+            ],
+        ),
+    ]
+    selection = ReadingSelection(
+        text="selected evidence",
+        locator={"page_number": 2, "block_index": 8},
+    )
+
+    context = build_research_context(
+        selection,
+        _document(),
+        pages,
+        user_question="What does the evidence show?",
+        context_token_budget=20,
+        history_token_budget=10,
+    )
+
+    assert context.section_heading == "3 Results"
+    assert context.related_caption == "Figure 2. Accuracy by training step"
+
+
+def test_context_does_not_attach_a_distant_caption() -> None:
+    page = Page(
+        page_number=1,
+        text="Figure 1 caption filler filler selected text",
+        blocks=[
+            TextBlock(block_index=1, text="Figure 1. Earlier result", role="caption"),
+            TextBlock(block_index=2, text="filler one"),
+            TextBlock(block_index=3, text="filler two"),
+            TextBlock(block_index=4, text="filler three"),
+            TextBlock(block_index=5, text="selected text"),
+        ],
+    )
+    selection = ReadingSelection(
+        text="selected text",
+        locator={"page_number": 1, "block_index": 5},
+    )
+
+    context = build_research_context(
+        selection,
+        _document(),
+        [page],
+        user_question="Explain",
+        context_token_budget=20,
+        history_token_budget=10,
+    )
+
+    assert context.related_caption == ""
 
 
 def test_context_trims_history_and_rejects_conversation_for_other_document() -> None:

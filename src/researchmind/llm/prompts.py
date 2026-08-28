@@ -92,6 +92,8 @@ def _render_paper_context(context: ResearchContext) -> str:
         ("document_title", context.document_title),
         ("author", context.author),
         ("page_number", "" if context.page_number is None else str(context.page_number)),
+        ("section_heading", context.section_heading),
+        ("related_caption", context.related_caption),
         ("surrounding_text", context.surrounding_text),
         ("selected_text", context.selected_text),
     )

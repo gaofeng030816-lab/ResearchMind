@@ -17,6 +17,11 @@ from researchmind.models import (
 )
 
 
+CAPTION_BLOCK_DISTANCE = 2
+MAX_SECTION_HEADING_CHARS = 160
+MAX_RELATED_CAPTION_CHARS = 500
+
+
 def build_research_context(
     selection: ReadingSelection,
     document: Document,
@@ -34,6 +39,11 @@ def build_research_context(
         raise ValueError("Conversation does not belong to the opened document.")
 
     page_number = _locator_int(selection, "page_number")
+    section_heading, related_caption = _context_landmarks(
+        selection,
+        pages,
+        page_number=page_number,
+    )
     history = [] if conversation is None else conversation.messages
     return ResearchContext(
         selected_text=selection.text,
@@ -44,6 +54,8 @@ def build_research_context(
             token_budget=context_token_budget,
         ),
         page_number=page_number,
+        section_heading=section_heading,
+        related_caption=related_caption,
         document_id=document.id,
         document_title=document.title,
         author=", ".join(document.authors),
@@ -54,6 +66,73 @@ def build_research_context(
             token_budget=history_token_budget,
         ),
     )
+
+
+def _context_landmarks(
+    selection: ReadingSelection,
+    pages: Sequence[Page],
+    *,
+    page_number: int | None,
+) -> tuple[str, str]:
+    if page_number is None:
+        return "", ""
+
+    page = next((item for item in pages if item.page_number == page_number), None)
+    if page is None or not page.blocks:
+        return "", ""
+
+    block_index = _locator_int(selection, "block_index")
+    anchor_position = next(
+        (
+            index
+            for index, block in enumerate(page.blocks)
+            if block.block_index == block_index
+        ),
+        None,
+    )
+    if anchor_position is None:
+        return "", ""
+
+    section_heading = _nearest_section_heading(
+        pages,
+        page_number=page_number,
+        anchor_position=anchor_position,
+    )
+    related_caption = _nearest_caption(page, anchor_position=anchor_position)
+    return (
+        section_heading[:MAX_SECTION_HEADING_CHARS],
+        related_caption[:MAX_RELATED_CAPTION_CHARS],
+    )
+
+
+def _nearest_section_heading(
+    pages: Sequence[Page],
+    *,
+    page_number: int,
+    anchor_position: int,
+) -> str:
+    eligible_pages = sorted(
+        (page for page in pages if page.page_number <= page_number),
+        key=lambda page: page.page_number,
+        reverse=True,
+    )
+    for page in eligible_pages:
+        end = anchor_position if page.page_number == page_number else len(page.blocks)
+        for block in reversed(page.blocks[:end]):
+            if block.role == "heading":
+                return block.text
+    return ""
+
+
+def _nearest_caption(page: Page, *, anchor_position: int) -> str:
+    candidates = (
+        (abs(index - anchor_position), index, block.text)
+        for index, block in enumerate(page.blocks)
+        if block.role == "caption"
+        and abs(index - anchor_position) <= CAPTION_BLOCK_DISTANCE
+    )
+    nearest = min(candidates, default=None)
+    return "" if nearest is None else nearest[2]
 
 
 def _surrounding_text(

@@ -3,6 +3,7 @@
 import streamlit as st
 
 from researchmind.app import state, use_cases
+from researchmind.app.views.context_evidence import render_context_evidence
 
 
 _TASK_LABELS = {
@@ -43,6 +44,19 @@ def render_conversation() -> None:
         st.caption(
             "隐私提示：追问会发送当前问题、最小论文上下文和预算内的最近对话。"
         )
+        if question.strip():
+            try:
+                preview = use_cases.preview_followup_context(
+                    question,
+                    document=document,
+                    selection=selection,
+                    conversation=conversation,
+                )
+                render_context_evidence(preview, action_label="追问")
+            except use_cases.USER_FACING_ERRORS as exc:
+                st.error(str(exc))
+        else:
+            st.caption("输入追问后可在发送前检查本次上下文证据。")
         if st.button("发送追问", key="ask_followup_button"):
             try:
                 response = use_cases.ask_followup(

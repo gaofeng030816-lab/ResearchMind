@@ -49,6 +49,53 @@ def test_reader_exposes_ordered_blocks_and_figure_download(
     assert app.download_button[0].label == "下载图表 1"
 
 
+def test_reader_warns_when_document_has_no_extractable_text(
+    blank_page_pdf: Path,
+) -> None:
+    app = AppTest.from_file(APP_PATH, default_timeout=10).run()
+    app.text_input(key="pdf_path_input").set_value(str(blank_page_pdf))
+    app.button(key="open_pdf_button").click().run()
+
+    assert not app.exception
+    assert any(
+        "未提取到可用文本" in warning.value
+        for warning in app.warning
+    )
+
+
+def test_context_evidence_is_visible_before_explanation(
+    monkeypatch: pytest.MonkeyPatch,
+    structured_pdf: Path,
+) -> None:
+    monkeypatch.setattr(
+        use_cases,
+        "load_settings",
+        lambda: Settings(context_token_budget=200, history_token_budget=200),
+    )
+
+    app = AppTest.from_file(APP_PATH, default_timeout=10).run()
+    app.text_input(key="pdf_path_input").set_value(str(structured_pdf))
+    app.button(key="open_pdf_button").click().run()
+    document_id = app.session_state["opened_document"].document.id
+    app.text_area(key=f"selection_text_{document_id}").set_value(
+        "Second context block"
+    )
+    app.button(key="create_selection_button").click().run()
+
+    assert not app.exception
+    assert any(
+        expander.label == "AI 解释上下文证据（发送前预览）"
+        for expander in app.expander
+    )
+    plain_text = [element.value for element in app.text]
+    assert "章节：2 Proposed Method" in plain_text
+    assert "图表说明：Figure 3. Update overview" in plain_text
+    assert any(
+        "约 " in caption.value and "tokens" in caption.value
+        for caption in app.caption
+    )
+
+
 def test_reader_to_obsidian_flow_without_network(
     monkeypatch: pytest.MonkeyPatch,
     multi_page_pdf: Path,

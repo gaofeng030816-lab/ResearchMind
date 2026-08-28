@@ -9,13 +9,60 @@ system; it does not bundle upstream source, Java runtime, or hybrid services.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 from typing import Literal
 
-from researchmind.models import TextBlock
+from researchmind.models import TextBlock, TextBlockRole
 
 
 MIN_GAP_POINTS = 5.0
 NARROW_BLOCK_WIDTH_RATIO = 0.10
+MAX_HEADING_CHARS = 160
+MAX_CAPTION_CHARS = 500
+
+_CAPTION_PATTERN = re.compile(
+    r"^(?:(?:fig(?:ure)?\.?|table)\s*(?:[a-z]?\d+|[ivxlcdm]+)"
+    r"|[图表]\s*[a-z]?[0-9一二三四五六七八九十百]+)"
+    r"(?:[\s.:：、-]|$)",
+    re.IGNORECASE,
+)
+_NUMBERED_HEADING_PATTERN = re.compile(
+    r"^(?:(?:\d+(?:\.\d+)*)|(?:[ivxlcdm]+))[.)]?\s+"
+    r"[A-Z\u4e00-\u9fff]",
+    re.IGNORECASE,
+)
+_CHINESE_HEADING_PATTERN = re.compile(
+    r"^第[0-9一二三四五六七八九十百]+[章节]\s*\S+"
+)
+_COMMON_HEADINGS = frozenset(
+    {
+        "abstract",
+        "introduction",
+        "background",
+        "related work",
+        "method",
+        "methods",
+        "methodology",
+        "experiments",
+        "experimental results",
+        "results",
+        "discussion",
+        "conclusion",
+        "conclusions",
+        "references",
+        "摘要",
+        "引言",
+        "背景",
+        "相关工作",
+        "方法",
+        "实验",
+        "实验结果",
+        "结果",
+        "讨论",
+        "结论",
+        "参考文献",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -38,6 +85,27 @@ def normalize_block_text(text: str) -> str:
         else:
             paragraph += " " + line
     return paragraph.strip()
+
+
+def classify_block_role(text: str) -> TextBlockRole:
+    """Classify only high-confidence paper headings and figure/table captions."""
+
+    normalized = " ".join(text.split())
+    if not normalized:
+        return "body"
+    if len(normalized) <= MAX_CAPTION_CHARS and _CAPTION_PATTERN.match(normalized):
+        return "caption"
+    if len(normalized) > MAX_HEADING_CHARS:
+        return "body"
+
+    normalized_heading = normalized.rstrip(":：").casefold()
+    if normalized_heading in _COMMON_HEADINGS:
+        return "heading"
+    if _NUMBERED_HEADING_PATTERN.match(normalized):
+        return "heading"
+    if _CHINESE_HEADING_PATTERN.match(normalized):
+        return "heading"
+    return "body"
 
 
 def order_text_blocks(blocks: list[TextBlock]) -> list[TextBlock]:
