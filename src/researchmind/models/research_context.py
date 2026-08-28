@@ -19,4 +19,5 @@ class ResearchContext:
     page_number: int | None = None
     section_heading: str = ""
     related_caption: str = ""
+    related_formula: str = ""
     conversation_history: list[Message] = field(default_factory=list)

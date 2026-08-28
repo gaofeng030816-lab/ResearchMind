@@ -81,6 +81,7 @@ def test_unlocated_selection_does_not_attach_arbitrary_document_text() -> None:
     assert context.surrounding_text == ""
     assert context.section_heading == ""
     assert context.related_caption == ""
+    assert context.related_formula == ""
 
 
 def test_context_adds_nearest_section_heading_and_local_caption() -> None:
@@ -149,6 +150,92 @@ def test_context_does_not_attach_a_distant_caption() -> None:
     )
 
     assert context.related_caption == ""
+
+
+def test_context_adds_nearby_formula_and_ignores_running_title_header() -> None:
+    document = _document()
+    pages = [
+        Page(
+            page_number=1,
+            text="2 Proposed Method",
+            blocks=[
+                TextBlock(
+                    block_index=1,
+                    text="2 Proposed Method",
+                    role="heading",
+                )
+            ],
+        ),
+        Page(
+            page_number=2,
+            text="4 Optimization Paper x(t1) = x(t0) + f(x, t) selected claim",
+            blocks=[
+                TextBlock(
+                    block_index=2,
+                    text="4 Optimization Paper",
+                    role="heading",
+                ),
+                TextBlock(
+                    block_index=3,
+                    text="x(t1) = x(t0) + f(x, t)",
+                    role="formula",
+                ),
+                TextBlock(
+                    block_index=4,
+                    text="y(t1) = decode(x(t1))",
+                    role="formula",
+                ),
+                TextBlock(block_index=5, text="selected claim"),
+            ],
+        ),
+    ]
+    selection = ReadingSelection(
+        text="selected claim",
+        locator={"page_number": 2, "block_index": 5},
+    )
+
+    context = build_research_context(
+        selection,
+        document,
+        pages,
+        user_question="Explain",
+        context_token_budget=30,
+        history_token_budget=10,
+    )
+
+    assert context.section_heading == "2 Proposed Method"
+    assert context.related_formula == (
+        "x(t1) = x(t0) + f(x, t)\ny(t1) = decode(x(t1))"
+    )
+
+
+def test_context_does_not_attach_a_distant_formula() -> None:
+    page = Page(
+        page_number=1,
+        text="formula filler filler selected",
+        blocks=[
+            TextBlock(block_index=1, text="x = y", role="formula"),
+            TextBlock(block_index=2, text="filler one"),
+            TextBlock(block_index=3, text="filler two"),
+            TextBlock(block_index=4, text="filler three"),
+            TextBlock(block_index=5, text="selected"),
+        ],
+    )
+    selection = ReadingSelection(
+        text="selected",
+        locator={"page_number": 1, "block_index": 5},
+    )
+
+    context = build_research_context(
+        selection,
+        _document(),
+        [page],
+        user_question="Explain",
+        context_token_budget=20,
+        history_token_budget=10,
+    )
+
+    assert context.related_formula == ""
 
 
 def test_context_trims_history_and_rejects_conversation_for_other_document() -> None:

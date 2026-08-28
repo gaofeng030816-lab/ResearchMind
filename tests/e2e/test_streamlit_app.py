@@ -49,6 +49,24 @@ def test_reader_exposes_ordered_blocks_and_figure_download(
     assert app.download_button[0].label == "下载图表 1"
 
 
+def test_reader_labels_copyable_formula_blocks(
+    unicode_math_pdf: Path,
+) -> None:
+    app = AppTest.from_file(APP_PATH, default_timeout=10).run()
+    app.text_input(key="pdf_path_input").set_value(str(unicode_math_pdf))
+    app.button(key="open_pdf_button").click().run()
+
+    assert not app.exception
+    assert any(
+        "疑似数学公式" in caption.value
+        for caption in app.caption
+    )
+    assert any(
+        "数学公式候选" in caption.value
+        for caption in app.caption
+    )
+
+
 def test_reader_warns_when_document_has_no_extractable_text(
     blank_page_pdf: Path,
 ) -> None:

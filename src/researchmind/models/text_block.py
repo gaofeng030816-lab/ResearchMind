@@ -5,7 +5,7 @@ from typing import Literal
 
 
 BoundingBox = tuple[float, float, float, float]
-TextBlockRole = Literal["body", "heading", "caption"]
+TextBlockRole = Literal["body", "heading", "caption", "formula"]
 
 
 @dataclass

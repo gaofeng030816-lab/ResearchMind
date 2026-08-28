@@ -142,13 +142,28 @@ def render_reader() -> None:
 
     st.markdown("**当前页提取文本** · 每个文本块右上角都可一键复制")
     if page_view.page.blocks:
+        formula_count = sum(
+            block.role == "formula"
+            for block in page_view.page.blocks
+        )
+        if formula_count:
+            st.caption(
+                f"检测到 {formula_count} 个疑似数学公式文字块。"
+                "已保留可用换行；可复制后选择“数学”模式解释。"
+                "复杂排版可能仍需对照页面图像。"
+            )
         with st.expander("按阅读顺序逐块复制", expanded=True):
             for display_index, block in enumerate(page_view.page.blocks, start=1):
-                st.caption(f"文本块 {display_index}")
+                block_label = (
+                    f"数学公式候选 · 文本块 {display_index}"
+                    if block.role == "formula"
+                    else f"文本块 {display_index}"
+                )
+                st.caption(block_label)
                 st.code(
                     block.text,
                     language=None,
-                    wrap_lines=True,
+                    wrap_lines=block.role != "formula",
                     height="content",
                 )
     else:

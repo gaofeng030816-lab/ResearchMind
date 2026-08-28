@@ -22,6 +22,7 @@ from researchmind.pdf.errors import (
 from researchmind.pdf.layout import (
     classify_block_role,
     normalize_block_text,
+    normalize_formula_text,
     order_text_blocks,
 )
 
@@ -297,16 +298,23 @@ def _extract_loaded_page(source_page: pymupdf.Page, page_number: int) -> Page:
         if block_type != 0:
             continue
 
-        block_text = normalize_block_text(str(raw_block[4]))
-        if not block_text:
+        raw_text = str(raw_block[4])
+        paragraph_text = normalize_block_text(raw_text)
+        if not paragraph_text:
             continue
+        role = classify_block_role(paragraph_text)
+        block_text = (
+            normalize_formula_text(raw_text)
+            if role == "formula"
+            else paragraph_text
+        )
 
         blocks.append(
             TextBlock(
                 block_index=int(raw_block[5]),
                 text=block_text,
                 bbox=bbox,
-                role=classify_block_role(block_text),
+                role=role,
             )
         )
 

@@ -27,6 +27,10 @@ def render_context_evidence(
         st.text(f"页码：{page_label}")
         st.text(f"章节：{preview.section_heading or '（未识别）'}")
         st.text(f"图表说明：{preview.related_caption or '（未识别）'}")
+        formula_status = (
+            "已识别（见下方）" if preview.related_formula else "（未识别）"
+        )
+        st.text(f"邻近公式：{formula_status}")
         st.text(f"预算内历史消息：{preview.history_message_count} 条")
         st.caption(
             f"请求估算：约 {preview.request_character_count:,} 字符 / "
@@ -35,8 +39,24 @@ def render_context_evidence(
         )
 
         st.markdown("**当前问题**")
-        st.code(preview.user_question or "（未提供）", language=None)
+        st.code(
+            preview.user_question or "（未提供）",
+            language=None,
+            height=140,
+        )
         st.markdown("**选中文本**")
-        st.code(preview.selected_text, language=None)
+        st.code(preview.selected_text, language=None, height=180)
+        if preview.related_formula:
+            st.markdown("**邻近公式文字层**")
+            st.code(
+                preview.related_formula,
+                language=None,
+                wrap_lines=False,
+                height=160,
+            )
         st.markdown("**周边文本**")
-        st.code(preview.surrounding_text or "（无可用周边文本）", language=None)
+        st.code(
+            preview.surrounding_text or "（无可用周边文本）",
+            language=None,
+            height=260,
+        )

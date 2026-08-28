@@ -19,20 +19,63 @@ MIN_GAP_POINTS = 5.0
 NARROW_BLOCK_WIDTH_RATIO = 0.10
 MAX_HEADING_CHARS = 160
 MAX_CAPTION_CHARS = 500
+MAX_FORMULA_CHARS = 500
+MAX_NUMBERED_HEADING_WORDS = 16
+MAX_SECTION_NUMBER_COMPONENT = 999
 
 _CAPTION_PATTERN = re.compile(
-    r"^(?:(?:fig(?:ure)?\.?|table)\s*(?:[a-z]?\d+|[ivxlcdm]+)"
-    r"|[图表]\s*[a-z]?[0-9一二三四五六七八九十百]+)"
-    r"(?:[\s.:：、-]|$)",
+    r"^(?P<label>(?:fig(?:ure)?\.?|table)\s*"
+    r"(?:[a-z]?\d+(?:\.\d+)*[a-z]?|[ivxlcdm]+)"
+    r"|[图表]\s*(?:\d+(?:\.\d+)*|[一二三四五六七八九十百]+))"
+    r"(?P<separator>\s+|[.:：、-](?!\d)[\s.:：、-]*|$)(?P<rest>.*)$",
     re.IGNORECASE,
 )
-_NUMBERED_HEADING_PATTERN = re.compile(
-    r"^(?:(?:\d+(?:\.\d+)*)|(?:[ivxlcdm]+))[.)]?\s+"
-    r"[A-Z\u4e00-\u9fff]",
-    re.IGNORECASE,
+_NUMERIC_HEADING_PATTERN = re.compile(
+    r"^(?P<number>\d+(?:\.\d+)*)[.)]?\s+(?P<title>.+)$"
+)
+_ROMAN_HEADING_PATTERN = re.compile(
+    r"^(?P<number>[IVXLCDM]+)[.)]\s+(?P<title>.+)$"
 )
 _CHINESE_HEADING_PATTERN = re.compile(
     r"^第[0-9一二三四五六七八九十百]+[章节]\s*\S+"
+)
+_CAPTION_REFERENCE_START_PATTERN = re.compile(
+    r"^(?:shows?|shown|reorganises?|reorganizes?|describes?|illustrates?|"
+    r"presents?|gives?|contains?|reports?|compares?|summari[sz]es?|depicts?|"
+    r"demonstrates?|lists?|introduces?|provides?|is|are|was|were)\b",
+    re.IGNORECASE,
+)
+_CHINESE_CAPTION_REFERENCE_START_PATTERN = re.compile(
+    r"^(?:给出(?:了)?|描述(?:了)?|显示(?:了)?|说明(?:了)?|展示(?:了)?|"
+    r"表明(?:了)?|列出(?:了)?|比较(?:了)?|是|中|可见)"
+)
+_PROCEDURE_OR_EXERCISE_START_PATTERN = re.compile(
+    r"^(?:procedure|input|output|return|repeat|for\b|while\b|sample\b|"
+    r"说明|证明|比较|试求|写出|考虑|设\b|已知|假设)",
+    re.IGNORECASE,
+)
+_REFERENCE_HINT_PATTERN = re.compile(
+    r"(?:https?://|\bdoi\b|\bet\s+al\.|\((?:19|20)\d{2}[a-z]?\))",
+    re.IGNORECASE,
+)
+_STRONG_MATH_PATTERN = re.compile(
+    r"[∑∫∏√∂∇∞±×÷≤≥≈≠≡∈∉⊂⊆⊗⊕→←↔]"
+)
+_RELATION_PATTERN = re.compile(r"(?:=|≤|≥|≈|≠|≡|(?<!<)<(?!<)|(?<!>)>(?!>))")
+_OPERATOR_OR_NOTATION_PATTERN = re.compile(
+    r"(?:[+*/^_]|(?<!\w)-(?!\s)|[()[\]{}]|\b(?:sin|cos|tan|log|exp)\b)",
+    re.IGNORECASE,
+)
+_DERIVATIVE_PATTERN = re.compile(
+    r"(?:\bd[A-Za-zα-ωΑ-Ω]+\s*/\s*d[A-Za-zα-ωΑ-Ω]+|∂)",
+)
+_LATEX_PATTERN = re.compile(
+    r"\\(?:frac|sum|int|prod|sqrt|partial|nabla|begin|left|right)\b"
+)
+_CODE_HINT_PATTERN = re.compile(
+    r"(?:^R>|<-|\bcursor\.execute\b|\bSELECT\b|\b(?:def|class|import)\s+|"
+    r"\[[^\]]*\bfor\b[^\]]*\])",
+    re.IGNORECASE,
 )
 _COMMON_HEADINGS = frozenset(
     {
@@ -87,25 +130,118 @@ def normalize_block_text(text: str) -> str:
     return paragraph.strip()
 
 
+def normalize_formula_text(text: str) -> str:
+    """Keep formula line boundaries while removing extraction-only spacing."""
+
+    return "\n".join(
+        " ".join(line.split())
+        for line in text.splitlines()
+        if line.strip()
+    ).strip()
+
+
 def classify_block_role(text: str) -> TextBlockRole:
-    """Classify only high-confidence paper headings and figure/table captions."""
+    """Classify only high-confidence structural and mathematical blocks."""
 
     normalized = " ".join(text.split())
     if not normalized:
         return "body"
-    if len(normalized) <= MAX_CAPTION_CHARS and _CAPTION_PATTERN.match(normalized):
+    if len(normalized) <= MAX_CAPTION_CHARS and _looks_like_caption(normalized):
         return "caption"
+    if len(normalized) <= MAX_FORMULA_CHARS and _looks_like_formula(normalized):
+        return "formula"
     if len(normalized) > MAX_HEADING_CHARS:
         return "body"
 
     normalized_heading = normalized.rstrip(":：").casefold()
     if normalized_heading in _COMMON_HEADINGS:
         return "heading"
-    if _NUMBERED_HEADING_PATTERN.match(normalized):
+    if _looks_like_numbered_heading(normalized):
         return "heading"
     if _CHINESE_HEADING_PATTERN.match(normalized):
         return "heading"
     return "body"
+
+
+def _looks_like_caption(text: str) -> bool:
+    match = _CAPTION_PATTERN.match(text)
+    if match is None:
+        return False
+
+    remainder = match.group("rest").strip()
+    if not remainder:
+        return True
+    if _CAPTION_REFERENCE_START_PATTERN.match(remainder):
+        return False
+    if _CHINESE_CAPTION_REFERENCE_START_PATTERN.match(remainder):
+        return False
+    return True
+
+
+def _looks_like_formula(text: str) -> bool:
+    if _REFERENCE_HINT_PATTERN.search(text) or _CODE_HINT_PATTERN.search(text):
+        return False
+
+    latin_word_count = len(re.findall(r"[A-Za-z]{2,}", text))
+    cjk_character_count = len(re.findall(r"[\u4e00-\u9fff]", text))
+    if latin_word_count > 8 or cjk_character_count > 16:
+        return False
+
+    if _LATEX_PATTERN.search(text) or _DERIVATIVE_PATTERN.search(text):
+        return True
+    if _STRONG_MATH_PATTERN.search(text):
+        return len(text.split()) <= 16
+    if not _RELATION_PATTERN.search(text):
+        return False
+    if text.endswith((".", "?", "!", "。", "？", "！")):
+        return False
+    if "$" in text and "=" not in text:
+        return False
+
+    has_notation = bool(_OPERATOR_OR_NOTATION_PATTERN.search(text))
+    return has_notation or len(text) <= 80
+
+
+def _looks_like_numbered_heading(text: str) -> bool:
+    numeric_match = _NUMERIC_HEADING_PATTERN.match(text)
+    if numeric_match is not None:
+        components = [int(value) for value in numeric_match.group("number").split(".")]
+        if any(value > MAX_SECTION_NUMBER_COMPONENT for value in components):
+            return False
+        return _looks_like_heading_title(numeric_match.group("title"))
+
+    roman_match = _ROMAN_HEADING_PATTERN.match(text)
+    if roman_match is None:
+        return False
+    return _looks_like_heading_title(roman_match.group("title"))
+
+
+def _looks_like_heading_title(title: str) -> bool:
+    normalized = title.strip()
+    if not normalized:
+        return False
+
+    common_title = normalized.rstrip(":：").casefold() in _COMMON_HEADINGS
+    first_character = normalized[0]
+    if first_character.isascii() and first_character.isalpha():
+        if first_character.islower() and not common_title:
+            return False
+    elif not ("\u4e00" <= first_character <= "\u9fff"):
+        return False
+
+    if normalized.endswith((".", "?", "!", ";", "。", "？", "！", "；")):
+        return False
+    if any(mark in normalized for mark in ("=", "<", ">")):
+        return False
+    if "." in normalized or "," in normalized or ";" in normalized:
+        return False
+    if _REFERENCE_HINT_PATTERN.search(normalized):
+        return False
+    if _PROCEDURE_OR_EXERCISE_START_PATTERN.match(normalized):
+        return False
+    if len(re.findall(r"[A-Za-z0-9]+", normalized)) > MAX_NUMBERED_HEADING_WORDS:
+        return False
+    return True
 
 
 def order_text_blocks(blocks: list[TextBlock]) -> list[TextBlock]:

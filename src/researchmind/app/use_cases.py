@@ -104,6 +104,7 @@ class ContextEvidencePreview:
     selected_text: str
     section_heading: str
     related_caption: str
+    related_formula: str
     surrounding_text: str
     user_question: str
     history_message_count: int
@@ -432,6 +433,7 @@ def _context_evidence_preview(
         selected_text=context.selected_text,
         section_heading=context.section_heading,
         related_caption=context.related_caption,
+        related_formula=context.related_formula,
         surrounding_text=context.surrounding_text,
         user_question=context.user_question,
         history_message_count=len(context.conversation_history),

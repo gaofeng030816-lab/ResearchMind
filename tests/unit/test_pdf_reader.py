@@ -21,7 +21,7 @@ from researchmind.pdf import (
     render_figure_images,
     render_page_image,
 )
-from researchmind.pdf.layout import classify_block_role
+from researchmind.pdf.layout import classify_block_role, normalize_formula_text
 from tests.fixtures.pdf_factory import create_text_pdf
 
 
@@ -34,7 +34,25 @@ from tests.fixtures.pdf_factory import create_text_pdf
         ("Figure 2. Accuracy by training step", "caption"),
         ("Table IV: Ablation results", "caption"),
         ("图 3 消融实验结果", "caption"),
+        ("x^2 + y^2 = z^2", "formula"),
+        ("∂L / ∂z(t) = a(t)", "formula"),
         ("The method improves accuracy on all datasets.", "body"),
+        ("1. Each variable forms a column.", "body"),
+        ("4 repeat", "body"),
+        ("M. Hanke, A regularization method.", "body"),
+        ("600000 Compiled mode", "body"),
+        ("Figure 8 shows examples from the model.", "body"),
+        ("Table 3 reorganises the observations.", "body"),
+        ("图1.2给出了监督学习问题", "body"),
+        (
+            "To optimize L, we require gradients with respect to theta. "
+            "The term ∂f/∂z is evaluated at each step.",
+            "body",
+        ),
+        ("其中模型由条件概率分布P(Y|X)或决策函数Y=f(X)表示。", "body"),
+        ('R> hod2 <- join(hod2, codes, by = "cod")', "body"),
+        ("religion / <$10k / $10-20k", "body"),
+        ("cursor.execute('SELECT ... WHERE id=%s', user_id)", "body"),
     ),
 )
 def test_text_block_role_classifier_is_conservative(
@@ -42,6 +60,14 @@ def test_text_block_role_classifier_is_conservative(
     expected_role: str,
 ) -> None:
     assert classify_block_role(text) == expected_role
+
+
+def test_formula_normalization_preserves_semantic_lines() -> None:
+    text = "  z(t1) = z(t0) +  \n  integral(f(z(t), t)) dt  \n"
+
+    assert normalize_formula_text(text) == (
+        "z(t1) = z(t0) +\nintegral(f(z(t), t)) dt"
+    )
 
 
 def test_open_pdf_extracts_metadata_pages_text_and_blocks(
@@ -143,13 +169,18 @@ def test_blank_page_extracts_empty_text_and_blocks(blank_page_pdf: Path) -> None
 def test_unicode_and_mathematical_content_is_extracted(
     unicode_math_pdf: Path,
 ) -> None:
-    text = open_pdf(unicode_math_pdf).pages[0].text
+    page = open_pdf(unicode_math_pdf).pages[0]
+    text = page.text
 
     assert "中文文本" in text
     assert "α" in text
     assert "β" in text
     assert "γ" in text
     assert "x^2 + y^2 = z^2" in text
+    assert any(
+        block.role == "formula" and "x^2 + y^2 = z^2" in block.text
+        for block in page.blocks
+    )
 
 
 @pytest.mark.parametrize("page_number", (0, 2, -1, True))

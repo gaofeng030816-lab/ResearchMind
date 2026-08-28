@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 
 from researchmind.core.conversation import (
@@ -18,8 +19,10 @@ from researchmind.models import (
 
 
 CAPTION_BLOCK_DISTANCE = 2
+FORMULA_BLOCK_DISTANCE = 2
 MAX_SECTION_HEADING_CHARS = 160
 MAX_RELATED_CAPTION_CHARS = 500
+MAX_RELATED_FORMULA_CHARS = 500
 
 
 def build_research_context(
@@ -39,10 +42,11 @@ def build_research_context(
         raise ValueError("Conversation does not belong to the opened document.")
 
     page_number = _locator_int(selection, "page_number")
-    section_heading, related_caption = _context_landmarks(
+    section_heading, related_caption, related_formula = _context_landmarks(
         selection,
         pages,
         page_number=page_number,
+        document_title=document.title,
     )
     history = [] if conversation is None else conversation.messages
     return ResearchContext(
@@ -56,6 +60,7 @@ def build_research_context(
         page_number=page_number,
         section_heading=section_heading,
         related_caption=related_caption,
+        related_formula=related_formula,
         document_id=document.id,
         document_title=document.title,
         author=", ".join(document.authors),
@@ -73,13 +78,14 @@ def _context_landmarks(
     pages: Sequence[Page],
     *,
     page_number: int | None,
-) -> tuple[str, str]:
+    document_title: str,
+) -> tuple[str, str, str]:
     if page_number is None:
-        return "", ""
+        return "", "", ""
 
     page = next((item for item in pages if item.page_number == page_number), None)
     if page is None or not page.blocks:
-        return "", ""
+        return "", "", ""
 
     block_index = _locator_int(selection, "block_index")
     anchor_position = next(
@@ -91,17 +97,20 @@ def _context_landmarks(
         None,
     )
     if anchor_position is None:
-        return "", ""
+        return "", "", ""
 
     section_heading = _nearest_section_heading(
         pages,
         page_number=page_number,
         anchor_position=anchor_position,
+        document_title=document_title,
     )
     related_caption = _nearest_caption(page, anchor_position=anchor_position)
+    related_formula = _nearby_formula(page, anchor_position=anchor_position)
     return (
         section_heading[:MAX_SECTION_HEADING_CHARS],
         related_caption[:MAX_RELATED_CAPTION_CHARS],
+        related_formula[:MAX_RELATED_FORMULA_CHARS],
     )
 
 
@@ -110,6 +119,7 @@ def _nearest_section_heading(
     *,
     page_number: int,
     anchor_position: int,
+    document_title: str,
 ) -> str:
     eligible_pages = sorted(
         (page for page in pages if page.page_number <= page_number),
@@ -119,7 +129,10 @@ def _nearest_section_heading(
     for page in eligible_pages:
         end = anchor_position if page.page_number == page_number else len(page.blocks)
         for block in reversed(page.blocks[:end]):
-            if block.role == "heading":
+            if block.role == "heading" and not _is_running_title_header(
+                block.text,
+                document_title,
+            ):
                 return block.text
     return ""
 
@@ -133,6 +146,24 @@ def _nearest_caption(page: Page, *, anchor_position: int) -> str:
     )
     nearest = min(candidates, default=None)
     return "" if nearest is None else nearest[2]
+
+
+def _nearby_formula(page: Page, *, anchor_position: int) -> str:
+    nearby_formulas = (
+        block.text
+        for index, block in enumerate(page.blocks)
+        if block.role == "formula"
+        and abs(index - anchor_position) <= FORMULA_BLOCK_DISTANCE
+    )
+    return "\n".join(nearby_formulas)
+
+
+def _is_running_title_header(block_text: str, document_title: str) -> bool:
+    normalized_title = " ".join(document_title.split()).casefold()
+    if not normalized_title:
+        return False
+    match = re.match(r"^\d+\s+(.+)$", " ".join(block_text.split()))
+    return match is not None and match.group(1).strip().casefold() == normalized_title
 
 
 def _surrounding_text(
