@@ -8,10 +8,12 @@ from typing import Literal
 MessageRole = Literal["user", "assistant"]
 MessageTask = Literal[
     "translate",
+    "convert:latex",
     "explain:concept",
     "explain:math",
     "explain:algorithm",
     "explain:contextual",
+    "explain:code",
     "followup",
 ]
 

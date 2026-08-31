@@ -36,7 +36,10 @@ def test_explanation_preview_exposes_bounded_evidence_without_provider_call(
     )
 
     assert preview.document_title == "Structured Research Paper"
+    assert preview.source_type == "pdf"
     assert preview.page_number == 1
+    assert preview.block_index is not None
+    assert preview.bbox is not None
     assert preview.selected_text == "Second context block"
     assert preview.section_heading == "2 Proposed Method"
     assert preview.related_caption == "Figure 3. Update overview"
@@ -65,6 +68,8 @@ def test_math_preview_includes_formula_text_without_provider_call(
     )
 
     assert preview.page_number == 1
+    assert preview.block_index is not None
+    assert preview.bbox is not None
     assert "x^2 + y^2 = z^2" in preview.related_formula
 
 

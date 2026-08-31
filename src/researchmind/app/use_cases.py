@@ -3,22 +3,64 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
+from researchmind.code import (
+    CodeProjectError,
+    apply_code_change as code_apply_code_change,
+    code_file_from_proposal,
+    code_file_from_recovery,
+    open_code_project as code_open_code_project,
+    read_code_snapshot,
+    rollback_code_change as code_rollback_code_change,
+)
 from researchmind.config import ConfigError, Settings, load_settings
-from researchmind.core import build_research_context, locate_selection
+from researchmind.core import (
+    MAX_ASSISTANT_LLM_CALLS,
+    MAX_ASSISTANT_TOOL_CALLS,
+    add_evidence_link as core_add_evidence_link,
+    build_code_change_proposal,
+    build_code_context,
+    build_research_context,
+    create_read_only_assistant_session,
+    create_user_confirmed_evidence_link,
+    get_code_file as core_get_code_file,
+    locate_selection,
+    record_assistant_final_step,
+    record_assistant_tool_step,
+    replace_code_project_file,
+    select_code_lines,
+    select_code_symbol,
+    select_text_block,
+    summarize_code_project,
+    stop_read_only_assistant_session,
+    tool_output_stop_reason,
+    tool_request_stop_reason,
+    validate_code_change_snapshot,
+)
 from researchmind.core.conversation import APPROXIMATE_CHARS_PER_TOKEN
 from researchmind.llm import (
     ChatMessage,
     LlmError,
     LlmProvider,
     build_algorithm_prompt,
+    build_code_change_prompt,
+    build_code_explanation_prompt,
     build_concept_prompt,
     build_contextual_prompt,
     build_followup_prompt,
+    build_latex_prompt,
     build_math_prompt,
+    build_read_only_assistant_prompt,
     create_llm_provider,
+    parse_assistant_action,
+    parse_code_replacement,
+    parse_latex_response,
+)
+from researchmind.maintenance import (
+    diagnose_configuration as maintenance_diagnose_configuration,
 )
 from researchmind.integration.obsidian import (
     ObsidianError,
@@ -27,12 +69,31 @@ from researchmind.integration.obsidian import (
     write_note_to_vault,
 )
 from researchmind.models import (
+    AssistantToolName,
+    AssistantToolResult,
+    BoundingBox,
+    CodeChangeAuditAction,
+    CodeChangeAuditEvent,
+    CodeChangeAuditStatus,
+    CodeChangeProposal,
+    CodeChangeReceipt,
+    CodeChangeRollbackReceipt,
+    CodeContext,
+    CodeFile,
+    CodeProject,
+    CodeProjectSummary,
+    CodeSelection,
     Conversation,
+    ConfigurationReport,
+    EvidenceLink,
+    EvidenceRelation,
     KnowledgeNote,
     Message,
     Page,
     ReadingSelection,
     ResearchContext,
+    ReadOnlyAssistantSession,
+    PaperEvidenceKind,
 )
 from researchmind.pdf import (
     OpenedDocument,
@@ -55,6 +116,7 @@ from researchmind.translation import (
 ExplainMode = Literal["concept", "math", "algorithm", "contextual"]
 MIN_TEXT_COVERAGE_RATIO = 0.1
 USER_FACING_ERRORS = (
+    CodeProjectError,
     ConfigError,
     PdfError,
     LlmError,
@@ -62,6 +124,12 @@ USER_FACING_ERRORS = (
     ObsidianError,
     ValueError,
 )
+
+
+def get_configuration_report() -> ConfigurationReport:
+    """Return a local, non-secret configuration report without network calls."""
+
+    return maintenance_diagnose_configuration()
 
 
 @dataclass(frozen=True)
@@ -100,7 +168,10 @@ class ContextEvidencePreview:
 
     document_title: str
     author: str
+    source_type: str
     page_number: int | None
+    block_index: int | None
+    bbox: BoundingBox | None
     selected_text: str
     section_heading: str
     related_caption: str
@@ -110,6 +181,41 @@ class ContextEvidencePreview:
     history_message_count: int
     request_character_count: int
     approximate_request_tokens: int
+
+
+@dataclass(frozen=True)
+class CodeContextEvidencePreview:
+    """Read-only code evidence and request-size preview for one LLM call."""
+
+    project_name: str
+    source_type: str
+    relative_path: str
+    start_line: int
+    end_line: int
+    symbol_kind: str | None
+    symbol_name: str | None
+    extraction_method: str
+    selected_code: str
+    surrounding_code: str
+    user_question: str
+    request_character_count: int
+    approximate_request_tokens: int
+
+
+@dataclass(frozen=True)
+class CodeChangeApplication:
+    """One applied change plus the refreshed in-memory project model."""
+
+    project: CodeProject
+    receipt: CodeChangeReceipt
+
+
+@dataclass(frozen=True)
+class CodeChangeRollbackApplication:
+    """One rollback plus the refreshed in-memory project model."""
+
+    project: CodeProject
+    receipt: CodeChangeRollbackReceipt
 
 
 _EXPLANATION_BUILDERS = {
@@ -125,6 +231,253 @@ _DEFAULT_QUESTIONS = {
     "algorithm": "Explain this algorithm.",
     "contextual": "Explain this selection in its paper context.",
 }
+_LATEX_QUESTION = "Convert the selected mathematical material to LaTeX."
+
+
+def open_code_project(path: Path) -> CodeProject:
+    """Open one local Python folder through the fixed T3 safety limits."""
+
+    return code_open_code_project(path)
+
+
+def get_code_file(project: CodeProject, relative_path: str) -> CodeFile:
+    """Return one indexed code file without exposing reader internals to the UI."""
+
+    return core_get_code_file(project, relative_path)
+
+
+def get_code_project_summary(project: CodeProject) -> CodeProjectSummary:
+    """Return a path-safe static overview without reading new files."""
+
+    return summarize_code_project(project)
+
+
+def create_code_symbol_selection(
+    project: CodeProject,
+    relative_path: str,
+    *,
+    symbol_index: int,
+) -> CodeSelection:
+    """Create a traceable selection from one statically located symbol."""
+
+    return select_code_symbol(
+        project,
+        relative_path,
+        symbol_index=symbol_index,
+    )
+
+
+def create_code_line_selection(
+    project: CodeProject,
+    relative_path: str,
+    *,
+    start_line: int,
+    end_line: int,
+) -> CodeSelection:
+    """Create a traceable selection from an explicit inclusive line range."""
+
+    return select_code_lines(
+        project,
+        relative_path,
+        start_line=start_line,
+        end_line=end_line,
+    )
+
+
+def preview_code_context(
+    project: CodeProject,
+    selection: CodeSelection,
+    *,
+    question: str,
+    settings: Settings | None = None,
+) -> CodeContextEvidencePreview:
+    """Preview the exact bounded code request without invoking an LLM."""
+
+    resolved_settings = settings or load_settings()
+    context = _build_code_explanation_context(
+        project,
+        selection,
+        question=question,
+        settings=resolved_settings,
+    )
+    request_messages = build_code_explanation_prompt(context)
+    request_character_count = _request_character_count(request_messages)
+    return CodeContextEvidencePreview(
+        project_name=context.project_name,
+        source_type=context.source,
+        relative_path=context.relative_path,
+        start_line=context.start_line,
+        end_line=context.end_line,
+        symbol_kind=context.symbol_kind,
+        symbol_name=context.symbol_name,
+        extraction_method=context.extraction_method,
+        selected_code=context.selected_code,
+        surrounding_code=context.surrounding_code,
+        user_question=context.user_question,
+        request_character_count=request_character_count,
+        approximate_request_tokens=_approximate_tokens(
+            request_character_count
+        ),
+    )
+
+
+def explain_code_selection(
+    project: CodeProject,
+    selection: CodeSelection,
+    *,
+    question: str,
+    llm_provider: LlmProvider | None = None,
+    settings: Settings | None = None,
+) -> Message:
+    """Explain one explicit static-code selection without execution authority."""
+
+    resolved_settings = settings or load_settings()
+    context = _build_code_explanation_context(
+        project,
+        selection,
+        question=question,
+        settings=resolved_settings,
+    )
+    provider = llm_provider or create_llm_provider(resolved_settings)
+    response = provider.complete(build_code_explanation_prompt(context))
+    return Message(
+        role="assistant",
+        task="explain:code",
+        content=response,
+        selection_id=selection.id,
+    )
+
+
+def propose_code_change(
+    project: CodeProject,
+    selection: CodeSelection,
+    *,
+    instruction: str,
+    llm_provider: LlmProvider | None = None,
+    settings: Settings | None = None,
+) -> CodeChangeProposal:
+    """Request and validate one preview-only selected-range replacement."""
+
+    resolved_settings = settings or load_settings()
+    snapshot = read_code_snapshot(project, selection.relative_path)
+    validate_code_change_snapshot(project, selection, snapshot)
+    context = _build_code_explanation_context(
+        project,
+        selection,
+        question=instruction,
+        settings=resolved_settings,
+    )
+    provider = llm_provider or create_llm_provider(resolved_settings)
+    response = provider.complete(build_code_change_prompt(context))
+    replacement = parse_code_replacement(response)
+    return build_code_change_proposal(
+        project,
+        selection,
+        snapshot,
+        replacement_text=replacement,
+    )
+
+
+def apply_code_change_proposal(
+    project: CodeProject,
+    proposal: CodeChangeProposal,
+    *,
+    confirmed: bool,
+) -> CodeChangeApplication:
+    """Apply exactly one proposal only after explicit per-action confirmation."""
+
+    if not confirmed:
+        raise ValueError("Code change requires explicit confirmation before writing.")
+    updated_file = code_file_from_proposal(proposal)
+    receipt = code_apply_code_change(project, proposal)
+    return CodeChangeApplication(
+        project=replace_code_project_file(project, updated_file),
+        receipt=receipt,
+    )
+
+
+def rollback_applied_code_change(
+    project: CodeProject,
+    receipt: CodeChangeReceipt,
+    *,
+    confirmed: bool,
+) -> CodeChangeRollbackApplication:
+    """Roll back exactly one applied change after a second explicit consent."""
+
+    if not confirmed:
+        raise ValueError("Code rollback requires explicit confirmation.")
+    updated_file = code_file_from_recovery(project, receipt)
+    rollback_receipt = code_rollback_code_change(project, receipt)
+    return CodeChangeRollbackApplication(
+        project=replace_code_project_file(project, updated_file),
+        receipt=rollback_receipt,
+    )
+
+
+def create_code_change_audit_event(
+    *,
+    action: CodeChangeAuditAction,
+    status: CodeChangeAuditStatus,
+    relative_path: str,
+    start_line: int,
+    end_line: int,
+    before_sha256: str | None = None,
+    after_sha256: str | None = None,
+    recovery_relative_path: str | None = None,
+    error: Exception | None = None,
+) -> CodeChangeAuditEvent:
+    """Create non-sensitive session metadata for one T5-B1 user action."""
+
+    if not relative_path or relative_path.startswith(("/", "\\")):
+        raise ValueError("Code-change audit requires a relative path.")
+    if start_line < 1 or end_line < start_line:
+        raise ValueError("Code-change audit requires a valid line range.")
+    return CodeChangeAuditEvent(
+        action=action,
+        status=status,
+        relative_path=relative_path,
+        start_line=start_line,
+        end_line=end_line,
+        occurred_at=datetime.now(UTC).isoformat(timespec="seconds"),
+        before_sha256=before_sha256,
+        after_sha256=after_sha256,
+        recovery_relative_path=recovery_relative_path,
+        error_type=None if error is None else type(error).__name__,
+    )
+
+
+def create_evidence_link(
+    document: OpenedDocument,
+    reading_selection: ReadingSelection,
+    code_project: CodeProject,
+    code_selection: CodeSelection,
+    *,
+    evidence_kind: PaperEvidenceKind,
+    relation: EvidenceRelation,
+    confidence: float,
+    rationale: str | None = None,
+) -> EvidenceLink:
+    """Create a user-confirmed link without merging paper and code contexts."""
+
+    return create_user_confirmed_evidence_link(
+        document.document,
+        reading_selection,
+        code_project,
+        code_selection,
+        evidence_kind=evidence_kind,
+        relation=relation,
+        confidence=confidence,
+        rationale=rationale,
+    )
+
+
+def add_evidence_link(
+    existing_links: list[EvidenceLink],
+    link: EvidenceLink,
+) -> list[EvidenceLink]:
+    """Add one evidence link while preserving collection immutability."""
+
+    return core_add_evidence_link(existing_links, link)
 
 
 def open_pdf(path: Path, *, settings: Settings | None = None) -> OpenedDocument:
@@ -176,6 +529,22 @@ def create_selection(
     """Create a selection, locating it when extracted text permits."""
 
     return locate_selection(text, document.pages, current_page=current_page)
+
+
+def create_block_selection(
+    document: OpenedDocument,
+    page_number: int,
+    block_index: int,
+) -> ReadingSelection:
+    """Create an exact selection from one displayed document text block."""
+
+    page = next(
+        (item for item in document.pages if item.page_number == page_number),
+        None,
+    )
+    if page is None:
+        raise ValueError(f"Page {page_number} was not found in the opened PDF.")
+    return select_text_block(page, block_index=block_index)
 
 
 def translate_selection(
@@ -256,6 +625,55 @@ def preview_explanation_context(
     )
 
 
+def convert_selection_to_latex(
+    selection: ReadingSelection,
+    *,
+    document: OpenedDocument,
+    conversation: Conversation | None = None,
+    llm_provider: LlmProvider | None = None,
+    settings: Settings | None = None,
+) -> Message:
+    """Convert selected mathematical text to one constrained LaTeX expression."""
+
+    resolved_settings = settings or load_settings()
+    context = _build_context(
+        selection,
+        document=document,
+        conversation=conversation,
+        user_question=_LATEX_QUESTION,
+        settings=resolved_settings,
+    )
+    provider = llm_provider or create_llm_provider(resolved_settings)
+    expression = parse_latex_response(
+        provider.complete(build_latex_prompt(context))
+    )
+    return Message(
+        role="assistant",
+        task="convert:latex",
+        content=expression,
+    )
+
+
+def preview_latex_context(
+    selection: ReadingSelection,
+    *,
+    document: OpenedDocument,
+    conversation: Conversation | None = None,
+    settings: Settings | None = None,
+) -> ContextEvidencePreview:
+    """Preview exactly what a LaTeX conversion sends without calling an LLM."""
+
+    resolved_settings = settings or load_settings()
+    context = _build_context(
+        selection,
+        document=document,
+        conversation=conversation,
+        user_question=_LATEX_QUESTION,
+        settings=resolved_settings,
+    )
+    return _context_evidence_preview(context, build_latex_prompt(context))
+
+
 def ask_followup(
     question: str,
     *,
@@ -303,6 +721,404 @@ def preview_followup_context(
     return _context_evidence_preview(context, build_followup_prompt(context))
 
 
+def get_available_assistant_tools(
+    *,
+    document: OpenedDocument | None,
+    reading_selection: ReadingSelection | None,
+    code_project: CodeProject | None,
+    code_selection: CodeSelection | None,
+    evidence_links: list[EvidenceLink],
+) -> tuple[AssistantToolName, ...]:
+    """Return the fixed read-only tools backed by current session evidence."""
+
+    available: list[AssistantToolName] = []
+    if document is not None and reading_selection is not None:
+        available.append("inspect_paper_context")
+    if (
+        code_project is not None
+        and code_selection is not None
+        and code_selection.project_id == code_project.id
+    ):
+        available.append("inspect_code_context")
+    if evidence_links:
+        available.append("inspect_evidence_links")
+    return tuple(available)
+
+
+def start_read_only_assistant(
+    question: str,
+    *,
+    document: OpenedDocument | None,
+    reading_selection: ReadingSelection | None,
+    conversation: Conversation | None,
+    code_project: CodeProject | None,
+    code_selection: CodeSelection | None,
+    evidence_links: list[EvidenceLink],
+    llm_provider: LlmProvider | None = None,
+    settings: Settings | None = None,
+) -> ReadOnlyAssistantSession:
+    """Start one bounded run and perform exactly one model decision."""
+
+    session = create_read_only_assistant_session(question)
+    return _advance_read_only_assistant(
+        session,
+        document=document,
+        reading_selection=reading_selection,
+        conversation=conversation,
+        code_project=code_project,
+        code_selection=code_selection,
+        evidence_links=evidence_links,
+        llm_provider=llm_provider,
+        settings=settings,
+    )
+
+
+def continue_read_only_assistant(
+    session: ReadOnlyAssistantSession,
+    *,
+    document: OpenedDocument | None,
+    reading_selection: ReadingSelection | None,
+    conversation: Conversation | None,
+    code_project: CodeProject | None,
+    code_selection: CodeSelection | None,
+    evidence_links: list[EvidenceLink],
+    llm_provider: LlmProvider | None = None,
+    settings: Settings | None = None,
+) -> ReadOnlyAssistantSession:
+    """Continue only after the user has reviewed the pending tool result."""
+
+    if session.status != "awaiting_user":
+        raise ValueError(
+            "Only a read-only assistant waiting for user confirmation can continue."
+        )
+    return _advance_read_only_assistant(
+        session,
+        document=document,
+        reading_selection=reading_selection,
+        conversation=conversation,
+        code_project=code_project,
+        code_selection=code_selection,
+        evidence_links=evidence_links,
+        llm_provider=llm_provider,
+        settings=settings,
+    )
+
+
+def stop_read_only_assistant(
+    session: ReadOnlyAssistantSession,
+    *,
+    reason: str | None = None,
+) -> ReadOnlyAssistantSession:
+    """Stop a session immediately from an explicit user action."""
+
+    return stop_read_only_assistant_session(
+        session,
+        stop_reason="user_stopped",
+        requested_action="user_stop",
+        error_message=(reason or "Stopped by the user.").strip(),
+    )
+
+
+def _advance_read_only_assistant(
+    session: ReadOnlyAssistantSession,
+    *,
+    document: OpenedDocument | None,
+    reading_selection: ReadingSelection | None,
+    conversation: Conversation | None,
+    code_project: CodeProject | None,
+    code_selection: CodeSelection | None,
+    evidence_links: list[EvidenceLink],
+    llm_provider: LlmProvider | None,
+    settings: Settings | None,
+) -> ReadOnlyAssistantSession:
+    if session.llm_call_count >= MAX_ASSISTANT_LLM_CALLS:
+        return stop_read_only_assistant_session(
+            session,
+            stop_reason="llm_budget",
+            requested_action="budget_check",
+            error_message="The four-call model budget was exhausted.",
+        )
+
+    resolved_settings = settings or load_settings()
+    available_tools = get_available_assistant_tools(
+        document=document,
+        reading_selection=reading_selection,
+        code_project=code_project,
+        code_selection=code_selection,
+        evidence_links=evidence_links,
+    )
+    request_messages = build_read_only_assistant_prompt(
+        session.question,
+        tool_results=session.tool_results,
+        available_tools=available_tools,
+        remaining_tool_calls=max(
+            0,
+            MAX_ASSISTANT_TOOL_CALLS - session.tool_call_count,
+        ),
+    )
+    request_character_count = _request_character_count(request_messages)
+    provider = llm_provider or create_llm_provider(resolved_settings)
+    try:
+        response = provider.complete(request_messages)
+    except LlmError as error:
+        return stop_read_only_assistant_session(
+            session,
+            stop_reason="provider_error",
+            requested_action="provider_call",
+            error_message=str(error),
+            request_character_count=request_character_count,
+            llm_call_increment=1,
+        )
+
+    response_character_count = len(response)
+    try:
+        action = parse_assistant_action(response)
+    except LlmError as error:
+        return stop_read_only_assistant_session(
+            session,
+            stop_reason="invalid_protocol",
+            requested_action="invalid_protocol",
+            error_message=str(error),
+            request_character_count=request_character_count,
+            response_character_count=response_character_count,
+            llm_call_increment=1,
+        )
+
+    if action.action == "final":
+        return record_assistant_final_step(
+            session,
+            action,
+            request_character_count=request_character_count,
+            response_character_count=response_character_count,
+        )
+
+    stop_reason = tool_request_stop_reason(session, action.action)
+    if stop_reason is not None:
+        return stop_read_only_assistant_session(
+            session,
+            stop_reason=stop_reason,
+            requested_action=action.action,
+            error_message="The requested tool is not permitted at this step.",
+            request_character_count=request_character_count,
+            response_character_count=response_character_count,
+            llm_call_increment=1,
+        )
+
+    try:
+        tool_result = _execute_read_only_assistant_tool(
+            action.action,
+            question=session.question,
+            document=document,
+            reading_selection=reading_selection,
+            conversation=conversation,
+            code_project=code_project,
+            code_selection=code_selection,
+            evidence_links=evidence_links,
+            settings=resolved_settings,
+        )
+    except ValueError as error:
+        return stop_read_only_assistant_session(
+            session,
+            stop_reason="tool_error",
+            requested_action=action.action,
+            error_message=str(error),
+            request_character_count=request_character_count,
+            response_character_count=response_character_count,
+            llm_call_increment=1,
+        )
+
+    output_stop_reason = tool_output_stop_reason(session, tool_result)
+    if output_stop_reason is not None:
+        return stop_read_only_assistant_session(
+            session,
+            stop_reason=output_stop_reason,
+            requested_action=action.action,
+            error_message="The local tool output exceeded the assistant budget.",
+            request_character_count=request_character_count,
+            response_character_count=response_character_count,
+            llm_call_increment=1,
+        )
+    return record_assistant_tool_step(
+        session,
+        action,
+        tool_result,
+        request_character_count=request_character_count,
+        response_character_count=response_character_count,
+    )
+
+
+def _execute_read_only_assistant_tool(
+    tool_name: AssistantToolName,
+    *,
+    question: str,
+    document: OpenedDocument | None,
+    reading_selection: ReadingSelection | None,
+    conversation: Conversation | None,
+    code_project: CodeProject | None,
+    code_selection: CodeSelection | None,
+    evidence_links: list[EvidenceLink],
+    settings: Settings,
+) -> AssistantToolResult:
+    """Dispatch one fixed no-argument read-only tool without reflection."""
+
+    if tool_name == "inspect_paper_context":
+        if document is None or reading_selection is None:
+            return AssistantToolResult(
+                tool_name=tool_name,
+                status="unavailable",
+                source_summary="No current paper selection",
+                content="No paper selection is available in the current session.",
+            )
+        context = _build_context(
+            reading_selection,
+            document=document,
+            conversation=conversation,
+            user_question=question,
+            settings=settings,
+        )
+        return AssistantToolResult(
+            tool_name=tool_name,
+            status="available",
+            source_summary=_paper_source_summary(context),
+            content=_serialize_paper_context(context),
+        )
+
+    if tool_name == "inspect_code_context":
+        if code_project is None or code_selection is None:
+            return AssistantToolResult(
+                tool_name=tool_name,
+                status="unavailable",
+                source_summary="No current code selection",
+                content="No code selection is available in the current session.",
+            )
+        context = _build_code_explanation_context(
+            code_project,
+            code_selection,
+            question=question,
+            settings=settings,
+        )
+        return AssistantToolResult(
+            tool_name=tool_name,
+            status="available",
+            source_summary=(
+                f"{context.project_name}:"
+                f"{context.relative_path}:{context.start_line}-{context.end_line}"
+            ),
+            content=_serialize_code_context(context),
+        )
+
+    if tool_name == "inspect_evidence_links":
+        if not evidence_links:
+            return AssistantToolResult(
+                tool_name=tool_name,
+                status="unavailable",
+                source_summary="No current evidence links",
+                content="No paper-to-code evidence links exist in the current session.",
+            )
+        return AssistantToolResult(
+            tool_name=tool_name,
+            status="available",
+            source_summary=f"{len(evidence_links)} current evidence link(s)",
+            content=_serialize_evidence_links(evidence_links),
+        )
+
+    raise ValueError("Unsupported read-only assistant tool.")
+
+
+def _paper_source_summary(context: ResearchContext) -> str:
+    if context.page_number is None:
+        return f"{context.document_title}: unlocated selection"
+    return f"{context.document_title}: page {context.page_number}"
+
+
+def _serialize_paper_context(context: ResearchContext) -> str:
+    bbox = (
+        ""
+        if context.bbox is None
+        else ", ".join(f"{coordinate:.2f}" for coordinate in context.bbox)
+    )
+    history = "\n".join(
+        f"- {message.role}/{message.task}: {message.content}"
+        for message in context.conversation_history
+    )
+    fields = (
+        ("Document", context.document_title),
+        ("Author", context.author),
+        ("Source type", context.source),
+        ("Page", "" if context.page_number is None else str(context.page_number)),
+        (
+            "Block",
+            "" if context.block_index is None else str(context.block_index),
+        ),
+        ("Bounding box", bbox),
+        ("Section", context.section_heading),
+        ("Related caption", context.related_caption),
+        ("Related formula", context.related_formula),
+        ("Surrounding text", context.surrounding_text),
+        ("Selected text", context.selected_text),
+        ("Budgeted conversation", history or "(none)"),
+    )
+    return "\n".join(f"{name}: {value}" for name, value in fields)
+
+
+def _serialize_code_context(context: CodeContext) -> str:
+    fields = (
+        ("Project", context.project_name),
+        ("Source type", context.source),
+        ("Relative path", context.relative_path),
+        ("Lines", f"{context.start_line}-{context.end_line}"),
+        ("Symbol kind", context.symbol_kind or ""),
+        ("Symbol name", context.symbol_name or ""),
+        ("Extraction method", context.extraction_method),
+        ("Surrounding code", context.surrounding_code),
+        ("Selected code", context.selected_code),
+    )
+    return "\n".join(f"{name}: {value}" for name, value in fields)
+
+
+def _serialize_evidence_links(evidence_links: list[EvidenceLink]) -> str:
+    rendered: list[str] = []
+    for index, link in enumerate(evidence_links, start=1):
+        paper_bbox = (
+            ""
+            if link.paper.bbox is None
+            else ", ".join(
+                f"{coordinate:.2f}" for coordinate in link.paper.bbox
+            )
+        )
+        rendered.extend(
+            (
+                f"[Evidence link {index}]",
+                f"Relation: {link.relation}",
+                f"Confidence: {link.confidence:.2f}",
+                f"Generation method: {link.generation_method}",
+                f"Rationale: {link.rationale or ''}",
+                f"Paper title: {link.paper.document_title}",
+                f"Paper evidence kind: {link.paper.evidence_kind}",
+                f"Paper page: {link.paper.page_number}",
+                (
+                    "Paper block: "
+                    + (
+                        ""
+                        if link.paper.block_index is None
+                        else str(link.paper.block_index)
+                    )
+                ),
+                f"Paper bounding box: {paper_bbox}",
+                f"Paper excerpt: {link.paper.excerpt}",
+                f"Code project: {link.code.project_name}",
+                f"Code relative path: {link.code.relative_path}",
+                f"Code lines: {link.code.start_line}-{link.code.end_line}",
+                f"Code symbol kind: {link.code.symbol_kind or ''}",
+                f"Code symbol name: {link.code.symbol_name or ''}",
+                f"Code extraction method: {link.code.extraction_method}",
+                f"Code excerpt: {link.code.excerpt}",
+                "",
+            )
+        )
+    return "\n".join(rendered).rstrip()
+
+
 def capture_knowledge(
     document: OpenedDocument,
     selection: ReadingSelection | None,
@@ -311,19 +1127,32 @@ def capture_knowledge(
     tags: list[str],
     *,
     title: str | None = None,
+    evidence_links: list[EvidenceLink] | None = None,
 ) -> KnowledgeNote:
     """Assemble selected reading and conversation content into a KnowledgeNote."""
 
     return KnowledgeNote(
         title=_knowledge_title(title, document, selection),
         source=document.document.title,
+        source_type=(
+            document.document.source_type
+            if selection is None
+            else selection.source_type
+        ),
         authors=list(document.document.authors),
         page_number=_selection_page_number(selection),
+        block_index=_selection_block_index(selection),
+        bbox=_selection_bbox(selection),
         selected_text=_optional_text(None if selection is None else selection.text),
         translation=_joined_message_content(
             messages,
             role="assistant",
             tasks={"translate"},
+        ),
+        latex=_joined_message_content(
+            messages,
+            role="assistant",
+            tasks={"convert:latex"},
         ),
         question=_joined_message_content(
             messages,
@@ -333,6 +1162,7 @@ def capture_knowledge(
                 "explain:math",
                 "explain:algorithm",
                 "explain:contextual",
+                "convert:latex",
                 "followup",
             },
         ),
@@ -349,6 +1179,50 @@ def capture_knowledge(
         ),
         user_notes=_optional_text(user_notes),
         tags=_normalized_tags(tags),
+        evidence_links=list(evidence_links or []),
+    )
+
+
+def capture_code_knowledge(
+    project: CodeProject,
+    selection: CodeSelection,
+    response: Message | None,
+    *,
+    question: str,
+    response_question: str | None = None,
+    user_notes: str,
+    tags: list[str],
+    title: str | None = None,
+) -> KnowledgeNote:
+    """Assemble one current code selection into a path-safe knowledge note."""
+
+    _validate_code_knowledge_selection(project, selection)
+    explanation: str | None = None
+    if response is not None:
+        if (
+            response.role != "assistant"
+            or response.task != "explain:code"
+            or response.selection_id != selection.id
+        ):
+            raise ValueError(
+                "Code explanation does not belong to the current code selection."
+            )
+        if _optional_text(response_question) != _optional_text(question):
+            raise ValueError(
+                "Code explanation does not belong to the current code question."
+            )
+        explanation = _optional_text(response.content)
+
+    return KnowledgeNote(
+        title=_code_knowledge_title(title, project, selection),
+        source=project.name,
+        source_type="code",
+        selected_text=selection.text,
+        question=_optional_text(question),
+        ai_explanation=explanation,
+        user_notes=_optional_text(user_notes),
+        tags=_normalized_tags(tags),
+        code_selection=selection,
     )
 
 
@@ -419,17 +1293,17 @@ def _context_evidence_preview(
     context: ResearchContext,
     request_messages: list[ChatMessage],
 ) -> ContextEvidencePreview:
-    request_character_count = sum(
-        len(message.content)
-        for message in request_messages
+    request_character_count = _request_character_count(request_messages)
+    approximate_request_tokens = _approximate_tokens(
+        request_character_count
     )
-    approximate_request_tokens = (
-        request_character_count + APPROXIMATE_CHARS_PER_TOKEN - 1
-    ) // APPROXIMATE_CHARS_PER_TOKEN
     return ContextEvidencePreview(
         document_title=context.document_title,
         author=context.author,
+        source_type=context.source,
         page_number=context.page_number,
+        block_index=context.block_index,
+        bbox=context.bbox,
         selected_text=context.selected_text,
         section_heading=context.section_heading,
         related_caption=context.related_caption,
@@ -440,6 +1314,34 @@ def _context_evidence_preview(
         request_character_count=request_character_count,
         approximate_request_tokens=approximate_request_tokens,
     )
+
+
+def _build_code_explanation_context(
+    project: CodeProject,
+    selection: CodeSelection,
+    *,
+    question: str,
+    settings: Settings,
+) -> CodeContext:
+    if selection.project_id != project.id:
+        raise ValueError("Code selection does not belong to the opened project.")
+    code_file = core_get_code_file(project, selection.relative_path)
+    return build_code_context(
+        selection,
+        code_file,
+        user_question=question,
+        context_token_budget=settings.context_token_budget,
+    )
+
+
+def _request_character_count(request_messages: list[ChatMessage]) -> int:
+    return sum(len(message.content) for message in request_messages)
+
+
+def _approximate_tokens(character_count: int) -> int:
+    return (
+        character_count + APPROXIMATE_CHARS_PER_TOKEN - 1
+    ) // APPROXIMATE_CHARS_PER_TOKEN
 
 
 def _validate_explain_mode(mode: ExplainMode) -> None:
@@ -471,6 +1373,58 @@ def _knowledge_title(
     return _single_line(document.document.title) or "Research note"
 
 
+def _code_knowledge_title(
+    title: str | None,
+    project: CodeProject,
+    selection: CodeSelection,
+) -> str:
+    requested_title = _single_line(title)
+    if requested_title:
+        return requested_title
+    if selection.symbol_name:
+        return f"{project.name} · {_single_line(selection.symbol_name)}"
+    return (
+        f"{project.name} · {selection.relative_path}:"
+        f"{selection.start_line}-{selection.end_line}"
+    )
+
+
+def _validate_code_knowledge_selection(
+    project: CodeProject,
+    selection: CodeSelection,
+) -> None:
+    if (
+        selection.project_id != project.id
+        or selection.project_name != project.name
+    ):
+        raise ValueError("Code selection does not belong to the opened project.")
+    code_file = core_get_code_file(project, selection.relative_path)
+    if selection.relative_path != code_file.relative_path:
+        raise ValueError("Code selection must use a normalized relative path.")
+    current_lines = select_code_lines(
+        project,
+        selection.relative_path,
+        start_line=selection.start_line,
+        end_line=selection.end_line,
+    )
+    if current_lines.text != selection.text:
+        raise ValueError("Code selection no longer matches the indexed source.")
+    if selection.extraction_method == "text":
+        if selection.symbol_kind is not None or selection.symbol_name is not None:
+            raise ValueError("Line-range code selection cannot claim an AST symbol.")
+        return
+    if selection.extraction_method != "ast":
+        raise ValueError("Code selection extraction method is unsupported.")
+    if not any(
+        symbol.start_line == selection.start_line
+        and symbol.end_line == selection.end_line
+        and symbol.kind == selection.symbol_kind
+        and symbol.qualified_name == selection.symbol_name
+        for symbol in code_file.symbols
+    ):
+        raise ValueError("Code selection no longer matches an indexed AST symbol.")
+
+
 def _selection_page_number(selection: ReadingSelection | None) -> int | None:
     if selection is None or selection.locator is None:
         return None
@@ -478,6 +1432,30 @@ def _selection_page_number(selection: ReadingSelection | None) -> int | None:
     if isinstance(page_number, int) and not isinstance(page_number, bool):
         return page_number
     return None
+
+
+def _selection_block_index(selection: ReadingSelection | None) -> int | None:
+    if selection is None or selection.locator is None:
+        return None
+    block_index = selection.locator.get("block_index")
+    if isinstance(block_index, int) and not isinstance(block_index, bool):
+        return block_index
+    return None
+
+
+def _selection_bbox(selection: ReadingSelection | None) -> BoundingBox | None:
+    if selection is None or selection.locator is None:
+        return None
+    value = selection.locator.get("bbox")
+    if not isinstance(value, (list, tuple)) or len(value) != 4:
+        return None
+    if not all(
+        isinstance(coordinate, (int, float))
+        and not isinstance(coordinate, bool)
+        for coordinate in value
+    ):
+        return None
+    return tuple(float(coordinate) for coordinate in value)
 
 
 def _joined_message_content(

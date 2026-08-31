@@ -8,6 +8,7 @@ from researchmind.app.views.context_evidence import render_context_evidence
 
 _TASK_LABELS = {
     "translate": "翻译",
+    "convert:latex": "LaTeX 转换",
     "explain:concept": "概念解释",
     "explain:math": "数学解释",
     "explain:algorithm": "算法解释",
@@ -32,7 +33,11 @@ def render_conversation() -> None:
     for message in messages:
         with st.chat_message(message.role):
             st.caption(_TASK_LABELS.get(message.task, message.task))
-            st.markdown(message.content)
+            if message.task == "convert:latex" and message.role == "assistant":
+                st.code(message.content, language="latex")
+                st.latex(message.content)
+            else:
+                st.markdown(message.content)
 
     selection = state.get_current_selection()
     if selection is not None:

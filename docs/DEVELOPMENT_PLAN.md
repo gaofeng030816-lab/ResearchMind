@@ -1,6 +1,6 @@
-# ResearchMind V1 开发计划
+# ResearchMind V1–V1.3.2 内部开发记录
 
-版本：2026-08-26 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [ARCHITECTURE.md](./ARCHITECTURE.md)
+同步日期：2026-08-30 · 状态：M0–M6 与 V1.1–V1.3.2 已完成；过渡基线已推进至 T5-B1 / T6-C · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) · [V1→V2 过渡门禁](../V1%20to%20V2过渡要求.md)
 
 ## 0. 计划原则
 
@@ -8,6 +8,16 @@
 2. **自底向上**：先基础设施（PDF、LLM/翻译、Obsidian 写入），再核心逻辑，最后 UI——每一步都建立在已测的代码之上。
 3. **每个里程碑含测试任务**：遵循 testing-review skill 的验证循环，DoD（完成定义）以真实测试结果为准。
 4. **编码遵循 python-engineering skill**；每个里程碑完成后按 learning-mode skill 输出学习总结。
+
+## 当前执行状态（2026-08-30）
+
+本文保留为 V1 与 V1.3.2 的历史里程碑、依赖理由和验收记录，不再作为当前
+待办清单。当前产品基线为 V1.3.2 + T1/T3/T4/T5-A/T5-B1/
+T6-A/T6-B/T6-C；T5-B1 已完成一个已选 Python 行范围的受控替换、确认、
+恢复副本、哈希冲突保护和安全回滚，仍不允许 Shell、测试执行或依赖安装。
+T6-C 自动证据已通过，真实浏览器部分由用户于 2026-08-30 明确人工确认通过；
+该确认不等同于自动浏览器截图证据。未来阶段不能回写成 M0–M6 的未完成工作，
+也不能把 Proposed 能力描述为当前实现。
 
 ## 1. 里程碑总览
 
@@ -20,6 +30,7 @@
 | M4 | 知识沉淀与 Obsidian 集成 | integration/obsidian/（Vault 写入 + Markdown 渲染）+ 全链路测试 | 中 |
 | M5 | Streamlit UI | 4 个视图 + 状态管理 + AppTest 冒烟 | 大 |
 | M6 | 收尾 | 安全清单、README、手动验收、全量回归 | 小 |
+| V1.3.2 | 选择驱动的 LaTeX | 严格 LLM 输出解析、数学预览、KnowledgeNote/Obsidian 公式 | 中 |
 
 > 注：V1 **没有数据库里程碑**——对话在会话内存活，知识以 Markdown 写入 Obsidian Vault（判断依据见 ARCHITECTURE.md 3.3）。
 
@@ -120,6 +131,28 @@
 - **测试**：全量回归。
 - **DoD**：全量测试真实通过；安全清单通过；按 learning-mode skill 输出 V1 学习总结。
 
+### V1.3.2 选择驱动的 LaTeX
+
+- **状态**：已完成；V1.3.2 首次基线为 170 tests。T0–T2 增量基线为
+  178 tests；完成 T3 后为 188 tests，完成 T4 后最新基线为 198 tests。
+  人工视觉环境阻塞继续在 T0/T3
+  记录中如实保留。
+- **目标**：把 V1.3.1 公式文字层阅读接入 Paper ↔ Mathematics ↔ Notes 闭环，
+  同时保持选择驱动、上下文有界和结果可追溯。
+- **任务**：
+  1. `llm/prompts.py` 增加 ResearchContext-grounded LaTeX prompt；
+  2. `llm/latex.py` 严格解析单个表达式，拒绝 TeX 文档、宏、文件/链接和
+     外部资源能力；
+  3. `app/use_cases.py` 增加转换和无网络上下文预览；
+  4. 对话同时展示可复制源码与 Streamlit 数学预览；
+  5. `KnowledgeNote` 和 Obsidian Markdown 保存可选显示公式。
+- **依赖决定**：复用 Streamlit 与现有 LLM provider，不新增运行时依赖，不
+  安装或调用 TeX 编译器，不实现图片公式 OCR。
+- **测试**：prompt/解析安全单测、fake provider 用例测试、完整研究流、
+  Streamlit AppTest、Obsidian Markdown 和全量回归。
+- **DoD**：验证记录见
+  [V1_3_2_LATEX_VALIDATION.md](./V1_3_2_LATEX_VALIDATION.md)。
+
 ## 3. 依赖清单（每个都需理由）
 
 | 依赖 | 用途 | 为什么需要 |
@@ -140,5 +173,6 @@
 5. 代码分层检查通过：UI 不直接碰 pdf/llm/translation/integration；Domain 不 import UI；
 6. README 能让另一个初/中级开发者装好、配好 Key 与 Vault、跑起来。
 
-这些标准证明 V1 闭环可用，不代表允许公开发布。后续内部优化与最终发布路线见
-[POST_V1_DEVELOPMENT_PLAN.md](./POST_V1_DEVELOPMENT_PLAN.md)。
+这些标准证明 V1 闭环可用，不代表允许公开发布。V1.x 已完成优化记录见
+[POST_V1_DEVELOPMENT_PLAN.md](./POST_V1_DEVELOPMENT_PLAN.md)；当前 T0–T6
+状态与最终发布门禁见 [V1→V2 过渡要求](../V1%20to%20V2过渡要求.md)。

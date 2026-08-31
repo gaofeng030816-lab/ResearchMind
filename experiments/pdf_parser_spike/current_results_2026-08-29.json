@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "engine": "researchmind-pymupdf",
+  "environment": {
+    "python": "3.12.13",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "pymupdf": "1.28.2"
+  },
+  "capability_boundary": {
+    "text_blocks_and_bbox": true,
+    "embedded_raster_regions": true,
+    "formula_text_candidates": true,
+    "semantic_tables": false,
+    "ocr": false,
+    "image_formula_to_latex": false,
+    "vector_chart_understanding": false
+  },
+  "documents": [
+    {
+      "id": "code_security",
+      "total_pages": 14,
+      "pages_with_text": 14,
+      "total_blocks": 426,
+      "role_counts": {"body": 380, "caption": 12, "formula": 16, "heading": 18},
+      "figure_regions": 0,
+      "parse_seconds": 0.232611,
+      "parse_seconds_per_page": 0.016615,
+      "peak_python_bytes": 583157,
+      "render_page": 3,
+      "render_seconds": 0.056299
+    },
+    {
+      "id": "tidy_data",
+      "total_pages": 24,
+      "pages_with_text": 24,
+      "total_blocks": 1463,
+      "role_counts": {"body": 1412, "caption": 20, "heading": 31},
+      "figure_regions": 1,
+      "parse_seconds": 0.28961,
+      "parse_seconds_per_page": 0.012067,
+      "peak_python_bytes": 1008752,
+      "render_page": 1,
+      "render_seconds": 0.031928
+    },
+    {
+      "id": "statistical_learning",
+      "total_pages": 209,
+      "pages_with_text": 208,
+      "total_blocks": 2165,
+      "role_counts": {"body": 1926, "caption": 53, "formula": 16, "heading": 170},
+      "figure_regions": 587,
+      "parse_seconds": 1.175064,
+      "parse_seconds_per_page": 0.005622,
+      "peak_python_bytes": 2248966,
+      "render_page": 20,
+      "render_seconds": 0.041212
+    },
+    {
+      "id": "chinese_scan",
+      "total_pages": 1,
+      "pages_with_text": 0,
+      "total_blocks": 0,
+      "role_counts": {},
+      "figure_regions": 1,
+      "parse_seconds": 0.005141,
+      "parse_seconds_per_page": 0.005141,
+      "peak_python_bytes": 11955,
+      "render_page": 1,
+      "render_seconds": 0.101704
+    },
+    {
+      "id": "pdfua_invoice",
+      "total_pages": 1,
+      "pages_with_text": 1,
+      "total_blocks": 18,
+      "role_counts": {"body": 18},
+      "figure_regions": 1,
+      "parse_seconds": 0.00979,
+      "parse_seconds_per_page": 0.00979,
+      "peak_python_bytes": 21642,
+      "render_page": 1,
+      "render_seconds": 0.034744
+    }
+  ],
+  "notes": [
+    "All five SHA-256 values matched the versioned corpus.",
+    "Timing is a single local smoke run and not a cross-engine benchmark.",
+    "peak_python_bytes excludes native PyMuPDF allocations."
+  ]
+}

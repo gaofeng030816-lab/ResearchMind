@@ -50,7 +50,10 @@ def test_prompt_contains_only_minimal_research_context_fields() -> None:
 
     assert "<document_title>Optimization Paper</document_title>" in user_content
     assert "<author>Ada Researcher</author>" in user_content
+    assert "<source_type>pdf</source_type>" in user_content
     assert "<page_number>3</page_number>" in user_content
+    assert "<block_index>4</block_index>" in user_content
+    assert "<bbox>10.00, 20.00, 30.00, 40.00</bbox>" in user_content
     assert "<section_heading>2 Proposed Method</section_heading>" in user_content
     assert "<related_caption>Figure 3. Update overview.</related_caption>" in user_content
     assert "<related_formula>x(t1) = x(t0) + f(x, t)</related_formula>" in user_content
@@ -138,8 +141,10 @@ def _research_context(
         document_id="document-123",
         document_title="Optimization Paper",
         author="Ada Researcher",
-        source="local/path/to/paper.pdf",
+        source="pdf",
         user_question=user_question,
         page_number=3,
+        block_index=4,
+        bbox=(10.0, 20.0, 30.0, 40.0),
         conversation_history=[] if conversation_history is None else conversation_history,
     )

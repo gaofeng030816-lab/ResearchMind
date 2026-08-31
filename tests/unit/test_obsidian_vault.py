@@ -10,6 +10,7 @@ from researchmind.integration.obsidian import (
     VaultConfigurationError,
     VaultWriteError,
     sanitize_filename,
+    validate_vault_destination,
     write_note_to_vault,
 )
 from researchmind.models import KnowledgeNote
@@ -111,6 +112,32 @@ def test_existing_file_cannot_be_used_as_output_subdirectory(
             vault_path=temporary_vault,
             subdirectory="ResearchMind",
         )
+
+
+def test_vault_destination_rejects_resolved_path_outside_vault(
+    temporary_vault: Path,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    linked_directory = temporary_vault / "Linked"
+    linked_directory.mkdir()
+    outside_directory = tmp_path / "outside"
+    outside_directory.mkdir()
+    path_type = type(temporary_vault)
+    original_resolve = path_type.resolve
+
+    def resolve_candidate(
+        self: Path,
+        strict: bool = False,
+    ) -> Path:
+        if self == linked_directory:
+            return outside_directory
+        return original_resolve(self, strict=strict)
+
+    monkeypatch.setattr(path_type, "resolve", resolve_candidate)
+
+    with pytest.raises(VaultConfigurationError, match="stay inside the Vault"):
+        validate_vault_destination(temporary_vault, "Linked")
 
 
 def test_write_failure_is_exposed_as_project_error(

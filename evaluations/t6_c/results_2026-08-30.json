@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "python": "3.12.13",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "inputs": {
+    "pdf_pages": 100,
+    "code_files": 2000,
+    "markdown_notes": 1000
+  },
+  "passed": true,
+  "metrics": [
+    {
+      "name": "configuration_diagnostics",
+      "elapsed_seconds": 0.002843,
+      "limit_seconds": 0.25,
+      "peak_mib": 0.006,
+      "peak_limit_mib": 32.0,
+      "passed": true
+    },
+    {
+      "name": "pdf_open_and_extract",
+      "elapsed_seconds": 0.061117,
+      "limit_seconds": 5.0,
+      "peak_mib": 0.117,
+      "peak_limit_mib": 256.0,
+      "passed": true
+    },
+    {
+      "name": "pdf_render_first_page",
+      "elapsed_seconds": 0.033045,
+      "limit_seconds": 2.0,
+      "peak_mib": 0.01,
+      "peak_limit_mib": 128.0,
+      "passed": true
+    },
+    {
+      "name": "code_index",
+      "elapsed_seconds": 16.359228,
+      "limit_seconds": 20.0,
+      "peak_mib": 2.379,
+      "peak_limit_mib": 256.0,
+      "passed": true
+    },
+    {
+      "name": "markdown_backup",
+      "elapsed_seconds": 7.390081,
+      "limit_seconds": 10.0,
+      "peak_mib": 1.24,
+      "peak_limit_mib": 256.0,
+      "passed": true
+    },
+    {
+      "name": "markdown_restore",
+      "elapsed_seconds": 1.795601,
+      "limit_seconds": 5.0,
+      "peak_mib": 3.064,
+      "peak_limit_mib": 256.0,
+      "passed": true
+    }
+  ]
+}

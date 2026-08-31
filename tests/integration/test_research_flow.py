@@ -6,12 +6,14 @@ from pathlib import Path
 from researchmind.app.use_cases import (
     ask_followup,
     capture_knowledge,
+    convert_selection_to_latex,
     create_selection,
     explain_selection,
     get_page_view,
     open_pdf,
     preview_explanation_context,
     preview_followup_context,
+    preview_latex_context,
     save_note_to_vault,
     search_text,
     translate_selection,
@@ -28,6 +30,7 @@ def test_open_select_translate_explain_and_follow_up_without_network(
 ) -> None:
     fake_llm_provider.responses = [
         "第二个上下文块。",
+        r"<latex>x_{k+1}=x_k+\alpha d_k</latex>",
         "This block supplies nearby evidence for the paper's claim.",
         "It matters because the next inference depends on that evidence.",
     ]
@@ -50,6 +53,19 @@ def test_open_select_translate_explain_and_follow_up_without_network(
         settings=settings,
     )
     conversation = Conversation(document_id=opened.document.id)
+    latex_preview = preview_latex_context(
+        selection,
+        document=opened,
+        conversation=conversation,
+        settings=settings,
+    )
+    latex = convert_selection_to_latex(
+        selection,
+        document=opened,
+        conversation=conversation,
+        llm_provider=fake_llm_provider,
+        settings=settings,
+    )
     explanation_question = Message(
         role="user",
         task="explain:contextual",
@@ -98,6 +114,7 @@ def test_open_select_translate_explain_and_follow_up_without_network(
         selection,
         [
             translation,
+            latex,
             explanation_question,
             explanation,
             followup_question,
@@ -116,27 +133,36 @@ def test_open_select_translate_explain_and_follow_up_without_network(
     assert selection.locator is not None
     assert translation.task == "translate"
     assert translation.content == "第二个上下文块。"
+    assert latex.task == "convert:latex"
+    assert latex.content == r"x_{k+1}=x_k+\alpha d_k"
     assert explanation.task == "explain:contextual"
     assert followup.task == "followup"
-    assert len(fake_llm_provider.calls) == 3
+    assert len(fake_llm_provider.calls) == 4
 
-    explanation_prompt = fake_llm_provider.calls[1][0][1].content
+    latex_prompt = fake_llm_provider.calls[1][0][1].content
+    assert "<paper_context>" in latex_prompt
+    assert latex_preview.request_character_count == sum(
+        len(message.content)
+        for message in fake_llm_provider.calls[1][0]
+    )
+
+    explanation_prompt = fake_llm_provider.calls[2][0][1].content
     assert "<paper_context>" in explanation_prompt
     assert "Second context block" in explanation_prompt
     assert "Why is this block relevant?" in explanation_prompt
     assert explanation_preview.request_character_count == sum(
         len(message.content)
-        for message in fake_llm_provider.calls[1][0]
+        for message in fake_llm_provider.calls[2][0]
     )
 
-    followup_prompt = fake_llm_provider.calls[2][0][1].content
+    followup_prompt = fake_llm_provider.calls[3][0][1].content
     assert "<conversation_history>" in followup_prompt
     assert "Why is this block relevant?" in followup_prompt
     assert escape(explanation.content) in followup_prompt
     assert "Why does the next inference depend on it?" in followup_prompt
     assert followup_preview.request_character_count == sum(
         len(message.content)
-        for message in fake_llm_provider.calls[2][0]
+        for message in fake_llm_provider.calls[3][0]
     )
 
     assert saved_path.parent == temporary_vault / "ResearchMind"
@@ -145,6 +171,7 @@ def test_open_select_translate_explain_and_follow_up_without_network(
     assert "Fixture Research Paper" in saved_markdown
     assert "> Second context block" in saved_markdown
     assert translation.content in saved_markdown
+    assert "$$\n" + latex.content + "\n$$" in saved_markdown
     assert explanation_question.content in saved_markdown
     assert explanation.content in saved_markdown
     assert followup_question.content in saved_markdown

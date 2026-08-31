@@ -76,6 +76,25 @@ def sanitize_filename(title: str) -> str:
 
 
 def _prepare_output_directory(vault_path: Path, subdirectory: str) -> Path:
+    candidate = validate_vault_destination(vault_path, subdirectory)
+    resolved_vault = Path(vault_path).expanduser().resolve(strict=True)
+
+    try:
+        candidate.mkdir(parents=True, exist_ok=True)
+        resolved_output = candidate.resolve(strict=True)
+    except OSError:
+        raise VaultWriteError("Could not create the configured Vault subdirectory.") from None
+
+    if not resolved_output.is_relative_to(resolved_vault):
+        raise VaultConfigurationError("Obsidian subdirectory resolves outside the Vault.")
+    if not resolved_output.is_dir():
+        raise VaultConfigurationError("Configured Obsidian output path is not a directory.")
+    return resolved_output
+
+
+def validate_vault_destination(vault_path: Path, subdirectory: str) -> Path:
+    """Validate a Vault destination without creating or modifying directories."""
+
     try:
         resolved_vault = Path(vault_path).expanduser().resolve(strict=True)
     except (FileNotFoundError, OSError):
@@ -91,18 +110,7 @@ def _prepare_output_directory(vault_path: Path, subdirectory: str) -> Path:
         raise VaultConfigurationError("Obsidian subdirectory must stay inside the Vault.")
     if candidate.exists() and not candidate.is_dir():
         raise VaultConfigurationError("Configured Obsidian output path is not a directory.")
-
-    try:
-        candidate.mkdir(parents=True, exist_ok=True)
-        resolved_output = candidate.resolve(strict=True)
-    except OSError:
-        raise VaultWriteError("Could not create the configured Vault subdirectory.") from None
-
-    if not resolved_output.is_relative_to(resolved_vault):
-        raise VaultConfigurationError("Obsidian subdirectory resolves outside the Vault.")
-    if not resolved_output.is_dir():
-        raise VaultConfigurationError("Configured Obsidian output path is not a directory.")
-    return resolved_output
+    return candidate
 
 
 def _validated_relative_directory(subdirectory: str) -> Path:

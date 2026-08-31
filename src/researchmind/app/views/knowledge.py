@@ -56,6 +56,7 @@ def render_knowledge() -> None:
                 user_notes,
                 tags_text.split(","),
                 title=title,
+                evidence_links=state.get_evidence_links(),
             )
             state.set_current_note(note)
         except use_cases.USER_FACING_ERRORS as exc:

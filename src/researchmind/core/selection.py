@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from researchmind.models import Page, ReadingSelection
+from researchmind.models import Page, ReadingSelection, TextBlock
 
 
 def locate_selection(
@@ -32,13 +32,40 @@ def locate_selection(
                 return ReadingSelection(
                     text=selected_text,
                     source_type="pdf",
-                    locator={
-                        "page_number": page.page_number,
-                        "block_index": block.block_index,
-                    },
+                    locator=_block_locator(page.page_number, block),
                 )
 
     return ReadingSelection(text=selected_text, source_type="pdf")
+
+
+def select_text_block(page: Page, *, block_index: int) -> ReadingSelection:
+    """Create an exact selection from one extracted text block."""
+
+    block = next(
+        (item for item in page.blocks if item.block_index == block_index),
+        None,
+    )
+    if block is None:
+        raise ValueError(
+            f"Text block {block_index} was not found on page {page.page_number}."
+        )
+    if not block.text.strip():
+        raise ValueError("Selected text block must not be blank.")
+    return ReadingSelection(
+        text=block.text,
+        source_type="pdf",
+        locator=_block_locator(page.page_number, block),
+    )
+
+
+def _block_locator(page_number: int, block: TextBlock) -> dict[str, object]:
+    locator: dict[str, object] = {
+        "page_number": page_number,
+        "block_index": block.block_index,
+    }
+    if block.bbox is not None:
+        locator["bbox"] = block.bbox
+    return locator
 
 
 def _pages_in_search_order(

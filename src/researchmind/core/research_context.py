@@ -10,6 +10,7 @@ from researchmind.core.conversation import (
     trim_conversation_history,
 )
 from researchmind.models import (
+    BoundingBox,
     Conversation,
     Document,
     Page,
@@ -58,6 +59,8 @@ def build_research_context(
             token_budget=context_token_budget,
         ),
         page_number=page_number,
+        block_index=_locator_int(selection, "block_index"),
+        bbox=_locator_bbox(selection),
         section_heading=section_heading,
         related_caption=related_caption,
         related_formula=related_formula,
@@ -253,6 +256,21 @@ def _locator_int(selection: ReadingSelection, key: str) -> int | None:
         return None
     value = selection.locator.get(key)
     return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _locator_bbox(selection: ReadingSelection) -> BoundingBox | None:
+    if selection.locator is None:
+        return None
+    value = selection.locator.get("bbox")
+    if not isinstance(value, (list, tuple)) or len(value) != 4:
+        return None
+    if not all(
+        isinstance(coordinate, (int, float))
+        and not isinstance(coordinate, bool)
+        for coordinate in value
+    ):
+        return None
+    return tuple(float(coordinate) for coordinate in value)
 
 
 def _validate_token_budget(token_budget: int) -> None:

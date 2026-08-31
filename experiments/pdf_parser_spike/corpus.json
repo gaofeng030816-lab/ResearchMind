@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-29",
+  "documents": [
+    {
+      "id": "code_security",
+      "filename": "2408.02509v1.pdf",
+      "sha256": "1F45F83E3EB33B441A63C483C3FA08AB4EC7296597DBB1A6A78859FB0EC01ABE",
+      "categories": ["double_column", "formula", "figure"],
+      "sample_pages": [3]
+    },
+    {
+      "id": "tidy_data",
+      "filename": "tidy-data.pdf",
+      "sha256": "662D82AB14760B154C28D8B113E771A83971C771E0A9EC56E69BA7650B26BB86",
+      "categories": ["double_column", "table"],
+      "sample_pages": [1]
+    },
+    {
+      "id": "statistical_learning",
+      "filename": "统计学习方法李航(非扫描版).pdf",
+      "sha256": "C48A55E257ECCC13A9621B693E3C48547B12CCC70E1D57EE020A99A35E9C7139",
+      "categories": ["formula", "figure", "non_english"],
+      "sample_pages": [20]
+    },
+    {
+      "id": "chinese_scan",
+      "filename": "chinese_scan.pdf",
+      "sha256": "972B342FF5A87F3BF6E1A4DF8A81168E56FB42F61128709F5EB9A5C04945AE3C",
+      "categories": ["scanned", "non_english"],
+      "sample_pages": [1]
+    },
+    {
+      "id": "pdfua_invoice",
+      "filename": "PDFUA-Ref-2-02_Invoice.pdf",
+      "sha256": "FBAE08464F192F532205833215505B78266E86DF6283D9B0C439CB06927CE0B9",
+      "categories": ["table"],
+      "sample_pages": [1]
+    }
+  ]
+}

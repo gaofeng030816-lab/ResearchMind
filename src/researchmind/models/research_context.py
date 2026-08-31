@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 
 from researchmind.models.message import Message
+from researchmind.models.text_block import BoundingBox
 
 
 @dataclass
@@ -17,6 +18,8 @@ class ResearchContext:
     source: str
     user_question: str
     page_number: int | None = None
+    block_index: int | None = None
+    bbox: BoundingBox | None = None
     section_heading: str = ""
     related_caption: str = ""
     related_formula: str = ""

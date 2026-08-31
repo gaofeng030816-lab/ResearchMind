@@ -15,3 +15,7 @@ class VaultConfigurationError(ObsidianError):
 
 class VaultWriteError(ObsidianError):
     """Raised when a Markdown note cannot be written to the Vault."""
+
+
+class VaultBackupError(ObsidianError):
+    """Raised when a Markdown backup or restore cannot be completed safely."""

@@ -155,9 +155,13 @@ def render_reader() -> None:
         with st.expander("按阅读顺序逐块复制", expanded=True):
             for display_index, block in enumerate(page_view.page.blocks, start=1):
                 block_label = (
-                    f"数学公式候选 · 文本块 {display_index}"
+                    f"数学公式候选 · 阅读序号 {display_index} · "
+                    f"源块 {block.block_index}"
                     if block.role == "formula"
-                    else f"文本块 {display_index}"
+                    else (
+                        f"文本块 · 阅读序号 {display_index} · "
+                        f"源块 {block.block_index}"
+                    )
                 )
                 st.caption(block_label)
                 st.code(
@@ -166,6 +170,29 @@ def render_reader() -> None:
                     wrap_lines=block.role != "formula",
                     height="content",
                 )
+                if st.button(
+                    "选择此公式" if block.role == "formula" else "选择此文本块",
+                    key=(
+                        f"select_block_{document.document.id}_"
+                        f"{page_view.page.page_number}_{block.block_index}"
+                    ),
+                ):
+                    try:
+                        selection = use_cases.create_block_selection(
+                            document,
+                            page_view.page.page_number,
+                            block.block_index,
+                        )
+                        state.set_current_selection_from_reader(
+                            selection,
+                            document_id=document.document.id,
+                        )
+                        st.success(
+                            f"已选择第 {page_view.page.page_number} 页"
+                            f"文本块 {block.block_index}，可直接翻译或解释。"
+                        )
+                    except use_cases.USER_FACING_ERRORS as exc:
+                        st.error(str(exc))
     else:
         st.caption("本页未提取到可复制文本。")
 

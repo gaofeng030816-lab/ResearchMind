@@ -19,12 +19,25 @@ def render_context_evidence(
         )
         st.text(f"文档：{preview.document_title or '（未提供）'}")
         st.text(f"作者：{preview.author or '（未提供）'}")
+        st.text(f"来源类型：{preview.source_type or '（未提供）'}")
         page_label = (
             str(preview.page_number)
             if preview.page_number is not None
             else "未定位"
         )
         st.text(f"页码：{page_label}")
+        block_label = (
+            str(preview.block_index)
+            if preview.block_index is not None
+            else "未定位"
+        )
+        bbox_label = (
+            ", ".join(f"{coordinate:.1f}" for coordinate in preview.bbox)
+            if preview.bbox is not None
+            else "未定位"
+        )
+        st.text(f"文本块：{block_label}")
+        st.text(f"边界框：{bbox_label}")
         st.text(f"章节：{preview.section_heading or '（未识别）'}")
         st.text(f"图表说明：{preview.related_caption or '（未识别）'}")
         formula_status = (

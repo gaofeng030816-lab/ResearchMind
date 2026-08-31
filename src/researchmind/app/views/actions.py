@@ -25,7 +25,7 @@ def render_actions() -> None:
 
     selected_text = st.text_area(
         "选中文本",
-        key=f"selection_text_{document.document.id}",
+        key=state.selection_text_widget_key(document.document.id),
         placeholder="从上方文本面板复制，或直接输入需要理解的内容。",
         height=130,
     )
@@ -40,7 +40,7 @@ def render_actions() -> None:
             if selection.locator is None:
                 st.warning("未定位到原文；仍可翻译或解释该文本。")
             else:
-                st.success(f"已定位到第 {selection.locator['page_number']} 页。")
+                st.success(f"已定位：{_selection_location_label(selection.locator)}")
         except use_cases.USER_FACING_ERRORS as exc:
             st.error(str(exc))
 
@@ -51,7 +51,7 @@ def render_actions() -> None:
     if selection.locator is None:
         st.caption("当前选择：未定位的手动文本")
     else:
-        st.caption(f"当前选择：第 {selection.locator['page_number']} 页")
+        st.caption(f"当前选择：{_selection_location_label(selection.locator)}")
 
     mode = st.selectbox(
         "解释模式",
@@ -74,10 +74,20 @@ def render_actions() -> None:
             question=question.strip() or None,
         )
         render_context_evidence(preview, action_label="AI 解释")
+        latex_preview = use_cases.preview_latex_context(
+            selection,
+            document=document,
+            conversation=state.get_current_conversation(),
+        )
+        render_context_evidence(latex_preview, action_label="LaTeX 转换")
     except use_cases.USER_FACING_ERRORS as exc:
         st.error(str(exc))
 
-    translation_column, explanation_column = st.columns(2)
+    st.caption(
+        "LaTeX 转换会发送当前选择和最小 ResearchContext；"
+        "仅处理文字层，不读取图片公式。"
+    )
+    translation_column, latex_column, explanation_column = st.columns(3)
     with translation_column:
         if st.button(
             "翻译",
@@ -88,6 +98,26 @@ def render_actions() -> None:
                 message = use_cases.translate_selection(selection)
                 state.append_message(message)
                 st.success("翻译已加入对话。")
+            except use_cases.USER_FACING_ERRORS as exc:
+                st.error(str(exc))
+    with latex_column:
+        if st.button(
+            "转换为 LaTeX",
+            key="convert_latex_button",
+            width="stretch",
+        ):
+            try:
+                message = use_cases.convert_selection_to_latex(
+                    selection,
+                    document=document,
+                    conversation=state.get_current_conversation(),
+                )
+                state.append_exchange(
+                    "将当前选择转换为 LaTeX",
+                    "convert:latex",
+                    message,
+                )
+                st.success("LaTeX 已加入对话，可复制或预览。")
             except use_cases.USER_FACING_ERRORS as exc:
                 st.error(str(exc))
     with explanation_column:
@@ -113,3 +143,14 @@ def render_actions() -> None:
                 st.success("解释已加入对话。")
             except use_cases.USER_FACING_ERRORS as exc:
                 st.error(str(exc))
+
+
+def _selection_location_label(locator: dict[str, object]) -> str:
+    page = locator.get("page_number", "未知")
+    block = locator.get("block_index", "未知")
+    bbox = locator.get("bbox")
+    if isinstance(bbox, (list, tuple)) and len(bbox) == 4:
+        bbox_label = ", ".join(f"{float(value):.1f}" for value in bbox)
+    else:
+        bbox_label = "未提供"
+    return f"第 {page} 页 · 文本块 {block} · bbox {bbox_label}"
