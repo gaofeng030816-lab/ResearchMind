@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "researchmind"
+version = "2.0.0rc1"
+description = "AI-powered research reading and knowledge capture workspace"
+requires-python = ">=3.12"
+dependencies = [
+    "openai>=3.5,<4",
+    "PyMuPDF>=1.28,<2",
+    "python-dotenv>=1.2,<2",
+    "streamlit>=1.62,<2",
+]
+
+[project.scripts]
+researchmind = "researchmind.launcher:main"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=9.1,<10",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]

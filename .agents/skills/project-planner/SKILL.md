@@ -1,0 +1,131 @@
+---
+name: project-planner
+description: Plan and gate ResearchMind V3 features, architecture decisions, dependency spikes, and cross-module changes while preserving the accepted V2 baseline. Use for persistence, Zotero, PDF interaction, formula recognition, multilingual code, adaptive UI, or any materially ambiguous slice; skip trivial contained fixes.
+---
+
+# Project Planner
+
+Plan the smallest independently verifiable step toward ResearchMind V3. Preserve the
+accepted 2.0.0rc1 V2 baseline and do not turn a roadmap entry into permission to
+adopt a dependency or change architecture.
+
+## Sources and Current Gate
+
+- docs/ARCHITECTURE.md describes what is implemented now and remains the code
+  source of truth.
+- V2 to V3过渡要求.md describes approved V3 requirements, stage order, decision
+  points, and entry/exit evidence.
+- V1 to V2过渡要求.md and V2 validation records are historical baselines.
+
+V3-G0 and V3-G1 are completed. G1 adopted standard-library sqlite3, explicit
+RESEARCHMIND_DATA_DIR, managed PDF/Python assets, immutable revisions, separated
+remove/delete, and verified backup/restore. Preserve that contract instead of
+re-planning persistence from scratch. V3-G2 was confirmed on 2026-09-02 and is
+Active: GET-only metadata browsing and schema v2 source links are implemented.
+Official /file returns 302 file:// rather than PDF bytes: direct import is disabled
+pending a separate local-file-read gate. Fake HTTP-200 PDF tests do not close this
+protocol gap. The file-read decision and real Zotero manual acceptance remain. Read
+docs/V3_G2_ZOTERO_VALIDATION.md before closing G2 or planning G3 implementation.
+Web API/sync, CCv2/pdf.js adoption, formula-recognition providers and Tree-sitter
+packages still require their own named decisions.
+
+## Product Test
+
+Place every request in this target loop:
+
+    library/import
+    → paper-only or paper+code workspace
+    → explicit text/code/formula selection
+    → translation or bounded AI explanation
+    → user-chosen evidence basket
+    → editable Markdown draft and preview
+    → explicit non-overwriting Obsidian save
+
+ResearchMind may maintain a local working library, but Zotero still owns literature
+management and Obsidian still owns long-term notes. A V3 plan must not quietly rebuild
+Zotero citation management or Obsidian knowledge organization.
+
+## Classification
+
+Classify the task before planning:
+
+- **bug fix**: current implemented behavior violates its contract;
+- **optimization**: implemented behavior has a measurable usability, quality, or
+  performance cost;
+- **spike**: isolated evidence for a dependency or interaction decision;
+- **feature**: new behavior inside an already approved V3 stage and architecture;
+- **architecture decision**: changes persistence, UI/component boundary, process
+  topology, module ownership, public use-case contracts, external data ownership, or
+  code authority.
+
+Use observe → define → measure → compare → improve → verify for optimizations. Use a
+spike before adding Zotero clients, PDF/OCR engines, formula models, Tree-sitter and
+language grammars, or a new frontend/build chain.
+
+## Planning Workflow
+
+1. Read the current architecture, the active V3 gate, relevant source/tests, and the
+   domain Skill.
+2. State the user-visible outcome, current evidence, and what remains unchanged.
+3. Trace data through View → use case → Core/models → infrastructure → persistence or
+   external output.
+4. Compare the smallest credible alternatives for every architecture choice.
+5. Define fixtures, failure paths, privacy behavior, rollback, and completion evidence
+   before implementation.
+6. Keep one primary gate active; split unrelated persistence, PDF, formula, code, and
+   UI changes.
+
+## V3 Architecture Questions
+
+Plans must explicitly answer the applicable questions:
+
+- **Library:** Which data is durable, who owns files, how are duplicates detected,
+  what is deletion versus unlinking, and how do migrations recover?
+- **Zotero:** Local read-only API, Web API, or neither? How are server/library/item
+  identities and stale versions represented without making Zotero mandatory?
+- **Upload:** Browser uploads provide bytes and relative names, not a trusted original
+  path. Where are validated files stored and how are limits enforced?
+- **PDF interaction:** Does native Streamlit suffice, or is a CCv2/pdf.js text layer
+  needed? How are selection text, page, spans/bboxes, scroll ownership, and debounce
+  verified?
+- **Formula:** Is the source digital text, a cropped image, or both? What metric and
+  corpus justify a recognizer, and what user editing/acceptance step handles errors?
+- **Code:** Which parser adapter covers each language, what parity is required with
+  current Python behavior, and how is no-execution authority proved?
+- **Notes:** Which evidence is explicitly selected, what is editable, what is stored
+  locally, and when is the only Vault write allowed?
+- **UI:** What does paper-only, paper+code, AI shortcut, and note-composer state look
+  like on desktop and narrow screens?
+
+## Plan Content
+
+A meaningful plan includes:
+
+- goal, stage/gate, assumptions, exclusions, and observable success;
+- affected models/modules and dependency direction;
+- actual input-to-output data flow and persistence lifetime;
+- candidate dependencies and an isolated adoption test;
+- unit, integration, Streamlit/AppTest, browser-manual, corpus-quality, security, and
+  migration checks in proportion to the change;
+- before/after metrics, failure UX, rollback, and evidence required to close the gate.
+
+Do not bundle a SQLite schema, Zotero sync, new PDF component, formula provider, and
+multi-language parser into one implementation step. Establish stable library IDs and
+file ownership before features that persist selections, links, or drafts.
+
+## Architecture Change Rule
+
+Before changing Streamlit, the no-database V2 decision, module boundaries, process
+topology, external file ownership, or code write/execute authority:
+
+1. show the requirement the V2 architecture cannot meet;
+2. compare the smallest alternatives and their migration/maintenance cost;
+3. define regression and rollback impact;
+4. obtain the specific gate confirmation recorded in V2 to V3过渡要求.md.
+
+## Finish Check
+
+A plan is ready when the active stage and permission are explicit, current and target
+behavior are not confused, ownership and data lifetime are unambiguous, dependencies
+are evidence-gated, privacy and deletion are addressed, verification is measurable,
+and future stages have not leaked into the active slice.

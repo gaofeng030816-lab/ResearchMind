@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "documents": [
+    {
+      "id": "code_security",
+      "filename": "2408.02509v1.pdf",
+      "sha256": "1F45F83E3EB33B441A63C483C3FA08AB4EC7296597DBB1A6A78859FB0EC01ABE",
+      "categories": ["double_column", "digital_text", "formula", "math_fonts"],
+      "sample_pages": [3],
+      "manual_labels": {
+        "digital_display_formula_regions": 3,
+        "image_formula_regions": 0
+      }
+    },
+    {
+      "id": "statistical_learning",
+      "filename": "统计学习方法李航(非扫描版).pdf",
+      "sha256": "C48A55E257ECCC13A9621B693E3C48547B12CCC70E1D57EE020A99A35E9C7139",
+      "categories": ["digital_text", "formula", "non_english", "scripts"],
+      "sample_pages": [20],
+      "manual_labels": {
+        "digital_display_formula_regions": 0,
+        "image_formula_regions": 1
+      }
+    },
+    {
+      "id": "chinese_scan",
+      "filename": "chinese_scan.pdf",
+      "sha256": "972B342FF5A87F3BF6E1A4DF8A81168E56FB42F61128709F5EB9A5C04945AE3C",
+      "categories": ["image_formula_boundary", "non_english", "scanned"],
+      "sample_pages": [1],
+      "manual_labels": null
+    }
+  ]
+}

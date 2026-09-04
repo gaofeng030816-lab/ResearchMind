@@ -1,0 +1,38 @@
+# Local Python environment
+.venv/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.release-tmp/
+.researchmind-recovery/
+
+# Test and coverage artifacts
+.pytest_cache/
+.pytest-tmp*/
+.pytest_tmp*/
+.coverage
+htmlcov/
+
+# Local generated documents and working-library databases (never publish)
+output/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.db
+
+
+# Editor and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

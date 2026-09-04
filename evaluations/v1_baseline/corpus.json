@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-29",
+  "selection_cases": [
+    {
+      "id": "tidy-data-selection",
+      "source": {
+        "filename": "tidy-data.pdf",
+        "sha256": "662D82AB14760B154C28D8B113E771A83971C771E0A9EC56E69BA7650B26BB86"
+      },
+      "current_page": 1,
+      "selected_text": "standard way to organise data values",
+      "pages": [
+        {
+          "page_number": 1,
+          "blocks": [
+            {
+              "block_index": 10,
+              "role": "body",
+              "bbox": [81.0, 680.3611450195312, 522.0987548828125, 745.46728515625],
+              "text": "The principles of tidy data provide a standard way to organise data values within a dataset."
+            }
+          ]
+        }
+      ],
+      "expected_locator": {
+        "page_number": 1,
+        "block_index": 10,
+        "bbox": [81.0, 680.3611450195312, 522.0987548828125, 745.46728515625]
+      },
+      "observed_source_bbox": [81.0, 680.3611450195312, 522.0987548828125, 745.46728515625]
+    },
+    {
+      "id": "statistical-learning-selection",
+      "source": {
+        "filename": "统计学习方法李航(非扫描版).pdf",
+        "sha256": "C48A55E257ECCC13A9621B693E3C48547B12CCC70E1D57EE020A99A35E9C7139"
+      },
+      "current_page": 20,
+      "selected_text": "联合概率分布P(X,Y)",
+      "pages": [
+        {
+          "page_number": 20,
+          "blocks": [
+            {
+              "block_index": 2,
+              "role": "body",
+              "bbox": [72.0, 137.8920135498047, 540.0001220703125, 205.09201049804688],
+              "text": "监督学习假设输入与输出的随机变量X和Y遵循联合概率分布P(X,Y)。"
+            }
+          ]
+        }
+      ],
+      "expected_locator": {
+        "page_number": 20,
+        "block_index": 2,
+        "bbox": [72.0, 137.8920135498047, 540.0001220703125, 205.09201049804688]
+      },
+      "observed_source_bbox": [72.0, 137.8920135498047, 540.0001220703125, 205.09201049804688]
+    }
+  ],
+  "research_context_cases": [
+    {
+      "id": "statistical-learning-caption-context",
+      "source": {
+        "filename": "统计学习方法李航(非扫描版).pdf",
+        "sha256": "C48A55E257ECCC13A9621B693E3C48547B12CCC70E1D57EE020A99A35E9C7139"
+      },
+      "document_title": "统计学习方法",
+      "page_number": 20,
+      "selected_block_index": 7,
+      "selected_text": "监督学习利用训练数据集学习一个模型",
+      "blocks": [
+        {
+          "block_index": 6,
+          "role": "heading",
+          "bbox": [234.9000244140625, 353.79962158203125, 376.8000793457031, 370.9733581542969],
+          "text": "1.2.2 问题的形式化"
+        },
+        {
+          "block_index": 7,
+          "role": "body",
+          "bbox": [72.0, 383.8919982910156, 540.0001220703125, 438.45147705078125],
+          "text": "监督学习利用训练数据集学习一个模型，再用模型对测试样本集进行预测。"
+        },
+        {
+          "block_index": 8,
+          "role": "caption",
+          "bbox": [264.3751220703125, 581.468994140625, 347.6251220703125, 591.338623046875],
+          "text": "图1.1 监督学习问题"
+        }
+      ],
+      "expected": {
+        "section_heading": "1.2.2 问题的形式化",
+        "related_caption": "图1.1 监督学习问题",
+        "related_formula": ""
+      }
+    },
+    {
+      "id": "code-security-formula-context",
+      "source": {
+        "filename": "2408.02509v1.pdf",
+        "sha256": "1F45F83E3EB33B441A63C483C3FA08AB4EC7296597DBB1A6A78859FB0EC01ABE"
+      },
+      "document_title": "2408.02509v1",
+      "page_number": 3,
+      "selected_block_index": 1,
+      "selected_text": "Measuring Functional Correctness",
+      "blocks": [
+        {
+          "block_index": 1,
+          "role": "body",
+          "bbox": [53.689998626708984, 121.81246185302734, 298.7454528808594, 232.78012084960938],
+          "text": "Measuring Functional Correctness The main goal of code completion is to provide completion c that results in a functionally correct program."
+        },
+        {
+          "block_index": 2,
+          "role": "formula",
+          "bbox": [62.417999267578125, 237.77891540527344, 123.72589111328125, 248.32711791992188],
+          "text": "pass@k(G) :="
+        }
+      ],
+      "expected": {
+        "section_heading": "",
+        "related_caption": "",
+        "related_formula": "pass@k(G) :="
+      }
+    }
+  ],
+  "formula_cases": [
+    {
+      "id": "neural-ode-residual-update",
+      "source": {
+        "filename": "neural_ode.pdf",
+        "provenance": "V1.3.1 validation, page 1"
+      },
+      "extracted_text": "ht+1 = ht + f(ht, θt) / (1)",
+      "candidate_role": "formula",
+      "accepted_latex_response": "<latex>h_{t+1}=h_t+f(h_t,\\theta_t)</latex>",
+      "required_latex_fragments": ["h_{t+1}", "h_t", "\\theta_t"]
+    },
+    {
+      "id": "code-security-pass-at-k",
+      "source": {
+        "filename": "2408.02509v1.pdf",
+        "sha256": "1F45F83E3EB33B441A63C483C3FA08AB4EC7296597DBB1A6A78859FB0EC01ABE",
+        "page_number": 3,
+        "block_index": 2
+      },
+      "extracted_text": "pass@k(G) :=",
+      "candidate_role": "formula",
+      "accepted_latex_response": "<latex>\\operatorname{pass@k}(G)</latex>",
+      "required_latex_fragments": ["\\operatorname{pass@k}", "G"]
+    }
+  ]
+}
