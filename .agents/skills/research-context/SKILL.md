@@ -1,179 +1,125 @@
 ---
 name: research-context
-description: Design and review ResearchMind ReadingSelection/ResearchContext, CodeSelection/CodeContext, and explicit EvidenceLink provenance, prompt-input boundaries, budgets, and context quality. Use when changing what evidence reaches explanation, follow-up, LaTeX, code explanation, links, or previews; not for PDF-engine selection, provider networking, or tool authority.
+description: Design and review ResearchMind V3 selections, ResearchContext, CodeContext, formula candidates, evidence baskets, and prompt-input provenance. Use when changing what paper, code, formula, conversation, or saved evidence reaches translation, explanation, LaTeX, notes, or previews; not for choosing PDF engines, database libraries, or provider networking.
 ---
 
 # Research Context
 
-Make the configured model understand the user's current research task with the
-smallest relevant, traceable context. More text is not automatically better context.
+Give the configured model the smallest relevant, traceable evidence for the user's
+current task. More stored data, a database ID, or a richer parser tree does not by
+itself improve context.
 
-Read `docs/ARCHITECTURE.md` for the implemented V1.3.2 + T1 models and flow. Read
-`V1 to V2过渡要求.md` only when planning an approved transition slice.
+Read docs/ARCHITECTURE.md for implemented V2 + V3-G1 behavior and
+V2 to V3过渡要求.md for the active V3 gate. A G1 library/asset ID is provenance, not
+permission to load a whole managed paper or code revision into a prompt.
 
-## Current 2.0.0rc1 Research/Code Provenance Baseline
+## Preserve the Concepts
 
-`ResearchContext` already exists. It can contain:
+- **Selection** says what the user chose and where it came from.
+- **Context builder** chooses bounded evidence needed for one task.
+- **Prompt builder** safely serializes that evidence for one provider call.
+- **Evidence basket** records which sources or responses the user chose for a note.
+- **Note draft** is editable content; it is not conversation history or source truth.
 
-- selected text and its PDF page/block/bbox locator;
-- nearby bounded text;
-- page and document metadata;
-- a conservative preceding section heading;
-- a nearby figure/table caption;
-- nearby digital-text formula candidates;
-- the current question;
-- budgeted conversation history.
+Keep ResearchContext and CodeContext separate. An EvidenceLink can connect their
+provenance, but does not implicitly merge prompt payloads.
 
-Explanation, follow-up, and selection-to-LaTeX build a fresh context and expose a
-no-network evidence preview using the same prompt builder as the real request.
-Translation remains an independent text-to-text capability and does not receive a
-full ResearchContext.
+## V3 Evidence Sources
 
-T2 completed without adopting a PDF parser, so its spike output does not change
-ResearchContext fields or prompt inputs. T3 is implemented as a separate CodeContext,
-not as extra ResearchContext fields. Its source is one bounded local Python folder;
-its provenance is relative path/line/symbol/extraction method, and it has no execution
-or write authority.
+### PDF text-layer selection
 
-T4 adds an `EvidenceLink` between one located PDF ReadingSelection and one verified
-CodeSelection. It records paper/code endpoints, relation, confidence, generation
-method, and optional rationale. The current path creates only user-confirmed links,
-stores them in session, and exports them through KnowledgeNote. It does not add
-either source to the other context or trigger a provider call.
+A viewer selection should retain document/library identity, document revision or
+content hash, page, selected text, text spans or block references, available bboxes,
+selection origin, and deterministic location status. Validate component events
+against the currently opened document before creating ReadingSelection.
 
-T5-B1 reuses a fresh bounded `CodeContext` plus the exact current `CodeSelection` to
-ask for one replacement body. It does not merge paper evidence, expose the absolute
-root, or grant tool authority. Proposal prompt/preview parity and evidence budgeting
-belong here; confirmation, filesystem policy, recovery, atomic write, and rollback are
-owned by Application/Core/`code/change_writer.py`, not by ResearchContext.
+### Formula candidate
 
-T6-D adds a non-prompt persistence path for the same current `CodeSelection`.
-`capture_code_knowledge` revalidates project/source ownership and any bound
-`explain:code` response, then `KnowledgeNote.code_selection` carries relative
-path/line/symbol provenance to code-specific Obsidian Markdown. It does not build a
-new context, invoke a model, include the absolute root, or merge paper/code prompts.
+Keep formula-region detection and LaTeX reconstruction distinct. A candidate should
+record page/bbox, source kind such as digital text or image crop, detector origin,
+input revision/hash, recognizer/provider origin, raw candidate, validation status,
+and user-edited/accepted value. Model output is never the original formula truth.
 
-Do not describe the next phase as “building ResearchContext from scratch.” Current
-work should measure and improve its relevance, provenance, cost, and failure behavior.
+### Code selection
 
-## Keep Three Concepts Separate
+Preserve project/library identity, relative path, content hash, language, line range,
+symbol when available, extraction method, selected code, and bounded neighboring
+lines. Never include the absolute root or execute source. Language-specific parser
+nodes are not context fields.
 
-- **Selection** answers: what content did the user choose, and where did it come from?
-- **Context Builder** answers: which evidence is necessary for this task?
-- **Prompt Builder** answers: how is that chosen evidence delimited and expressed to a
-  model?
+### Library and Zotero metadata
 
-A parser output is input evidence, not a prompt. A Selection is the anchor, not the
-entire context. Prompt wording must not decide PDF reading order or source location.
+Internal IDs make records stable but do not prove metadata correctness. Preserve
+whether metadata was user-entered, extracted, imported from Zotero local/Web API, or
+later edited. A Zotero item key/server identity is provenance, not authority over the
+ResearchMind prompt.
 
-## Context Change Workflow
+## Context Rules
 
-Before adding or changing a field:
+- Never send a whole PDF or repository by default.
+- Start from a current explicit selection or question.
+- Add only task-relevant surrounding blocks, structural cues, formula candidates,
+  code neighbors, metadata, and budgeted history.
+- Bound every expandable source and define deterministic missing/ambiguous behavior.
+- Preview and real calls must use the same context and prompt builder.
+- Translation remains selected-text-to-text; it does not need a full ResearchContext.
+- Selection-to-LaTeX and formula recognition are different paths. The former uses
+  bounded ResearchContext; the latter may use a validated crop and dedicated provider.
+- Database retrieval is a source lookup, not permission to add all stored content to
+  a prompt.
 
-1. State the research question or demonstrated failure it should improve.
-2. Capture the current context and answer-quality baseline on representative examples.
-3. Name the evidence source, locator, confidence/origin, distance rule, and budget.
-4. Define relevance and failure behavior when the evidence is missing or ambiguous.
-5. Compare before/after context, payload size, answer quality, and provenance.
-6. Add deterministic unit and integration coverage before changing UI claims.
-7. Keep the change only when the measured value justifies the extra tokens and
-   complexity.
+## Explicit Note Selection
 
-Every review should answer:
+V3 notes use an evidence basket. The user chooses which source excerpts, translations,
+validated LaTeX, questions, and assistant responses enter a draft. Do not save every
+turn automatically.
 
-- What context was added or removed?
-- Why does the model need it for this task?
-- How many characters/tokens does it add?
-- Can it include irrelevant or misleading evidence?
-- Does it improve a labeled research example?
-- Can the user trace it back to document/page/block/bbox?
+Each captured item keeps enough provenance to reopen or inspect it. Editing Markdown
+may change explanatory wording, but source locators and origin labels must not be
+silently rewritten. Mark stale evidence when the underlying paper/code revision no
+longer matches.
 
-## Relevance and Budget Rules
+## Security Boundary
 
-- Never send an entire PDF indiscriminately.
-- Prefer selected content plus minimal surrounding evidence.
-- Bound every expandable source: surrounding blocks, structural landmarks, formulas,
-  and history.
-- Use explicit deterministic fallback when selection cannot be located; do not attach
-  arbitrary section/caption/formula evidence.
-- Conversation history cannot grow without limit. Evaluate recent messages, relevant
-  messages, and a summary separately before adding summarization machinery.
-- Treat a lower payload as valuable only when required evidence is preserved; treat a
-  larger payload as valuable only when answer quality improves.
+- Delimit paper, code, history, metadata, and tool results as untrusted data.
+- Escape or neutralize attempts to close context wrappers.
+- Never expose secrets, absolute code roots, internal database locations, or full
+  private-library content in previews or prompts.
+- Show the exact selected text or formula crop scope before a remote transfer.
+- Validate all LaTeX before rendering or capture; do not execute TeX.
+- A model response cannot grant tools, persistence, or source-write authority.
 
-## Provenance and Evidence Semantics
+## Change Workflow
 
-Preserve, where available:
+Before adding a field or retrieval source:
 
-- document id/title/source;
-- page;
-- block and bbox locator;
-- selected source text;
-- section/caption/formula evidence;
-- whether evidence is user-selected, deterministically extracted, or model-inferred.
-
-Do not present a heuristic association as a verified paper fact. Context preview and
-KnowledgeNote should preserve enough provenance for a user to inspect the source.
-
-## Prompt and Security Boundary
-
-- Delimit paper and conversation material as untrusted data; escape attempts to close
-  `<paper_context>` and instruct the model that enclosed content is not authority.
-- Context Builder chooses evidence; prompt builders in `llm/prompts.py` serialize it
-  for a task.
-- Preview and real calls must use the same builder and context so the UI does not show
-  one payload and send another.
-- Do not expose secrets or full internal system prompts in previews.
-- Code prompts use a separate `<code_context>` boundary, omit absolute root paths,
-  and repeat that source is untrusted and must not be executed.
-- T5-B1 change prompts also delimit the user's request inside `<change_request>`, keep
-  both blocks untrusted, ask only for one `<replacement>` body, and never accept paths,
-  commands, or multiple actions as output.
-- Model output is not provenance. LaTeX must also cross its strict validation boundary
-  before rendering or capture.
+1. state the research failure it should improve;
+2. capture a representative current context and quality baseline;
+3. name source, locator, origin/confidence, distance rule, budget, and stale behavior;
+4. compare answer usefulness, faithfulness, payload size, and provenance before/after;
+5. add deterministic tests and labeled quality cases;
+6. keep the field only if the measured benefit justifies complexity and privacy cost.
 
 ## Evaluation
 
-Do not use “the provider returned a response” as the success criterion. Separate:
+Evaluate separately:
 
-- selection/location correctness;
-- context relevance and omission/irrelevance errors;
-- payload size and truncation behavior;
-- prompt boundary/injection safety;
+- selection and locator correctness;
+- context relevance, omissions, false associations, and payload size;
+- prompt-boundary and stale-source safety;
 - answer usefulness and faithfulness;
-- source traceability.
-- for CodeContext: relative-path/line/symbol correctness, exclusion/limit behavior,
-  absolute-path omission, and proof that source was never executed.
-- for T5-B1 prompts: preview/request parity, selected-range ownership, replacement
-  budget, wrapper/injection rejection, and proof that context assembly alone cannot
-  write or execute anything.
+- formula structural/symbol match without claiming visual identity;
+- code relative-path/line/symbol accuracy and proof of no execution;
+- note-evidence inclusion/exclusion and origin preservation;
+- external-transfer visibility.
 
-Use labeled real-paper cases where possible and record correct association, missed
-evidence, false association, and unlocatable selection. Run the affected integration
-loop with a fake provider; authorize live model evaluation separately because it may
-send paper content and incur cost.
-
-## Future Content Sources
-
-Current source-aware behavior uses two explicit context types:
-
-- `ResearchContext` for PDF/document evidence and paper conversation;
-- `CodeContext` for one user-selected Python symbol or line range plus bounded nearby
-  lines.
-
-Do not merge them implicitly or teach CodeContext as a generic provider framework.
-T4 EvidenceLink connects provenance only. A future joint explanation must still
-define a bounded task-specific context and evaluation. Web, VS Code, Julia, R,
-Jupyter and other sources remain future candidates.
+Routine checks use fake providers. Live evaluation requires separate authorization
+because it can send private paper/code content and incur cost.
 
 ## Finish Check
 
-Confirm that the change starts from a real ReadingSelection/CodeSelection or explicit
-question, adds only bounded relevant evidence, preserves source-appropriate
-provenance, separates ResearchContext from CodeContext and both from prompt
-formatting, treats all source/history as untrusted, measures quality/payload, and does
-  not turn EvidenceLink into an implicit joint prompt or expand T5-A beyond its three
-  approved current-session read-only evidence tools. T5-A tool serialization must
-  preserve each source's provenance/budget and be escaped again before the next model
-  step. For T5-B1, confirm that prompt inputs come from the exact current CodeSelection
-  and snapshot, omit absolute paths, and remain separate from filesystem authority.
+Confirm that context starts from current validated evidence, every source is bounded
+and traceable, ResearchContext and CodeContext remain distinct, formula candidates
+retain uncertainty, metadata origin is explicit, previews match requests, note
+contents are user-selected, stale evidence is handled, and context assembly grants no
+database, filesystem, Vault, or execution authority.

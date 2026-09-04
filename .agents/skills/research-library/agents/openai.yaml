@@ -1,0 +1,3 @@
+interface:
+  display_name: "Research Library"
+  short_description: "Plan and verify ResearchMind V3 library persistence"

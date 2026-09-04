@@ -1,20 +1,32 @@
 # ResearchMind
 
-> 当前产品实现为 `2.0.0rc1` 本地内部候选，不作为公开发布版本。
+> 当前产品实现为已通过 V2 内部验收的 `2.0.0rc1` 本地基线，不作为公开发布版本。
 > T6-C 自动门禁已通过，用户也已明确确认人工门禁通过；早期浏览器控制故障仍
 > 保留在验证记录中。T5-B1 只开放当前 Python 选择的单范围受控替换，不开放执行。
 > T6-D 已完成本地内部候选封口；不会上传包、创建公开 Release 或对外发布。
+> 用户于 2026-09-01 确认 V2 验收通过，并已在独立对话给出 V3 要求。
+> V3-G0/G1 已完成；V3-G2 已实现可选 Zotero Local API 元数据/来源链接，
+> 直接附件导入待本地文件读取门禁，真实 Zotero desktop 人工验收未完成。页面划词、自动公式、持久笔记草稿和
+> 多语言解析尚未进入生产。
 
 ResearchMind 是一个本地运行的 AI 科研阅读与知识沉淀工作台。它负责打开
 PDF、提取和选择文本、翻译、结合论文上下文进行 AI 解释与追问，并把理解整理
 为可追溯的 Markdown 笔记写入 Obsidian Vault。
 
 它连接的是 Zotero → ResearchMind → Obsidian 工作流：Zotero 继续管理文献，
-Obsidian 继续管理长期知识，ResearchMind 专注于“读懂论文并沉淀理解”。V1
-不包含文献库、数据库、OCR、PDF 编辑、知识图谱或 Zotero 集成。
+Obsidian 继续管理长期知识，ResearchMind 专注于“读懂论文并沉淀理解”。已验收
+2.0.0rc1 保持独立；V3-G1/G2 在其上增加工作资料库和可选 Zotero 来源，但仍不
+包含 OCR、PDF 编辑、Zotero 写入/同步或其余 V3 能力。
 
-## 当前 V1.3.2 + T5-B1/T6-C 能力
+## 当前能力（V2 Accepted + V3-G1/G2）
 
+- 在“本地资料库”中点击/拖放上传 PDF 或 Python 目录，使用独立数据目录保存
+  托管副本和 SQLite 元数据，应用重启后可列出并重新打开；
+- 对相同内容精确去重；可为既有记录显式导入新修订，不静默覆盖；
+- 资料库移除/恢复与“另行确认删除托管副本”分开；不会删除外部文件或 Vault；
+- Zotero 默认关闭；显式启用后可按按钮读取个人资料库、选择一个条目/PDF 附件，
+  为已上传论文建立来源链接；unlink 不删除任一侧文件。直接附件导入暂不可用；
+- 可生成带 manifest/SHA-256 的资料库备份，并验证后恢复到全新的数据目录；
 - 打开本地数字版 PDF，浏览、翻页、按页跳转、缩放和全文搜索；
 - 按阅读顺序显示可复制文本块，并改善常见双栏论文的段落顺序；
 - 对高置信度章节标题、相邻图表说明和数字文字层公式候选做轻量识别，为 AI 解释补充局部结构线索；
@@ -113,6 +125,9 @@ LLM_MODEL=dots3-note-prev
 
 TRANSLATION_TARGET_LANGUAGE=zh-CN
 
+RESEARCHMIND_DATA_DIR=D:\ResearchMindData
+ZOTERO_LOCAL_API_ENABLED=false
+
 OBSIDIAN_VAULT_PATH=D:\ObsidianVault
 OBSIDIAN_SUBDIRECTORY=ResearchMind
 
@@ -123,6 +138,11 @@ PDF_MAX_SIZE_MB=50
 
 - Dots Studio 使用 `LLM_API_KEY_HEADER=api-key`；使用标准 OpenAI Bearer
   鉴权的端点则设置为 `Authorization`。
+- `RESEARCHMIND_DATA_DIR` 必须是专门给 ResearchMind 的数据根目录，不能位于
+  Vault 内，也不能复用要导入/修改的代码项目目录。首次资料库操作会在其下创建
+  `researchmind.sqlite3`、`assets/` 和暂存目录。
+- `ZOTERO_LOCAL_API_ENABLED` 默认 `false`。只有你已在 Zotero desktop 中启用
+  Local API 并需要连接时才设为 `true`；ResearchMind 仍只在资料库按钮点击后读取。
 - `OBSIDIAN_VAULT_PATH` 必须指向已经存在的 Vault 根目录。应用会在其中
   创建 `OBSIDIAN_SUBDIRECTORY`，而不是把该子目录当作 Vault 根目录。
 - Vault 不是必需配置：未配置时仍可阅读和调用 AI，但不能保存笔记。
@@ -136,6 +156,8 @@ LLM_API_KEY = "replace-with-your-api-key"
 LLM_API_KEY_HEADER = "api-key"
 LLM_MODEL = "dots3-note-prev"
 TRANSLATION_TARGET_LANGUAGE = "zh-CN"
+RESEARCHMIND_DATA_DIR = "D:\\ResearchMindData"
+ZOTERO_LOCAL_API_ENABLED = false
 OBSIDIAN_VAULT_PATH = "D:\\ObsidianVault"
 OBSIDIAN_SUBDIRECTORY = "ResearchMind"
 ```
@@ -149,9 +171,9 @@ OBSIDIAN_SUBDIRECTORY = "ResearchMind"
 & .\.venv\Scripts\python.exe -m researchmind.maintenance diagnose --env-file .env
 ```
 
-也可添加 `--json` 生成机器可读结果。诊断只检查 Python、配置格式、LLM 地址
-格式、凭据是否齐全、Vault 目标和资源限制；不会联网、不会显示 API Key，也
-不会创建 Vault 子目录。应用顶部“启动与配置检查”提供同一项显式检查。
+也可添加 `--json` 生成机器可读结果。诊断只检查 Python、配置格式、LLM 地址、
+凭据、Vault、资料库配置状态和资源限制；不会联网、不会显示 API Key/私有绝对
+数据目录，也不会创建 Vault/资料库目录。应用顶部“启动与配置检查”提供同一检查。
 
 ## 启动
 
@@ -182,13 +204,17 @@ macOS 或 Linux：
 
 ## 使用流程
 
-1. 在“PDF 阅读”中输入本地 PDF 路径并打开；
-2. 翻页、搜索或调整缩放，从按阅读顺序排列的文本/公式块一键选择内容；
-3. 也可复制或手动输入文字并确认；随后翻译、转换为 LaTeX 或选择一种 AI 解释模式；
-4. 展开对应的“上下文证据（发送前预览）”，检查本次 AI 调用会使用的论文证据；
-5. 在“研究对话”中继续追问，并可在发送前检查追问上下文；
-6. 点击“沉淀为知识”，选择对话内容，补充自己的理解与标签；
-7. 预览 Markdown 后保存到配置的 Vault。
+1. 配置 `RESEARCHMIND_DATA_DIR`，进入“本地资料库”；
+2. 通过 PDF 上传框选择/拖放一份 PDF，或通过目录上传框选择一个 Python 目录；
+   如需 Zotero，另行显式启用 Local API，点击读取后选择条目/附件并链接已有论文；
+3. 从资料库列表点击“打开”，进入既有 PDF 或代码工作区；
+4. 翻页、搜索或调整缩放，从按阅读顺序排列的文本/公式块一键选择内容；
+5. 也可复制或手动输入文字并确认；随后翻译、转换为 LaTeX 或选择 AI 解释模式；
+6. 展开“上下文证据（发送前预览）”，检查本次 AI 调用会使用的论文证据；
+7. 在“研究对话”中继续追问，再显式整理、预览 Markdown 并保存到 Vault。
+
+V2 的本地路径打开入口仍保留，便于只读临时阅读而不导入资料库。浏览器上传不会
+提供可信原始 OS 路径，因此 G1 会复制验证后的内容到 ResearchMind 数据目录。
 
 代码上下文、证据链接与受控修改流程：
 
@@ -218,17 +244,44 @@ T4 链接不会调用模型，也不会把整个仓库发给模型或自动关�
 
 ## 数据与备份
 
-- PDF 保留在原位置；ResearchMind 不维护论文副本或文献数据库。
-- 打开的论文和对话只存在于当前 Streamlit 会话，刷新或停止应用后不会恢复。
-- 打开的代码项目、选择和解释同样只存在于当前 Streamlit 会话，不建立代码索引数据库。
+Zotero 兼容性说明（2026-09-04）：当前身份校验要求 Zotero 10+ 提供的
+`Zotero-Server-ID`，缺失时提示错误。官方附件接口返回 `302 file://`，因此直接
+导入暂被禁用，待确认安全本地读取方案；可先点击上传 PDF 再链接来源。依据见
+[官方 Local API 文档](https://www.zotero.org/support/dev/web_api/v3/local_api)。
+
+- 经 G1 点击导入的 PDF/Python 目录复制到 `RESEARCHMIND_DATA_DIR/assets/`；
+  `researchmind.sqlite3` 保存记录、哈希、相对路径、修订和显式 Zotero 来源快照，
+  不保存文件 blob、Zotero 凭据或全库缓存。
+- V2 本地路径入口仍只读原文件，不自动复制或登记。浏览器上传不声称保留原始
+  OS 路径。
+- 资料库记录和托管资产跨重启保留；当前打开页、对话、选择、解释、证据链接和
+  笔记预览仍只存在于当前 Streamlit 会话。
+- G1 托管代码修订不可由 T5-B1 修改；需要修改时使用另行管理的外部本地项目，
+  避免托管资产与数据库哈希静默不一致。
 - T5-B1 proposal 与审计只在当前会话；已确认修改会写回一个原文件，并在项目内
   `.researchmind-recovery/` 保留不覆盖的原始 bytes。恢复副本不会进入隐藏目录
   已排除的代码索引，也不属于 Obsidian 备份。
-- 证据链接同样只存在于当前会话；只有随 KnowledgeNote 导出的 Markdown 是
-  持久结果。当前没有证明需要跨会话链接库，因此未引入 SQLite。
-- 长期数据是 Vault 中的 Markdown。整个 Obsidian Vault 的既有备份/同步仍是
-  主备份方案。T6-B 另外提供一个只包含 ResearchMind 子目录中 `.md` 和校验
-  清单的便携 ZIP：
+- 证据链接只有随 KnowledgeNote 导出的 Markdown 才成为长期结果；G1 SQLite
+  不保存链接、对话或草稿。
+
+资料库与 Obsidian 是两类独立数据，应分别备份。G1 资料库 ZIP 包含一致 SQLite
+快照、托管 assets 和 checksummed manifest，不含 `.env`、Vault 或暂存内容：
+
+```powershell
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+& .\.venv\Scripts\python.exe -m researchmind.maintenance library-backup --env-file .env --output "D:\Backups\researchmind-library-$stamp.zip"
+```
+
+恢复会先验证路径、数量/体量、manifest、逐文件 SHA-256 和数据库 schema，只能
+写入尚不存在且不与当前数据目录/Vault 重叠的新目录。恢复成功后，人工把
+`RESEARCHMIND_DATA_DIR` 更新为该目录再启动应用：
+
+```powershell
+& .\.venv\Scripts\python.exe -m researchmind.maintenance library-restore --archive "D:\Backups\researchmind-library-20260901-120000.zip" --data-dir "D:\ResearchMindRecovered" --env-file .env
+```
+
+整个 Obsidian Vault 的既有备份/同步仍是长期知识的主备份方案。T6-B 另外提供
+只包含 ResearchMind 子目录中 `.md` 和校验清单的便携 ZIP：
 
 ```powershell
 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -242,7 +295,7 @@ $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 & .\.venv\Scripts\python.exe -m researchmind.maintenance restore --archive "D:\Backups\researchmind-20260830-120000.zip" --vault "D:\ObsidianVault" --subdirectory "ResearchMind-Recovered"
 ```
 
-- 定向 ZIP 不包含 `.env`、`secrets.toml`、PDF、代码、图片或其他 Vault 内容；
+- Vault 定向 ZIP 不包含 `.env`、`secrets.toml`、PDF、代码、图片或其他 Vault 内容；
   密钥配置必须单独安全保管。
 - `.env` 或 `secrets.toml` 应单独安全保管，不要放入 Vault、云端公开仓库或
   普通聊天记录；API Key 泄露时应在服务商处撤销并更换。
@@ -250,11 +303,12 @@ $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 
 ## 升级与回滚
 
-当前冻结为本地内部 `2.0.0rc1` 候选；它不是公开发布，也不承诺稳定公共 API。升级前：
+当前是已验收 V2 基线加 G1/G2 source increment（G2 附件导入和人工验收未完成）；它不是公开发布，也不承诺稳定
+公共 API。升级前：
 
 1. 记录当前 Git commit 或保存当前 wheel/source 工件；
 2. 运行配置诊断；
-3. 备份整个 Vault，并用上述命令额外生成 ResearchMind Markdown ZIP；
+3. 分别生成 G1 资料库 ZIP、ResearchMind Markdown ZIP，并备份整个 Vault；
 4. 在独立虚拟环境安装新工件，运行 `pip check`、诊断和启动检查；
 5. 验证完成前保留旧环境和旧工件。
 
@@ -264,8 +318,9 @@ $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 & .\.venv\Scripts\python.exe -m pip install --force-reinstall "D:\Releases\researchmind-previous-py3-none-any.whl"
 ```
 
-ResearchMind 当前没有数据库迁移，安装/回滚不应改动包外 Markdown。只有 Vault
-本身丢失或损坏时，才把备份恢复到新的子目录并人工比较后合并。
+代码回滚不会自动降级或删除 G1 数据库。保留原数据目录和资料库 ZIP；只有兼容
+版本才应继续打开该目录。需要恢复时始终恢复到新目录，再切换配置，不就地覆盖。
+Vault 恢复仍写入新子目录并由用户人工比较后合并。
 
 ## 测试
 
@@ -284,9 +339,14 @@ ResearchMind 当前没有数据库迁移，安装/回滚不应改动包外 Markd
   必须对照页面图像，不保证等价于原始二维公式；
 - 不做图片公式 OCR、自动整页公式重建或通用 TeX 文档编译；模型生成的 LaTeX
   经过受限命令校验，只用于 Streamlit 预览和 Obsidian 显示数学；
+- 自动公式区域识别、图片公式 OCR 和整页 PDF→LaTeX 已明确移至 post-V2/V3
+  候选范围，不属于 `2.0.0rc1` 的验收缺口；
 - 只识别嵌入位图区域，不识别纯矢量图、表格语义或图表含义；
 - 扫描版 PDF 没有 OCR，因此可能没有可复制文本；
-- 会话不跨应用重启持久化；
+- 资料库记录/资产跨重启，但会话、对话、选择、证据链接和笔记草稿尚不持久化；
+- 代码目录点击导入在 G1 只接受符合边界的 UTF-8 Python 文件；托管修订只读；
+- Streamlit 自动测试不能真实操作浏览器文件选择器；服务端上传边界和 AppTest
+  导航已覆盖，点击/拖放仍需真实浏览器人工验收；
 - 自动打开页面依赖操作系统存在有效的默认 HTTP 浏览器关联。
 - T3 仅支持 UTF-8 Python；语法错误文件可按行选择，非 UTF-8 文件只显示诊断；
   不支持 Jupyter、Julia、R、IDE 插件、跨文件语义分析或代码执行。
@@ -300,10 +360,14 @@ ResearchMind 当前没有数据库迁移，安装/回滚不应改动包外 Markd
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)、
 [docs/PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md)、
 [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md)、
-[docs/POST_V1_DEVELOPMENT_PLAN.md](docs/POST_V1_DEVELOPMENT_PLAN.md) 和
+[docs/POST_V1_DEVELOPMENT_PLAN.md](docs/POST_V1_DEVELOPMENT_PLAN.md)、
+[docs/V2_ACCEPTANCE_PREPARATION.md](docs/V2_ACCEPTANCE_PREPARATION.md)、
+[V2 to V3过渡要求.md](./V2%20to%20V3过渡要求.md) 和
 [V1 to V2过渡要求.md](./V1%20to%20V2过渡要求.md)。T3/T4 实现证据见
 [docs/T3_CODECONTEXT_VALIDATION.md](docs/T3_CODECONTEXT_VALIDATION.md) 和
 [docs/T4_EVIDENCE_LINK_VALIDATION.md](docs/T4_EVIDENCE_LINK_VALIDATION.md)。
-T5-B1/T6-C 证据见
+V3-G1/G2、T5-B1/T6-C 证据见
+[docs/V3_G1_LOCAL_LIBRARY_VALIDATION.md](docs/V3_G1_LOCAL_LIBRARY_VALIDATION.md)、
+[docs/V3_G2_ZOTERO_VALIDATION.md](docs/V3_G2_ZOTERO_VALIDATION.md)、
 [docs/T5_B1_CONTROLLED_CODE_WRITE_VALIDATION.md](docs/T5_B1_CONTROLLED_CODE_WRITE_VALIDATION.md) 和
 [docs/T6_C_PRIVACY_SECURITY_PERFORMANCE_VALIDATION.md](docs/T6_C_PRIVACY_SECURITY_PERFORMANCE_VALIDATION.md)。

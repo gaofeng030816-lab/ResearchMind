@@ -8,6 +8,9 @@ from pathlib import Path
 import pytest
 
 from researchmind.maintenance import main
+from researchmind.app import use_cases
+from researchmind.config import Settings
+from researchmind.models import UploadedFileData
 
 
 def test_diagnose_cli_emits_safe_json(
@@ -97,3 +100,58 @@ def test_backup_and_restore_cli_round_trip(
         encoding="utf-8"
     ) == "# durable\n"
     assert "1 Markdown" in captured.out
+
+
+def test_library_backup_and_restore_cli_round_trip(
+    tmp_path: Path,
+    clean_config_environment: None,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    data_dir = tmp_path / "library"
+    settings = Settings(researchmind_data_dir=data_dir)
+    imported = use_cases.import_code_directory_to_library(
+        [
+            UploadedFileData(
+                name="demo/main.py",
+                content=b"value = 42\n",
+            )
+        ],
+        settings=settings,
+    )
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        f"RESEARCHMIND_DATA_DIR={data_dir}\n",
+        encoding="utf-8",
+    )
+    archive = tmp_path / "library-backup.zip"
+    restored_dir = tmp_path / "restored-library"
+
+    backup_exit = main(
+        [
+            "library-backup",
+            "--env-file",
+            str(env_file),
+            "--output",
+            str(archive),
+        ]
+    )
+    restore_exit = main(
+        [
+            "library-restore",
+            "--archive",
+            str(archive),
+            "--data-dir",
+            str(restored_dir),
+            "--env-file",
+            str(env_file),
+        ]
+    )
+
+    restored = use_cases.list_library_entries(
+        settings=Settings(researchmind_data_dir=restored_dir)
+    )
+    captured = capsys.readouterr()
+    assert backup_exit == 0
+    assert restore_exit == 0
+    assert restored[0].record.id == imported.entry.record.id
+    assert "library backup" in captured.out

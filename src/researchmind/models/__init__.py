@@ -34,6 +34,17 @@ from researchmind.models.evidence_link import (
 )
 from researchmind.models.figure_region import FigureRegion
 from researchmind.models.knowledge_note import KnowledgeNote
+from researchmind.models.library import (
+    AssetKind,
+    AssetReference,
+    LibraryEntry,
+    LibraryBackupResult,
+    LibraryImportResult,
+    LibraryItemKind,
+    LibraryRecord,
+    LibraryRestoreResult,
+    UploadedFileData,
+)
 from researchmind.models.maintenance import (
     ConfigurationCheck,
     ConfigurationReport,
@@ -58,6 +69,16 @@ from researchmind.models.read_only_assistant import (
 )
 from researchmind.models.research_context import ResearchContext
 from researchmind.models.text_block import BoundingBox, TextBlock, TextBlockRole
+from researchmind.models.zotero import (
+    ZoteroAttachment,
+    ZoteroBrowseResult,
+    ZoteroConnection,
+    ZoteroDownloadedFile,
+    ZoteroItem,
+    ZoteroItemDetails,
+    ZoteroLibraryType,
+    ZoteroSourceLink,
+)
 
 __all__ = [
     "BoundingBox",
@@ -85,6 +106,15 @@ __all__ = [
     "EvidenceRelation",
     "FigureRegion",
     "KnowledgeNote",
+    "AssetKind",
+    "AssetReference",
+    "LibraryEntry",
+    "LibraryBackupResult",
+    "LibraryImportResult",
+    "LibraryItemKind",
+    "LibraryRecord",
+    "LibraryRestoreResult",
+    "UploadedFileData",
     "ConfigurationCheck",
     "ConfigurationReport",
     "DiagnosticStatus",
@@ -110,4 +140,12 @@ __all__ = [
     "ResearchContext",
     "TextBlock",
     "TextBlockRole",
+    "ZoteroAttachment",
+    "ZoteroBrowseResult",
+    "ZoteroConnection",
+    "ZoteroDownloadedFile",
+    "ZoteroItem",
+    "ZoteroItemDetails",
+    "ZoteroLibraryType",
+    "ZoteroSourceLink",
 ]

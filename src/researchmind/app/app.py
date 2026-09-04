@@ -9,6 +9,7 @@ from researchmind.app.views import (
     render_configuration_diagnostics,
     render_conversation,
     render_knowledge,
+    render_library,
     render_read_only_assistant,
     render_reader,
 )
@@ -17,12 +18,14 @@ _WORKSPACE_LABELS = {
     "paper": "论文阅读与笔记",
     "code": "代码学习与复现",
     "assistant": "只读研究助手",
+    "library": "本地资料库",
 }
 
 
 def main() -> None:
     st.set_page_config(page_title="ResearchMind", page_icon="📚", layout="wide")
     state.initialize_state()
+    state.apply_requested_workspace()
 
     st.title("ResearchMind")
     st.caption("论文理解、代码学习与科研复现，最终沉淀为可追溯知识。")
@@ -47,8 +50,10 @@ def main() -> None:
         render_knowledge()
     elif workspace == "code":
         render_code_workspace()
-    else:
+    elif workspace == "assistant":
         render_read_only_assistant()
+    else:
+        render_library()
 
 
 if __name__ == "__main__":

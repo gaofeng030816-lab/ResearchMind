@@ -37,6 +37,8 @@ class Settings:
     llm_api_key_header: str = DEFAULT_LLM_API_KEY_HEADER
     llm_model: str | None = None
     target_language: str = DEFAULT_TARGET_LANGUAGE
+    researchmind_data_dir: Path | None = None
+    zotero_local_api_enabled: bool = False
     obsidian_vault_path: Path | None = None
     obsidian_subdirectory: str = DEFAULT_OBSIDIAN_SUBDIRECTORY
     context_token_budget: int = DEFAULT_CONTEXT_TOKEN_BUDGET
@@ -91,6 +93,15 @@ def load_settings(
             values,
             "TRANSLATION_TARGET_LANGUAGE",
             DEFAULT_TARGET_LANGUAGE,
+        ),
+        researchmind_data_dir=_optional_path(
+            values,
+            "RESEARCHMIND_DATA_DIR",
+        ),
+        zotero_local_api_enabled=_boolean(
+            values,
+            "ZOTERO_LOCAL_API_ENABLED",
+            False,
         ),
         obsidian_vault_path=_optional_path(values, "OBSIDIAN_VAULT_PATH"),
         obsidian_subdirectory=_text_or_default(
@@ -190,3 +201,21 @@ def _positive_int(
         raise ConfigError(f"{key} must be a positive integer.")
 
     return value
+
+
+def _boolean(
+    values: Mapping[str, str],
+    key: str,
+    default: bool,
+) -> bool:
+    raw_value = _optional_text(values, key)
+    if raw_value is None:
+        return default
+    normalized = raw_value.casefold()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ConfigError(
+        f"{key} must be true/false, yes/no, on/off, or 1/0."
+    )

@@ -26,6 +26,8 @@ def test_diagnostics_report_ready_local_configuration_without_secret(
     assert statuses["configuration"] == "ok"
     assert statuses["llm_endpoint"] == "ok"
     assert statuses["llm_credentials"] == "ok"
+    assert statuses["library"] == "warning"
+    assert statuses["zotero_local_api"] == "warning"
     assert statuses["vault"] == "ok"
     assert report.has_errors is False
     assert "diagnostic-secret-value" not in repr(report)
@@ -37,8 +39,37 @@ def test_diagnostics_treat_unconfigured_optional_capabilities_as_warnings() -> N
 
     statuses = {check.code: check.status for check in report.checks}
     assert statuses["llm_credentials"] == "warning"
+    assert statuses["library"] == "warning"
+    assert statuses["zotero_local_api"] == "warning"
     assert statuses["vault"] == "warning"
     assert report.has_errors is False
+
+
+def test_diagnostics_validate_library_without_creating_it(
+    tmp_path: Path,
+) -> None:
+    data_dir = tmp_path / "new-library"
+
+    report = diagnose_configuration(
+        env={"RESEARCHMIND_DATA_DIR": str(data_dir)}
+    )
+
+    statuses = {check.code: check.status for check in report.checks}
+    assert statuses["library"] == "ok"
+    assert data_dir.exists() is False
+    assert str(tmp_path) not in repr(report)
+
+
+def test_diagnostics_reports_enabled_zotero_without_network_probe() -> None:
+    report = diagnose_configuration(
+        env={"ZOTERO_LOCAL_API_ENABLED": "true"}
+    )
+
+    check = next(
+        item for item in report.checks if item.code == "zotero_local_api"
+    )
+    assert check.status == "ok"
+    assert "诊断不会联网" in check.message
 
 
 def test_diagnostics_convert_invalid_configuration_to_safe_error() -> None:

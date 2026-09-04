@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-31",
+  "environment": {
+    "python": "3.12.13",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "pymupdf": "1.28.2",
+    "configured_model": "dots3-note-prev"
+  },
+  "automated_tests": {
+    "digital_geometry": 10,
+    "formula_vision": 9,
+    "total": 19,
+    "passed": 19
+  },
+  "full_regression": {
+    "passed": 288,
+    "skipped": 1,
+    "skip_reason": "Creating symlinks is unavailable on this Windows host.",
+    "pip_check": "No broken requirements found."
+  },
+  "production_before": {
+    "code_security_page_3": {
+      "formula_blocks": 4,
+      "text_blocks": 32,
+      "image_regions": 0
+    },
+    "statistical_learning_page_20": {
+      "formula_blocks": 0,
+      "text_blocks": 12,
+      "image_regions": 1
+    },
+    "chinese_scan_page_1": {
+      "formula_blocks": 0,
+      "text_blocks": 0,
+      "image_regions": 1
+    }
+  },
+  "digital_geometry_spike": {
+    "code_security_page_3": {
+      "manual_display_regions": 3,
+      "detected_display_regions": 3,
+      "inline_candidates_observational": 27,
+      "all_candidates": 30,
+      "real_display_regions_with_safe_deterministic_latex": 0
+    },
+    "statistical_learning_page_20": {
+      "manual_digital_display_regions": 0,
+      "detected_display_regions": 0,
+      "inline_candidates_observational": 8,
+      "manual_embedded_image_formula_regions": 1,
+      "detected_embedded_image_formula_regions": 1
+    },
+    "chinese_scan_page_1": {
+      "digital_candidates": 0,
+      "embedded_formula_image_candidates": 0,
+      "note": "A full-page scan is not relabeled as a formula region."
+    }
+  },
+  "live_multimodal_probes": [
+    {
+      "input": "license_free_embedded_raster_formula",
+      "external_user_document": false,
+      "crop_bytes": 18493,
+      "success": true,
+      "latex": "T = \\{(x_i, y_i)\\}_{i=1}^{N}"
+    },
+    {
+      "input": "license_free_stacked_fraction",
+      "external_user_document": false,
+      "crop_bytes": 3060,
+      "success": true,
+      "latex": "\\frac{a + b}{c + d}"
+    }
+  ],
+  "privacy": {
+    "real_course_pdf_sent_to_provider": false,
+    "full_page_or_full_pdf_sent": false,
+    "api_key_or_absolute_path_logged": false,
+    "live_requests": 2
+  },
+  "capability_boundary": {
+    "digital_display_region_detection": true,
+    "embedded_wide_short_image_candidate_detection": true,
+    "bounded_crop_render": true,
+    "strict_multimodal_latex_protocol": true,
+    "automatic_external_transfer": false,
+    "local_math_ocr": false,
+    "full_page_scan_formula_segmentation": false,
+    "production_integration": false
+  }
+}

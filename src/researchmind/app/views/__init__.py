@@ -5,6 +5,7 @@ from researchmind.app.views.code_workspace import render_code_workspace
 from researchmind.app.views.configuration import render_configuration_diagnostics
 from researchmind.app.views.conversation import render_conversation
 from researchmind.app.views.knowledge import render_knowledge
+from researchmind.app.views.library import render_library
 from researchmind.app.views.read_only_assistant import (
     render_read_only_assistant,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "render_configuration_diagnostics",
     "render_conversation",
     "render_knowledge",
+    "render_library",
     "render_read_only_assistant",
     "render_reader",
 ]

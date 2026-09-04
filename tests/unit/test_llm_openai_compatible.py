@@ -82,7 +82,7 @@ def test_timeout_is_mapped_without_provider_details() -> None:
 
 
 def test_api_error_does_not_expose_request_body_or_secret() -> None:
-    secret = "sk-test-sensitive-value"
+    secret = "unit-test-placeholder-not-a-real-key"
 
     def api_failure(**_: object) -> object:
         raise APIError(

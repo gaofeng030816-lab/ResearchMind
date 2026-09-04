@@ -25,6 +25,8 @@ def test_load_settings_uses_safe_defaults() -> None:
     assert settings.llm_api_key_header == DEFAULT_LLM_API_KEY_HEADER
     assert settings.llm_model is None
     assert settings.target_language == DEFAULT_TARGET_LANGUAGE
+    assert settings.researchmind_data_dir is None
+    assert settings.zotero_local_api_enabled is False
     assert settings.obsidian_vault_path is None
     assert settings.obsidian_subdirectory == DEFAULT_OBSIDIAN_SUBDIRECTORY
     assert settings.context_token_budget == DEFAULT_CONTEXT_TOKEN_BUDGET
@@ -45,6 +47,8 @@ def test_load_settings_reads_dotenv_without_leaking_key_in_repr(
                 "LLM_API_KEY_HEADER=api-key",
                 "LLM_MODEL=local-model",
                 "TRANSLATION_TARGET_LANGUAGE=zh-TW",
+                f"RESEARCHMIND_DATA_DIR={(tmp_path / 'library').as_posix()}",
+                "ZOTERO_LOCAL_API_ENABLED=true",
                 f"OBSIDIAN_VAULT_PATH={tmp_path.as_posix()}",
                 "OBSIDIAN_SUBDIRECTORY=Research Notes",
                 "CONTEXT_TOKEN_BUDGET=7000",
@@ -62,6 +66,8 @@ def test_load_settings_reads_dotenv_without_leaking_key_in_repr(
     assert settings.llm_api_key_header == "api-key"
     assert settings.llm_model == "local-model"
     assert settings.target_language == "zh-TW"
+    assert settings.researchmind_data_dir == tmp_path / "library"
+    assert settings.zotero_local_api_enabled is True
     assert settings.obsidian_vault_path == tmp_path
     assert settings.obsidian_subdirectory == "Research Notes"
     assert settings.context_token_budget == 7_000
@@ -116,3 +122,8 @@ def test_positive_integer_settings_reject_invalid_values(
 ) -> None:
     with pytest.raises(ConfigError, match=key):
         load_settings(env={key: value})
+
+
+def test_zotero_boolean_setting_rejects_ambiguous_values() -> None:
+    with pytest.raises(ConfigError, match="ZOTERO_LOCAL_API_ENABLED"):
+        load_settings(env={"ZOTERO_LOCAL_API_ENABLED": "maybe"})

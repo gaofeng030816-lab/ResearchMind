@@ -1,136 +1,123 @@
 ---
 name: pdf-research
-description: Evaluate and review ResearchMind scientific-PDF viewing, parsing, extraction quality, document understanding, and isolated parser/OCR technology spikes. Use for PDF rendering, reading order, text/bbox selection, formulas, tables, figures, captions, OCR, or tools such as PyMuPDF, OpenDataLoader-PDF, Docling, and Marker; not for generic project planning or unapproved production integration.
+description: Evaluate and review ResearchMind V3 PDF viewing, browser text-layer selection, extraction, formula-region detection, formula-to-LaTeX recognition, and isolated parser/OCR/component spikes. Use for PDF rendering, scroll/selection geometry, formulas, tables, figures, OCR, PyMuPDF, pdf.js, CCv2, or candidate PDF tools; not for unapproved production adoption.
 ---
 
 # PDF Research
 
-Make evidence-based PDF decisions that improve ResearchMind's reading-to-context
-workflow without replacing a stable implementation merely because another parser has
-more features.
+Make evidence-based PDF decisions for ResearchMind's reading-to-context workflow.
+Preserve the accepted PyMuPDF V2 baseline until a V3 gate adopts a measured change.
 
-Read `docs/ARCHITECTURE.md` for the current PDF boundary and
-`V1 to V2过渡要求.md` for the approved transition stage. Do not implement a planned
-PDF/OCR capability when the task only asks for evaluation or the stage is unapproved.
+Read docs/ARCHITECTURE.md for current behavior, V2 to V3过渡要求.md for the active
+gate, and docs/PDF_FORMULA_LATEX_SPIKE.md when formula recognition is involved.
+V3-G1 may provide a stable managed PDF identity/revision, but it did not adopt a
+browser text layer, CCv2/pdf.js, formula detector, OCR, or recognizer.
 
 ## Separate the Responsibilities
 
-Do not evaluate “PDF support” as one undifferentiated capability:
+- **Viewer:** shows the source, handles page/continuous navigation, zoom, search,
+  selectable text layer, keyboard/mouse events, and scroll ownership.
+- **Parser:** extracts text, spans, geometry, images, and structural candidates.
+- **Formula detector:** proposes page regions likely to contain mathematics.
+- **Formula recognizer:** converts one validated region into a LaTeX candidate.
+- **Document understanding:** chooses bounded evidence for ResearchContext and notes.
 
-- **PDF Viewer** helps the user see and navigate the original document. Its concerns
-  include rendering fidelity, page navigation, zoom, search, and interaction.
-- **PDF Parser** extracts text, geometry, images, and structural candidates for
-  ResearchMind. Its concerns include reading order, blocks, bbox, symbols, tables,
-  figures, captions, and OCR.
-- **Document Understanding** selects and interprets parser evidence for
-  ResearchContext. A parser output is not automatically a useful prompt or a correct
-  semantic model.
+Do not treat a good render, extracted string, detected box, or model response as proof
+of the other responsibilities.
 
-Rendering aims to show the source faithfully. Parsing aims to expose useful,
-traceable evidence. Understanding decides how that evidence supports a research task.
+## Current Baseline and V3 Need
 
-## Current 2.0.0rc1 PDF Baseline
+V2 uses PyMuPDF for validation, page images, search, text blocks/bboxes, conservative
+layout roles, and embedded-image regions. It presents page imagery plus copy-friendly
+blocks. The isolated formula Spike demonstrated useful digital/display-region and
+image-crop candidates, but not reliable exact two-dimensional reconstruction.
 
-The production baseline uses PyMuPDF inside `pdf/` for validation, rendering, text
-blocks, search, bbox geometry, lightweight embedded-image regions, revision-aware
-caches, and low-text coverage diagnosis. `pdf/layout.py` provides conservative
-reading-order, copy-friendly paragraph, heading/caption, and formula-candidate rules.
+V3 requires browser-native word selection and better mathematics. The recommended
+investigation is:
 
-T1 additionally carries page/block/bbox from direct text/formula block selection into
-ResearchContext and KnowledgeNote. T2 completed a repeatable five-document comparison:
-retain PyMuPDF and defer OpenDataLoader-PDF. The spike remains in `experiments/`; no
-candidate parser entered `src/`.
+1. retain PyMuPDF as backend parser/rendering evidence;
+2. spike a CCv2/pdf.js viewer text layer for selection and interaction;
+3. map viewer events into ResearchMind-owned page/span/bbox selections;
+4. separately benchmark formula detectors and recognizers on labeled crops;
+5. adopt only the component/provider that meets the recorded gate.
 
-T3 added a separate read-only Python CodeContext path and did not change PDF parsing,
-ResearchContext fields, PyMuPDF ownership, or the T2 dependency decision. T4
-user-confirmed evidence links preserve this boundary: their paper endpoint consumes
-existing page/block/bbox provenance, while code parsing remains outside `pdf/`.
-T5-B1 adds one controlled Python range-replacement path under `code/`; it does not
-change PDF extraction, selection provenance, formula handling, parser adoption, or
-ResearchContext. Do not use T5-B1 as authority to write PDF-derived content back into
-source files or to adopt OCR/parser dependencies.
+Native st.pdf may be compared for viewing, but its packaged dependency and event
+surface must be verified; it is not assumed to expose the selection provenance V3
+needs.
 
-ResearchMind reviewed local OpenDataLoader-PDF material and adopted a small
-XY-Cut-inspired idea in its own Python/PyMuPDF layout code. OpenDataLoader-PDF's
-Java/JAR/runtime and data model are not production dependencies. Treat
-OpenDataLoader-PDF, Docling, Marker, OCR engines, or a replacement PDF engine as
-candidates until a separate spike and adoption decision exist.
+## Browser Selection and Interaction
 
-Do not claim current support for scanned-text OCR, image-formula recovery, semantic
-tables, vector-chart understanding, exact two-dimensional equation reconstruction, or
-arbitrary document structure.
+For CCv2/pdf.js, verify:
 
-T6-D did not change the PyMuPDF boundary. Mouse-wheel page navigation remains an
-unimplemented CCv2 interaction spike candidate and must prove debounce, page bounds,
-trackpad behavior, and no ordinary-scroll hijacking before production adoption.
+- selection text matches the visible text layer;
+- page, span/character range, and bboxes map to the current PDF revision;
+- double-column, ligature, Unicode, superscript/subscript, and hyphenation behavior;
+- ordinary page scrolling is not hijacked;
+- wheel page-change ownership, page bounds, trackpad bursts, debounce, focus, and
+  nested scroll regions;
+- keyboard shortcut scope does not fire while typing or in unrelated widgets;
+- reruns rehydrate current page/selection without duplicate events;
+- component cleanup removes listeners and supports multiple instances.
+
+Use only Streamlit Custom Components v2 for new interactive components. Start with an
+isolated inline Spike; use the official component template before any packaged
+component.
+
+## Formula Recognition
+
+Evaluate inline/display equations, integral and summation limits, roots, fractions,
+Greek symbols, superscripts/subscripts, matrices, aligned multiline equations, and
+equation numbers separately.
+
+Success means a structurally useful, editable LaTeX candidate with traceable source,
+not pixel-identical typography. Record:
+
+- region detection recall/false positives;
+- symbol/token and structural match on labeled formulas;
+- reading-order/context errors around the region;
+- latency, memory, Windows packaging, model size, and failure rate;
+- whether content stays local or a crop is sent remotely;
+- strict LaTeX validation and user edit/acceptance UX.
+
+Never claim that flattened PDF text recovers the original formula layout. Never send
+an entire paper to a formula service when one crop is sufficient. Whole-PDF-to-LaTeX
+is not implied by region recognition.
+
+## File Import Boundary
+
+Streamlit uploads provide bytes and names, not a trusted original path. Validate PDF
+extension, magic bytes, size, duplicate hash, and parseability before creating a
+managed asset. Preserve the original display filename as untrusted metadata and use a
+safe internal name/path.
 
 ## Investigation Workflow
 
-1. Define the concrete user failure: viewing, selection, parsing, source location, or
-   context quality.
-2. Reproduce it with a named page and a representative paper; preserve a safe fixture
-   or evaluation record when licensing/privacy permits.
-3. Identify whether the failure belongs to Viewer, Parser, layout normalization,
-   Selection, or Context Builder.
-4. Measure the current PyMuPDF/ResearchMind result before comparing alternatives.
-5. Prefer a small rule or boundary-local fix when it solves the measured problem.
-6. Use an isolated `experiments/` spike for a major dependency or parser replacement.
-7. Decide adopt, reject, defer, or collect more evidence. Adoption is a separate
-   architecture/implementation task.
+1. Name the user failure and owning responsibility.
+2. Reproduce it on a named page/corpus and capture the current V2 result.
+3. Define a fixed metric and failure cases before comparison.
+4. Prefer a boundary-local rule when it solves the measured problem.
+5. Keep new components, parsers, OCR engines, and models in experiments until adopted.
+6. Record Windows/local setup, dependency/license/maintenance, privacy/network
+   behavior, internal-model mapping, and rollback.
+7. Recommend adopt, reject, defer, or gather more evidence; recommendation is not
+   production integration.
 
-## Evaluation Matrix
+## Representative Evaluation
 
-Select criteria relevant to the claim, and record failures as well as successes:
+Include digital and scanned pages, single/double column, English/Chinese/Unicode,
+complex mathematical layout, tables/figures/captions, malformed/blank pages, long
+documents, and low-text coverage when the claim touches them. Use ground truth only
+where it is actually labeled; do not invent accuracy percentages.
 
-- text accuracy and missing/duplicated characters;
-- page number, text block, line/span, and bbox fidelity;
-- single- and double-column reading order;
-- paragraph joining, hyphenation, headings, lists, and references;
-- English, Chinese, Unicode, Greek symbols, operators, superscript, and subscript;
-- inline math, display math, matrices, equation numbering, and text around equations;
-- table cells/order, figures, captions, raster versus vector content;
-- digital, scanned, blank, malformed, long, and complex-layout PDFs;
-- rendering/extraction latency, memory, and cache behavior;
-- Windows support, local/offline behavior, privacy/network transfer;
-- dependency size, runtime setup, license, maintenance, replaceability, and failure
-  semantics.
+## Third-party Boundary
 
-For quantitative comparison, keep the corpus and metric fixed before/after. Useful
-metrics include reading-order error count, character/word accuracy, locator accuracy,
-formula structural match, table cell accuracy, latency, peak memory, and human
-readability. Do not invent precision/recall without labeled ground truth.
-
-## Mathematics-specific Review
-
-For mathematical papers, inspect superscripts, subscripts, Greek symbols, operators,
-inline/display equations, numbering, multiline alignment, matrices, and reading order
-around equations separately. A flattened digital text layer may support selection and
-LLM-assisted LaTeX, but it is not evidence that the original two-dimensional formula
-was recovered.
-
-Image formula OCR and automatic LaTeX reconstruction require their own labeled corpus,
-quality thresholds, privacy analysis, and failure UX. Do not silently merge them into
-the current selection-driven LaTeX path.
-
-## Third-party and Core Boundary
-
-- Do not build a rendering engine from scratch; prefer mature PDF technology.
-- Keep every third-party PDF object and error inside a PDF adapter.
-- Convert output into ResearchMind-owned models before it reaches Application, Core,
-  UI, prompts, or persistence.
-- Do not make a vendor JSON/element schema the `Document` model.
-- Preserve page/block/bbox provenance and explicit confidence/origin when conversion
-  is lossy.
-- Do not add a dependency merely to obtain richer or prettier JSON.
+Keep PyMuPDF, pdf.js, parser JSON, OCR/model outputs, and vendor errors inside their
+own PDF/component adapter. Convert them to ResearchMind models before Application,
+Core, prompts, database, or notes. Preserve page/bbox/hash/origin/confidence whenever
+conversion is lossy.
 
 ## Review Output
 
-End a PDF decision or spike with:
-
-- user problem and responsibility boundary;
-- baseline and representative samples;
-- before/after results and failure cases;
-- dependency, privacy, Windows, and maintenance impact;
-- internal-model mapping;
-- recommendation and what it does not authorize;
-- regression plan for the existing V1.3.2 loop.
+End with the problem/responsibility, fixed samples and baseline, before/after evidence,
+failure cases, dependency/privacy/Windows impact, internal-model mapping, recommendation,
+what it does not authorize, and regression coverage for the V2 reading loop.

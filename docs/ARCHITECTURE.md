@@ -1,8 +1,15 @@
-# ResearchMind 系统架构（2.0.0rc1 本地内部候选）
+# ResearchMind 系统架构（V2 Accepted + V3-G1/G2 增量）
 
-版本：2.0.0rc1 本地内部候选 · 同步日期：2026-08-31 · 状态：T0–T6-D Completed，T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) · [V1→V2 过渡门禁](../V1%20to%20V2过渡要求.md)
+版本：2.0.0rc1 V2 Accepted + V3-G1/G2 source increment · 同步日期：2026-09-04 · 状态：V3-G0/G1 Completed，V3-G2 Active（元数据/来源链接已实现，附件读取门禁与人工验收待确认），T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
 
-> 术语说明：本文档、PRODUCT_SPEC.md 与 DEVELOPMENT_PLAN.md 均使用 "V1" 指代当前实现范围；三份文档的一致性状态见第 22 节。
+> 验收口径：项目于 2026-09-01 完成 **V2 Internal Acceptance**。用户于 2026-08-31
+> 明确将自动公式区域识别、图片公式 OCR 和整页 PDF→LaTeX 排除在 V2 验收之外；
+> 它们只保留为 V3 需求讨论前的隔离 Spike 证据。V2 仍包含已实现的“用户选择
+> 数字文字层内容 → ResearchContext → 受限 LaTeX → 预览/知识笔记”能力。
+
+> 事实边界：本文主体保留 V1→V2 演进时的章节名称，但描述的是当前
+> 2.0.0rc1 已实现架构。V3 目标与候选选型只在 V2→V3 过渡要求中生效；在某一
+> V3 阶段完成实现、测试和验收前，不得把候选 schema、组件或依赖写成当前事实。
 >
 > 发布策略：V1 及当前中间版本只作为内部能力基线。T3 已加入只读、不可执行的
 > Python CodeContext；T4 已加入用户确认、会话内、可随 KnowledgeNote 导出的
@@ -18,6 +25,13 @@
 > `CodeSelection`、`KnowledgeNote` 和唯一 Vault writer，只持久化项目名、相对
 > 路径、行号、符号、当前问题、可用解释与用户理解，不记录绝对项目路径，也不
 > 扩大 T5-B1 或代码执行权限。
+>
+> V3-G1 在该冻结基线之上增加本地工作资料库：原生上传先转换为受限项目输入，
+> standard-library sqlite3 保存记录/资产元数据，ResearchMind 数据目录保存托管
+> PDF/Python 副本；资料库记录、修订、移除、托管副本删除和备份/恢复均有明确
+> 语义。V3-G2 又加入默认关闭、只读的 Zotero Local API 来源连接；它只保存用户
+> 明确链接条目的来源快照。两阶段均未引入 PDF 文字层、公式识别、非 Python
+> 解析、草稿/对话持久化，也不改变 V2 外部项目的受控写入合同。
 
 ## 1. 产品定位与系统边界
 
@@ -37,7 +51,7 @@ ResearchMind 连接的是 Zotero 与 Obsidian 所代表的科研工作流：帮�
 
 | 软件 | 职责 | ResearchMind 与之的关系 |
 |------|------|------------------------|
-| Zotero | 管理论文与 PDF、文献元数据（DOI/作者/标题）、文献分类与检索 | 外部文献管理工具；ResearchMind 不替代，未来可作可选元数据来源（第 14 节） |
+| Zotero | 管理论文与 PDF、文献元数据（DOI/作者/标题）、文献分类与检索 | 外部文献管理工具；ResearchMind 不替代；G2 已提供可选元数据来源，直接附件导入待门禁（第 14 节） |
 | ResearchMind | 打开并阅读 PDF、文本选择、翻译、论文上下文解释、多轮对话和知识沉淀；默认只读打开一个本地 Python 文件夹、选择代码符号/行并生成独立 CodeContext 解释或可选代码笔记；显式确认论文到代码的证据链接；对当前选择提供 T5-B1 单范围受控替换 | 本职工作（见 1.3）；代码笔记只写 Vault Markdown；T4 链接不自动生成；T5-B1 只写一个已选既有 `.py` 范围且不执行代码、不隐式合并上下文 |
 | Obsidian | 长期知识管理：Markdown 笔记、标签、双向链接、知识组织、用户自己的知识体系 | ResearchMind 知识沉淀的最终目的地（第 13 节） |
 
@@ -63,6 +77,10 @@ ResearchMind 连接的是 Zotero 与 Obsidian 所代表的科研工作流：帮�
     通过语法/大小/改变行数校验并展示 unified diff 后，用户逐次确认应用或回滚。
 13. **代码知识沉淀（T6-D）**：无需 PDF，把当前代码选择、相对 locator、当前问题、
     可用解释和自己的理解预览为代码专用 Markdown，再显式保存到 Obsidian。
+14. **本地工作资料库（V3-G1）**：点击/拖放导入 PDF 或 Python 目录，跨重启列出
+    并重新打开，显式创建修订、软移除/恢复，并在单独确认后删除托管副本。
+15. **可选 Zotero 来源（V3-G2）**：用户显式启用并点击后，只读浏览个人资料库，
+    把一个条目链接到已上传论文。直接附件导入已停用，等待本地文件读取门禁。
 
 ## 2. 架构原则
 
@@ -92,26 +110,43 @@ ResearchMind 连接的是 Zotero 与 Obsidian 所代表的科研工作流：帮�
 | （可选）anthropic | LLM | 第二个 provider，需要时再加 |
 
 标准库负责：文件读写、Markdown 字符串构建、路径处理、T3 的 `ast.parse`
-静态 Python 符号提取，以及 T5-B1 的 SHA-256、diff、恢复副本和同目录原子替换。
-这些能力不需要新增第三方依赖。
+静态 Python 符号提取、T5-B1 的 SHA-256/diff/原子替换、V3-G1 的 sqlite3、
+ZIP/manifest、哈希/托管文件暂存，以及 V3-G2 的 loopback HTTP。这些能力不需要
+新增第三方依赖。
 
 ### 3.2 明确不引入的技术
 
 - PostgreSQL、Redis、Celery、消息队列：V1 是本地单机工具，不存在使用这些组件的理由；
 - Kubernetes、微服务、任何分布式系统：违背"单进程、简单可维护"原则；
 - 向量数据库、复杂 RAG 系统：V1 的上下文是"当前论文 + 当前选择"，不需要全文向量检索；
-- ORM：V1 没有数据库（见 3.3）；即便未来引入 SQLite 也优先用标准库 sqlite3。
+- ORM：V3-G1 已采用标准库 sqlite3；当前不引入 ORM 或数据库服务器。
 
-### 3.3 关于数据库：V1 不引入 SQLite
+### 3.3 数据库：V1/V2 历史边界与 V3-G1/G2 当前实现
 
-判断依据：V1 的最小功能闭环（第 17 节）中，论文按会话从文件系统打开、对话在会话内存活、知识以 Markdown 文件写入 Obsidian Vault。**Vault 文件就是 V1 的持久化层**，不存在必须由数据库承担的数据。因此 V1 不引入 SQLite——不为"标准软件架构"的形式完整性而加数据库。
+V1/V2 的历史判断仍成立：论文按会话从文件系统打开、对话在会话内存活、知识
+以 Markdown 文件写入 Obsidian Vault，当时没有需要数据库承担的数据。
 
-代价与边界（诚实声明）：
+V3-G1 因用户明确要求跨重启论文/代码工作资料库而触发持久化门禁，当前采用：
 
-- 应用重启后，会话内的对话历史与已打开的论文不保留——可接受，因为知识已经以文件形式沉淀在 Vault 中；
-- 论文页面的文本提取结果随进程缓存（Streamlit 资源缓存），同进程内不重复提取。
+- `RESEARCHMIND_DATA_DIR/researchmind.sqlite3`：schema version 2，包含
+  `library_records`、`asset_references` 和 `zotero_links`；v1→v2 原子迁移保留
+  现有记录，旧 v1 备份恢复后也会迁移；
+- `zotero_links` 每个论文最多一个来源，并对
+  `server_id/library_type/library_id/item_key` 唯一；保存版本和有界元数据快照，
+  不保存 Zotero 凭据、整库缓存或 PDF blob；
+- `assets/`：ResearchMind 托管的 PDF/Python 目录修订；SQLite 只存稳定 ID、
+  类型、哈希、大小、相对路径、修订和时间，不存文件 blob；
+- `.staging/`：仅用于受限导入/恢复暂存；资产原子完成与数据库提交使用补偿逻辑，
+  不向用户暴露半记录；
+- 移除记录是可恢复软删除；删除托管副本要求独立确认。任何操作都不删除外部
+  PDF/代码、Zotero 附件或 Vault 笔记；
+- 备份保存 SQLite 一致快照、托管 assets 和 checksummed manifest；恢复只到
+  不存在且不与当前数据目录/Vault 重叠的新目录。
 
-**未来重新引入 SQLite 的触发条件**（满足其一即按 AGENTS.md 的"SQLite first"原则评估）：(a) 需要跨会话保存对话/论文库；(b) 笔记在写入 Obsidian 前需要本地暂存、检索或管理。届时在 `database/` 新增一个基础设施模块即可，分层骨架不变。
+当前持久化只覆盖工作资料库、托管资产和用户明确建立的 Zotero 来源链接。
+Conversation、ReadingSelection、
+CodeSelection、EvidenceLink、KnowledgeNote 预览和 NoteDraft 仍不跨重启；后续
+草稿 schema 必须在其自身门禁中设计，不能把 G1 的库表当作通用状态数据库。
 
 ### 3.4 界面选型：Streamlit 与重评估条件
 
@@ -132,16 +167,17 @@ V1 继续选择 Streamlit：
 
 ## 4. 逻辑模块划分
 
-### 4.1 七大逻辑模块
+### 4.1 八大逻辑模块
 
 | 逻辑模块 | 职责 |
 |----------|------|
 | Core（核心域） | ResearchContext / CodeContext 组装、证据链接、只读助手状态/预算、对话管理规则、知识条目模型、Domain Models |
+| Database / Library（基础设施） | SQLite schema/迁移/事务/repository、托管资产、导入暂存、备份/恢复 |
 | PDF（基础设施） | 渲染、文本提取、选择定位、页面导航、文本搜索 |
 | Code Source（基础设施） | 本地文件夹边界、排除/规模规则、UTF-8 读取、Python AST 到项目模型转换；唯一的 T5-B1 单范围恢复/原子写入边界 |
 | Translation（翻译） | TranslationProvider 抽象、翻译服务 |
 | AI（AI 助理） | 普通解释、T5-A 只读助手与 T5-B1 proposal 编排、严格响应协议、LLM Provider、Prompt 管理、对话管理 |
-| Integration（集成） | Obsidian Vault 写入；未来：Zotero 元数据 |
+| Integration（集成） | Obsidian Vault 写入；G2 可选 Zotero Local API 元数据/来源链接 |
 | UI（界面） | PDF 阅读、AI 对话、翻译、知识沉淀、代码/链接、T5-A 继续与 T5-B1 diff/确认/回滚界面 |
 
 ### 4.2 逻辑模块到物理位置的映射
@@ -151,19 +187,20 @@ V1 继续选择 Streamlit：
 | 逻辑模块 | 物理位置（src/researchmind/） | V1 状态 |
 |----------|------------------------------|---------|
 | Core | `core/`（纯函数）+ `models/`（共享 dataclass） | 实现 |
+| Database / Library | `database/` + `models/library.py` + `app/views/library.py` | V3-G1 实现 |
 | PDF | `pdf/` | 实现 |
 | Code Source | `code/` | T3 默认只读；T5-B1 仅 `change_writer.py` 可对当前选择目标建立恢复副本并原子替换/回滚 |
 | Translation | `translation/` | 实现（V1 仅一个 provider，见第 10 节） |
 | AI | `llm/`（provider、prompts、严格助手/替换解析）+ `app/use_cases.py`（编排）+ `core/`（对话裁剪、助手预算与 proposal 纯规则） | 实现（含 T5-A/T5-B1） |
 | Integration / Obsidian | `integration/obsidian/` | 实现 |
-| Integration / Zotero | 无代码，仅接口预留（第 14 节） | 不实现 |
+| Integration / Zotero | `integration/zotero/` + `models/zotero.py`（第 14 节） | V3-G2 GET-only Local API 实现；人工验收待确认 |
 | UI | `app/`（views、state、app.py） | 实现 |
 
 ### 4.3 基础设施与核心业务的分离
 
 | 类别 | 模块 | 说明 |
 |------|------|------|
-| 基础设施（可替换的实现细节） | `pdf/`、`code/`、`llm/`、`translation/`、`integration/obsidian/`、`config.py` | 所有与外部世界（文件、渲染库、网络 API、磁盘）的交互 |
+| 基础设施（可替换的实现细节） | `database/`、`pdf/`、`code/`、`llm/`、`translation/`、`integration/obsidian/`、`integration/zotero/`、`config.py` | 所有与外部世界（数据库、文件、渲染库、网络 API、磁盘）的交互 |
 | 核心业务（ResearchMind 存在的理由） | `core/`、`models/`、`app/use_cases.py` | ResearchContext / CodeContext、显式证据链接、AI 理解、知识提取、Obsidian 联动的规则与编排 |
 
 原则：更换 PDF 引擎、LLM 服务商、翻译服务或 Vault 目录，只应改动基础设施层；核心业务的规则（如何组装上下文、如何沉淀知识）不随实现细节变化。
@@ -177,11 +214,11 @@ V1 继续选择 Streamlit：
 1. **UI 层**（`app/views/`、`app/state.py`）：Streamlit 页面，只做展示与事件委托，不含业务逻辑；
 2. **Application 层**（`app/use_cases.py`）：用例函数，编排 UI 与 Domain、Infrastructure 之间的数据流；
 3. **Domain 层**（`core/`）：ResearchContext / CodeContext 组装规则、证据链接规则、选择定位规则、对话裁剪规则——纯函数、无框架依赖；
-4. **Infrastructure 层**（`pdf/`、`code/`、`llm/`、`translation/`、`integration/obsidian/`、`config.py`）：所有外部世界交互。
+4. **Infrastructure 层**（`database/`、`pdf/`、`code/`、`llm/`、`translation/`、`integration/obsidian/`、`config.py`）：所有外部世界交互。
 
 `models/` 是纯 dataclass，被所有层共享，不 import 任何层。
 
-### 5.2 模块依赖规则（十三条）
+### 5.2 模块依赖规则（十五条）
 
 | # | 规则 | 架构上的保证 |
 |---|------|--------------|
@@ -191,7 +228,7 @@ V1 继续选择 Streamlit：
 | 4 | AI Assistant 通过 ResearchContext 获取当前阅读内容 | AI 相关用例函数必须先构建 ResearchContext 再调 provider（第 11.4 节） |
 | 5 | Knowledge Capture 负责把 AI 理解结果整理成可保存的知识 | KnowledgeNote 组装规则 + `capture_knowledge` 用例（第 12 节） |
 | 6 | Obsidian Integration 负责最终 Markdown 输出与文件写入 | `integration/obsidian/` 是系统中唯一写 Vault 的地方 |
-| 7 | Zotero 是可选模块，不是核心功能的强依赖 | 核心功能不 import 任何 Zotero 代码；V1 无 Zotero 代码（第 14 节） |
+| 7 | Zotero 是可选模块，不是核心功能的强依赖 | Core 不依赖 Zotero 基础设施；app/use_cases 显式编排可选 adapter，禁用时不请求（第 14 节） |
 | 8 | LLM Provider 可替换 | `LlmProvider` 协议 + factory 按配置构造（第 11.3 节） |
 | 9 | Translation Provider 可替换 | `TranslationProvider` 协议（第 10 节） |
 | 10 | PDF Engine 尽量独立 | 全部 PDF 调用封装在 `pdf/`，项目异常在模块边界转换 |
@@ -199,6 +236,7 @@ V1 继续选择 Streamlit：
 | 12 | 论文与代码上下文不隐式混合 | `ResearchContext` 和 `CodeContext` 使用独立模型与 prompt；T4 链接 provenance，不自动构建联合 prompt |
 | 13 | 证据链接来源必须可辨认 | T4 生产路径只创建 `user_confirmed` 链接；模型推断和确定性提取是显式 generation method，不能冒充用户确认事实 |
 | 14 | 代码笔记不能伪装成论文笔记 | `capture_code_knowledge` 校验当前项目/选择/源码与解释绑定；Markdown 使用项目、相对路径、行号和符号，不生成虚假页码或绝对项目路径 |
+| 15 | Database 独占持久化与迁移 | 只有 `database/` 打开 sqlite3、执行 schema/迁移/事务；views 只传项目输入，use cases 编排 repository 与托管文件补偿 |
 
 ### 5.3 一条数据流的完整路径
 
@@ -636,15 +674,37 @@ Obsidian 是 ResearchMind 知识沉淀的**最终目的地**。ResearchMind 不�
 行号、符号/提取方式和缩进代码块。两类笔记都先预览、再显式保存，且不覆盖
 已有文件；代码笔记不会写入绝对项目路径或虚构论文页码。
 
-## 14. Zotero Integration（V1 不实现）
+## 14. Zotero Integration（V3-G2 当前实现）
 
 ### 14.1 V1 的做法
 
 用户通过文件系统打开本地 PDF。V1 不重新实现 Zotero 的核心能力，也**不假设 Zotero API 一定存在**：ResearchMind 的核心功能不依赖 Zotero，Zotero 集成不可用时一切照常工作。
 
-### 14.2 未来的可选集成（Document / Metadata Provider）
+### 14.2 V3-G2 只读 Local API
 
-未来可以考虑把 Zotero 作为一个**可选的外部 Document / Metadata Provider**接入，从 Zotero 获取：标题、作者、年份、DOI、标签、PDF 路径、其他文献元数据。实现为一个新的集成模块（如 `integration/zotero/`），通过接口向 Application 层提供文档元数据；新增该模块不影响现有核心业务。
+`integration/zotero/` 当前固定 `http://127.0.0.1:23119/api/`，关闭代理且 transport
+协议只有 GET，拒绝重定向。`ZOTERO_LOCAL_API_ENABLED` 默认 false；启动、诊断
+和进入资料库都不会探测，只有用户点击读取条目或附件元数据时才请求。
+
+adapter 把 vendor JSON/headers 映射为 `ZoteroConnection`、`ZoteroItem` 和
+`ZoteroAttachment`，强制 API v3、server ID、library/item key/version、字段长度、
+响应大小。403、412、offline、404、损坏响应和
+identity mismatch 都转换为项目错误，urllib 对象/异常不会越界。
+
+`app/use_cases.py` 只支持个人资料库的会话内浏览和显式条目选择。用户可以把来源
+链接到通过 G1 上传的论文。数据库只持久化 `ZoteroSourceLink`；unlink 只删关系。
+来源关系不证明 PDF 内容相同，不可据此静默替换文件或附件身份。来源/附件/目标
+变化会使 UI 确认失效，详情读取失败会清理旧详情。删除托管副本前必须先解除来源。
+ResearchMind 不写 Zotero、不直接读 Zotero SQLite、不后台同步、不缓存整个资料库。
+
+2026-09-04 官方协议复核更正：`/file` 返回 `302 file://`，不是 PDF 字节流；
+`/file/view/url` 则返回本地 URL 文本。现有 download/import 字节响应用例只通过
+了 fake HTTP-200 测试，不能作为真实附件导入实现。直接导入 UI 已停用；所有
+重定向均拒绝，不自动读取本地文件。该读取边界尚需单独确认及测试。
+`Zotero-Server-ID` 官方支持为 Zotero 10+；缺失时当前 adapter 安全失败。
+协议依据见 [官方 Local API 文档](https://www.zotero.org/support/dev/web_api/v3/local_api)。
+
+Web API、组资料库产品流、集合管理、写请求和双向同步仍属于后续独立门禁。
 
 ## 15. 应用层用例函数契约
 
@@ -752,14 +812,15 @@ T5-B1 另有 `code_change_proposal`、apply/rollback receipt 和 session-only au
 
 ## 16. UI 视图（Streamlit）
 
-当前应用通过 `workspace_navigation` 提供 **3 个顶层工作区**，全部只做展示与
+当前应用通过 `workspace_navigation` 提供 **4 个顶层工作区**，全部只做展示与
 事件委托。代码工作区与论文工作区是并列入口，不以 `opened_document` 为前置条件：
 
-三个工作区上方另有 `app/views/configuration.py` 的折叠检查入口；只有用户点击
+四个工作区上方另有 `app/views/configuration.py` 的折叠检查入口；只有用户点击
 “运行本地配置检查”才读取配置并展示非敏感状态，不联网或创建目录。
 
 | 顶层工作区 | 文件 | 组成 |
 |------|------|------|
+| 本地资料库 | `app/views/library.py` | G1 点击导入、重开、修订、移除/恢复与删除；G2 显式浏览/来源链接；直接附件导入待门禁 |
 | 论文阅读与笔记 | `app/views/reader.py`、`actions.py`、`conversation.py`、`knowledge.py` | PDF 打开/阅读/搜索/选择；翻译、LaTeX、解释与追问；KnowledgeNote 和 Obsidian 导出 |
 | 代码学习与复现 | `app/views/code_workspace.py` | 独立打开一个本地 Python 文件夹；初学/科研复现目标；静态项目概览；文件/符号/行选择；CodeContext 预览和非执行解释；可选代码 KnowledgeNote 预览/Obsidian 保存；显式证据链接；T5-B1 proposal/diff/确认/取消/恢复/回滚/审计 |
 | 只读研究助手 | `app/views/read_only_assistant.py` | 显示三个工具可用性；输入问题；开始/继续/停止；每步待发送结果；会话内审计元数据和独立 final |
@@ -845,14 +906,21 @@ T6-A 改变的是入口和学习组织，不扩大工具权限：
 - `src/researchmind/`
   - `__init__.py`
   - `launcher.py`：wheel 的 `researchmind` 命令入口，只固定启动包内 Streamlit 应用
-  - `config.py`：配置与密钥唯一入口（LLM、目标语言、Vault 路径、上下文/历史预算、PDF 大小上限）
-  - `maintenance.py`：T6-B diagnose/backup/restore CLI 与本地协调
-  - `models/`：纯 dataclass（论文/对话/知识、code/evidence link、code change、read_only_assistant、maintenance）
+  - `config.py`：配置与密钥唯一入口（LLM、目标语言、Vault、ResearchMind 数据目录、Zotero 显式开关、预算与大小上限）
+  - `maintenance.py`：配置诊断、Vault Markdown 与 V3-G1 资料库备份/恢复 CLI
+  - `models/`：纯 dataclass（论文/对话/知识、code/evidence link/change、maintenance、library、Zotero）
+  - `database/`
+    - `schema.py`：schema version、迁移、连接/事务和结构验证
+    - `repository.py`：LibraryRecord/AssetReference/ZoteroSourceLink 的参数化查询
+    - `storage.py`：数据目录、上传校验、暂存、原子完成、隔离和安全解析
+    - `backup.py`：SQLite snapshot + assets + manifest 的备份和新目录恢复
+    - `errors.py`：数据库、导入、配置、备份和找不到记录等项目异常
+  - `integration/zotero/`：固定 loopback 的 GET-only transport、Local API 映射和项目错误
   - `app/`
     - `app.py`：Streamlit 入口，组装视图
     - `state.py`：会话状态集中管理
     - `use_cases.py`：用例函数（第 15 节）
-    - `views/`：reader / actions / conversation / knowledge / code_workspace / read_only_assistant / configuration
+    - `views/`：library / reader / actions / conversation / knowledge / code_workspace / read_only_assistant / configuration
   - `core/`
     - `research_context.py`：ResearchContext 组装（纯函数）
     - `selection.py`：选中文本定位（纯函数）
@@ -894,7 +962,9 @@ T6-A 改变的是入口和学习组织，不扩大工具权限：
   - `fixtures/`：测试用 PDF（含 Unicode/公式样例）
   - `unit/`、`integration/`、`e2e/`
 
-结构说明：沿用 src-layout，让测试与安装指向同一份代码。相比旧版结构的变化：删除 `database/` 与 `notes/`，新增 `translation/`、`integration/obsidian/`；`models/` 中的模型定义按第 6 节重命名。
+结构说明：沿用 src-layout，让测试与安装指向同一份代码。V1 曾删除无需求支撑的
+`database/`；V3-G1 在跨重启资料库需求和明确门禁后重新加入标准库 SQLite
+基础设施，但没有恢复通用 notes 数据库。长期知识仍由 Obsidian 持有。
 
 ## 19. 测试策略
 
@@ -902,8 +972,8 @@ T6-A 改变的是入口和学习组织，不扩大工具权限：
 
 | 测试层 | 目录 | 测什么 | 不测什么 |
 |--------|------|--------|----------|
-| Unit | tests/unit/ | ResearchContext/CodeContext、PDF/代码选择、代码 KnowledgeNote/相对 provenance、证据链接、T5-A 状态/预算/协议/注入/错误、T5-B1 strict replacement/selection/hash/path/recovery/atomic write/rollback、代码边界与 AST provenance、各 prompt、LaTeX、translation、Obsidian、T6-B 诊断/备份恢复/CLI、T6-C 性能工具、PDF fixture | 真实 LLM / 翻译 API、代码执行、TeX 编译器 |
-| Integration | tests/integration/ | 完整用例流（FakeLlmProvider + fixture PDF + 临时 Vault）：打开→选择→翻译→LaTeX→解释→追问→沉淀知识→写入 Vault | UI 渲染 |
+| Unit | tests/unit/ | ResearchContext/CodeContext、PDF/代码选择、代码 KnowledgeNote/相对 provenance、证据链接、T5-A、T5-B1、代码边界/AST、各 prompt、LaTeX、translation、Obsidian、配置/CLI，以及 G1 schema/迁移/外键/repository/并发初始化/备份恢复 | 真实 LLM / 翻译 API、代码执行、TeX 编译器 |
+| Integration | tests/integration/ | V2 完整用例流；G1 临时数据库/托管目录的 PDF/代码导入、去重、修订、重启重开、失败补偿、移除/恢复/删除 | 真实浏览器文件选择 |
 | E2E | tests/e2e/ | 既有 PDF→Vault 闭环；独立 Code→Obsidian 预览/保存；T3/T4 代码与链接；T5-A 开始→待发送预览→用户继续→final；T5-B1 未确认/取消零写入、diff、应用、恢复和回滚 | 视觉细节、真实网络、代码执行 |
 
 PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、双栏、嵌入位图、损坏文件、不存在路径、空白页、Unicode（中文/希腊字母）、数学符号、页码顺序。
@@ -981,20 +1051,55 @@ PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、�
 - 恢复只允许写到尚不存在的新子目录，先写同一 Vault 内临时目录再重命名，
   不合并或覆盖现有笔记。
 
+### 20.8 V3-G1 资料库、上传与恢复
+
+- 原生上传对象只在 view 边界转换为名称 + bytes 的 `UploadedFileData`；项目层
+  不信任或持有 Streamlit `UploadedFile`；
+- PDF 校验扩展名、magic bytes、上限、SHA-256 和 PyMuPDF 可解析性；代码目录
+  校验相对路径/根目录归一化、遍历、UTF-8、类型、文件数/单文件/总量，并排除
+  隐藏、秘密、vendor、build、VCS 和 symlink 语义；
+- `RESEARCHMIND_DATA_DIR` 必须与 Vault、导入代码项目分离；数据库只存安全相对
+  路径，读取/删除前再次验证 containment；
+- 资产先暂存，数据库事务登记后才原子完成，提交或文件动作失败时回滚/补偿；
+  并发相同哈希导入收敛到唯一 live asset；
+- 托管代码资产标记为只读，不允许 T5-B1 写回，避免数据库哈希/修订与磁盘内容
+  静默分叉；
+- 资料库备份拒绝 symlink、staging、超限和覆盖；恢复先验证 ZIP 路径、重复成员、
+  manifest、大小与逐文件 SHA-256，再验证数据库 schema，最后原子命名新目录；
+- 配置诊断和 routine 测试不显示私有绝对数据目录、不读用户资料库内容、不联网。
+
+### 20.9 V3-G2 Zotero 只读边界
+
+- 固定 loopback base URL、关闭代理、只允许相对路径 GET，防止 adapter 变成通用
+  网络客户端或 SSRF 入口；
+- API v3 和 `Zotero-Server-ID` 在 probe 后每次重验；412 或返回不同 identity
+  立即停止，不把不同 Zotero 数据库的条目合并；
+- 元数据、搜索长度、条目数、creator 数和响应大小受限；直接附件导入 UI 禁用。
+  HTTP-200 PDF 原型有类型/大小/magic/G1 哈希校验，但不支持官方本地文件重定向；
+- routine 测试只用 fake transport，不探测 localhost；诊断只报告显式开关状态；
+- 来源 snapshot 是未信任显示数据，不自动进入 prompt、Markdown 或 Obsidian；
+- unlink、资料库软移除和托管副本删除相互独立；有来源链接时先 unlink 才能
+  删除托管副本，任何动作都不写/删 Zotero。
+
 ## 21. 未来扩展点与 Out of Scope
 
-### 21.1 扩展点（只留接口，不提前实现）
+### 21.1 扩展点与已采用 V3 增量
+
+本节以 V2 冻结边界为起点。V3-G1 已实现本地资料库，V3-G2 已实现可选 Zotero
+Local API 只读来源；页面划词、公式识别、多语言代码、持久草稿等仍由仓库根目录
+V2 to V3过渡要求.md 管理。在对应阶段完成前，下表的 Pending 事实仍成立。
 
 原则：每个未来能力 = 新增一个基础设施模块 + 新增若干用例函数，**分层骨架不变**。
 
 | 未来能力 | 当前架构留下的接口 | V1 状态 |
 |----------|--------------------|---------|
-| Zotero 元数据集成 | 可选 Document / Metadata Provider 接口（第 14 节）；Document 的 source 抽象 | 不实现 |
+| Zotero 元数据集成 | `integration/zotero` → 项目模型 → use cases → `zotero_links`（第 14 节） | V3-G2 只读个人资料库实现；人工验收待确认 |
 | VS Code / 更多代码语言 | 当前 T3 本地 Python CodeContext 是证据基线；IDE、Notebook、Julia/R 等需另行评估 | 不实现 |
 | 网页等其他内容源 | 同上 | 不实现 |
 | 页面级划词/高亮/标注 | TextBlock 已带 bbox 坐标，届时只需在 UI 层实现 | 不实现 |
 | OCR / 语义表格 / 图片公式 / 图表内容识别 | 在 `pdf/` 内新增能力，不影响其他模块 | 不实现；V1.3.2 仅对用户选择的文字层做 LaTeX 转换 |
-| 跨会话对话/论文库持久化 | 按第 3.3 节触发条件引入 SQLite（`database/` 新模块） | 不实现 |
+| 论文/代码工作资料库 | `database/` + managed assets + library view | V3-G1 已实现 |
+| 跨会话对话、证据篮与 NoteDraft | 后续单独 schema/门禁；不得复用会话对象做隐式保存 | 不实现 |
 | 跨论文搜索/复杂 RAG | 需要时新增模块；V1 上下文模型不依赖向量库 | 不实现 |
 | 换 LLM / 翻译服务商 | LlmProvider / TranslationProvider 接口 + factory，新 provider 一个文件 | 接口已实现 |
 | React + FastAPI | 用例函数与 UI 解耦，可映射为 REST 端点（第 15 节）；触发条件见第 3.4 节 | 不实现 |
@@ -1014,15 +1119,18 @@ PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、�
 
 ## 22. 文档一致性状态
 
-PRODUCT_SPEC.md、ARCHITECTURE.md 与 DEVELOPMENT_PLAN.md 已统一为当前
-V1.3.2 + T5-B1/T6-C 内部口径；未来阶段状态由仓库根目录 V1 to V2过渡要求.md 管理：
+PRODUCT_SPEC.md、ARCHITECTURE.md 与 V2→V3 过渡要求的当前实现口径为
+已验收 2.0.0rc1 加 V3-G1/G2 source increment。V1→V2 与 DEVELOPMENT_PLAN 保留
+历史状态；后续 V3 门禁由 V2 to V3过渡要求.md 管理：
 
 - 当前内部实现为 V1.3.2 + T1/T3/T4/T5-A/T5-B1/T6-A/T6-B/T6-C 增量，仍不对外发布；
 - 产品定位统一为“AI 理解与知识沉淀工作台”，并以 Obsidian Vault 作为知识最终目的地；
 - 数据模型使用 `Document`、`ReadingSelection`、`ResearchContext`、
   `KnowledgeNote`、独立 `CodeSelection` / `CodeContext`，以及双端点
   `EvidenceLink`；
-- 模块结构继续无数据库；`code/` 默认只读，唯一写入例外是 T5-B1 narrow writer；
+- 模块结构新增 `database/` 管理工作资料库和 Zotero source link，
+  `integration/zotero/` 管理可选 GET-only Local API；`code/` 默认只读，T5-B1 narrow
+  writer 只适用于外部本地 Python 项目，托管修订不能写回；
 - V1.3.2 闭环统一为“打开本地 PDF → 阅读/选择 → 翻译、LaTeX 或解释 → 追问 → 生成结构化 Markdown → 写入 Obsidian Vault”。
 - 2026-08-29 的 T0 已封闭验证与评测基线，不改变本文件的技术栈、模块边界、
   无数据库决定或 Streamlit 选择；验证证据见 `T0_BASELINE_CLOSURE.md`；
@@ -1044,3 +1152,9 @@ V1.3.2 + T5-B1/T6-C 内部口径；未来阶段状态由仓库根目录 V1 to V2
   证据见 `T5_B1_CONTROLLED_CODE_WRITE_VALIDATION.md`；T5-BX 执行沙箱未批准。
 
 后续若修改产品范围、架构边界或开发里程碑，必须同步检查这三份文档，避免再次出现术语或范围漂移。
+
+V3-G0/G1 已完成。G2 元数据/来源链接已实现；直接附件导入待本地文件读取门禁，
+真实 Zotero desktop 人工验收未完成，因此仍为 Active。G1/G2 都没有新增第三方
+运行时依赖；最新全量回归见 V3_G2_ZOTERO_VALIDATION.md，既有 Windows symlink
+环境 skip 保留。当前仍无 CCv2/pdf.js 生产组件、自动公式识别、持久笔记草稿或
+非 Python 解析器；G2 文件读取门禁和人工验收关闭前不启动 G3。

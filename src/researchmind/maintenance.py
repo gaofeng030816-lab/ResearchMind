@@ -12,6 +12,12 @@ from urllib.parse import urlsplit
 
 from researchmind import __version__
 from researchmind.config import ConfigError, Settings, load_settings
+from researchmind.database import (
+    LibraryError,
+    create_library_backup,
+    prepare_library_paths,
+    restore_library_backup,
+)
 from researchmind.integration.obsidian import (
     ObsidianError,
     VaultConfigurationError,
@@ -63,6 +69,8 @@ def inspect_settings(settings: Settings) -> ConfigurationReport:
         ),
         _llm_endpoint_check(settings),
         _llm_credentials_check(settings),
+        _library_check(settings),
+        _zotero_check(settings),
         _vault_check(settings),
         ConfigurationCheck(
             code="resource_limits",
@@ -115,7 +123,35 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"{result.output_directory}"
             )
             return 0
-    except (ConfigError, ObsidianError) as exc:
+        if args.command == "library-backup":
+            settings = load_settings(args.env_file)
+            if settings.researchmind_data_dir is None:
+                raise ConfigError(
+                    "RESEARCHMIND_DATA_DIR is not configured."
+                )
+            paths = prepare_library_paths(
+                settings.researchmind_data_dir,
+                obsidian_vault_path=settings.obsidian_vault_path,
+            )
+            result = create_library_backup(paths, args.output)
+            print(
+                f"Created library backup with {result.entry_count} file(s): "
+                f"{result.archive_path}"
+            )
+            return 0
+        if args.command == "library-restore":
+            settings = load_settings(args.env_file)
+            _validate_library_restore_target(args.data_dir, settings)
+            result = restore_library_backup(
+                args.archive,
+                args.data_dir,
+            )
+            print(
+                f"Restored {result.entry_count} library file(s) into: "
+                f"{result.data_dir}"
+            )
+            return 0
+    except (ConfigError, LibraryError, ObsidianError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
     parser.error("A maintenance command is required.")
@@ -192,6 +228,101 @@ def _vault_check(settings: Settings) -> ConfigurationCheck:
     )
 
 
+def _library_check(settings: Settings) -> ConfigurationCheck:
+    data_dir = settings.researchmind_data_dir
+    if data_dir is None:
+        return ConfigurationCheck(
+            code="library",
+            label="本地资料库",
+            status="warning",
+            message=(
+                "RESEARCHMIND_DATA_DIR 未配置；V3 资料库与点击导入不可用。"
+            ),
+        )
+    try:
+        data_root = data_dir.expanduser().resolve(strict=False)
+        if data_root.exists() and not data_root.is_dir():
+            raise ValueError
+        vault = settings.obsidian_vault_path
+        if vault is not None:
+            vault_root = vault.expanduser().resolve(strict=False)
+            if (
+                data_root == vault_root
+                or data_root.is_relative_to(vault_root)
+                or vault_root.is_relative_to(data_root)
+            ):
+                return ConfigurationCheck(
+                    code="library",
+                    label="本地资料库",
+                    status="error",
+                    message=(
+                        "RESEARCHMIND_DATA_DIR 必须与 Obsidian Vault 分开。"
+                    ),
+                )
+    except (OSError, RuntimeError, ValueError):
+        return ConfigurationCheck(
+            code="library",
+            label="本地资料库",
+            status="error",
+            message="RESEARCHMIND_DATA_DIR 不是可用的目录配置。",
+        )
+    return ConfigurationCheck(
+        code="library",
+        label="本地资料库",
+        status="ok",
+        message=(
+            "V3 数据目录已配置且不显示绝对路径；"
+            "资料库仅在显式访问时创建或迁移。"
+        ),
+    )
+
+
+def _zotero_check(settings: Settings) -> ConfigurationCheck:
+    if not settings.zotero_local_api_enabled:
+        return ConfigurationCheck(
+            code="zotero_local_api",
+            label="Zotero Local API",
+            status="warning",
+            message=(
+                "未启用；ResearchMind 不会连接本机 Zotero。"
+                "在 .env 显式设为 true 后，仍只在用户点击时发起只读请求。"
+            ),
+        )
+    return ConfigurationCheck(
+        code="zotero_local_api",
+        label="Zotero Local API",
+        status="ok",
+        message=(
+            "已显式启用；诊断不会联网，连接仅在资料库中的用户操作后发生。"
+        ),
+    )
+
+
+def _validate_library_restore_target(
+    target_data_dir: Path,
+    settings: Settings,
+) -> None:
+    target = target_data_dir.expanduser().resolve(strict=False)
+    protected_roots = [
+        root.expanduser().resolve(strict=False)
+        for root in (
+            settings.researchmind_data_dir,
+            settings.obsidian_vault_path,
+        )
+        if root is not None
+    ]
+    if any(
+        target == root
+        or target.is_relative_to(root)
+        or root.is_relative_to(target)
+        for root in protected_roots
+    ):
+        raise LibraryError(
+            "Restore into a separate new directory outside the current "
+            "ResearchMind data root and Obsidian Vault."
+        )
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m researchmind.maintenance",
@@ -222,6 +353,19 @@ def _build_parser() -> argparse.ArgumentParser:
     restore.add_argument("--archive", type=Path, required=True)
     restore.add_argument("--vault", type=Path, required=True)
     restore.add_argument("--subdirectory", required=True)
+    library_backup = subparsers.add_parser(
+        "library-backup",
+        help="Create a verified ZIP of SQLite metadata and managed assets.",
+    )
+    library_backup.add_argument("--env-file", type=Path)
+    library_backup.add_argument("--output", type=Path, required=True)
+    library_restore = subparsers.add_parser(
+        "library-restore",
+        help="Restore a verified library ZIP into an absent data directory.",
+    )
+    library_restore.add_argument("--archive", type=Path, required=True)
+    library_restore.add_argument("--data-dir", type=Path, required=True)
+    library_restore.add_argument("--env-file", type=Path, required=True)
     return parser
 
 

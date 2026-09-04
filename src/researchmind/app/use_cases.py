@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
+from uuid import uuid4
 
 from researchmind.code import (
     CodeProjectError,
@@ -17,6 +18,21 @@ from researchmind.code import (
     rollback_code_change as code_rollback_code_change,
 )
 from researchmind.config import ConfigError, Settings, load_settings
+from researchmind.database import (
+    LibraryBackupError,
+    LibraryConfirmationError,
+    LibraryConflictError,
+    LibraryDatabaseError,
+    LibraryError,
+    LibraryImportError,
+    LibraryNotFoundError,
+    LibraryRepository,
+    ManagedStorage,
+    create_library_backup,
+    initialize_database,
+    prepare_library_paths,
+    restore_library_backup,
+)
 from researchmind.core import (
     MAX_ASSISTANT_LLM_CALLS,
     MAX_ASSISTANT_TOOL_CALLS,
@@ -68,6 +84,10 @@ from researchmind.integration.obsidian import (
     render_markdown,
     write_note_to_vault,
 )
+from researchmind.integration.zotero import (
+    ZoteroError,
+    ZoteroLocalApi,
+)
 from researchmind.models import (
     AssistantToolName,
     AssistantToolResult,
@@ -88,12 +108,24 @@ from researchmind.models import (
     EvidenceLink,
     EvidenceRelation,
     KnowledgeNote,
+    LibraryEntry,
+    LibraryBackupResult,
+    LibraryImportResult,
+    LibraryItemKind,
+    LibraryRecord,
+    LibraryRestoreResult,
     Message,
     Page,
     ReadingSelection,
     ResearchContext,
     ReadOnlyAssistantSession,
+    AssetReference,
+    UploadedFileData,
     PaperEvidenceKind,
+    ZoteroAttachment,
+    ZoteroBrowseResult,
+    ZoteroItemDetails,
+    ZoteroSourceLink,
 )
 from researchmind.pdf import (
     OpenedDocument,
@@ -118,10 +150,12 @@ MIN_TEXT_COVERAGE_RATIO = 0.1
 USER_FACING_ERRORS = (
     CodeProjectError,
     ConfigError,
+    LibraryError,
     PdfError,
     LlmError,
     TranslationError,
     ObsidianError,
+    ZoteroError,
     ValueError,
 )
 
@@ -232,6 +266,741 @@ _DEFAULT_QUESTIONS = {
     "contextual": "Explain this selection in its paper context.",
 }
 _LATEX_QUESTION = "Convert the selected mathematical material to LaTeX."
+
+
+def is_library_configured(
+    *,
+    settings: Settings | None = None,
+) -> bool:
+    """Return whether the explicit V3 durable-data root is configured."""
+
+    resolved_settings = settings or load_settings()
+    return resolved_settings.researchmind_data_dir is not None
+
+
+def is_zotero_local_api_enabled(
+    *,
+    settings: Settings | None = None,
+) -> bool:
+    """Return whether the user explicitly enabled loopback Zotero reads."""
+
+    resolved_settings = settings or load_settings()
+    return resolved_settings.zotero_local_api_enabled
+
+
+def browse_zotero_items(
+    *,
+    query: str = "",
+    limit: int = 20,
+    settings: Settings | None = None,
+    client: ZoteroLocalApi | None = None,
+) -> ZoteroBrowseResult:
+    """Probe Zotero and fetch one explicit, session-only personal list."""
+
+    _require_zotero_enabled(settings)
+    api = client or ZoteroLocalApi()
+    connection = api.probe()
+    items = api.list_recent_items(
+        connection,
+        query=query,
+        limit=limit,
+    )
+    return ZoteroBrowseResult(
+        connection=connection,
+        items=tuple(items),
+    )
+
+
+def get_zotero_item_details(
+    browse_result: ZoteroBrowseResult,
+    item_key: str,
+    *,
+    settings: Settings | None = None,
+    client: ZoteroLocalApi | None = None,
+) -> ZoteroItemDetails:
+    """Fetch PDF children only for the explicitly selected browse item."""
+
+    _require_zotero_enabled(settings)
+    item = next(
+        (
+            candidate
+            for candidate in browse_result.items
+            if candidate.item_key == item_key
+        ),
+        None,
+    )
+    if item is None:
+        raise ValueError("The selected Zotero item is not in this browse result.")
+    _validate_zotero_identity(browse_result, item.server_id)
+    api = client or ZoteroLocalApi()
+    attachments = api.list_pdf_attachments(
+        browse_result.connection,
+        item,
+    )
+    return ZoteroItemDetails(
+        connection=browse_result.connection,
+        item=item,
+        attachments=tuple(attachments),
+    )
+
+
+def get_zotero_source_link(
+    record_id: str,
+    *,
+    settings: Settings | None = None,
+) -> ZoteroSourceLink | None:
+    """Read a durable Zotero link without contacting Zotero."""
+
+    repository, _storage = _library_infrastructure(settings)
+    try:
+        return repository.get_zotero_link(record_id)
+    except LibraryNotFoundError:
+        return None
+
+
+def link_zotero_item_to_paper(
+    record_id: str,
+    details: ZoteroItemDetails,
+    *,
+    attachment_key: str | None = None,
+    confirmed: bool,
+    settings: Settings | None = None,
+) -> ZoteroSourceLink:
+    """Persist one explicit paper-to-source relationship and snapshot."""
+
+    if not confirmed:
+        raise LibraryConfirmationError(
+            "Confirm the Zotero source link before continuing."
+        )
+    _require_zotero_enabled(settings)
+    attachment = _selected_zotero_attachment(details, attachment_key)
+    _validate_zotero_details(details)
+    repository, _storage = _library_infrastructure(settings)
+    entry = repository.get_entry(record_id)
+    if entry.record.kind != "paper":
+        raise LibraryNotFoundError(
+            "A Zotero literature item can only link to a paper record."
+        )
+    moment = _utc_now()
+    return repository.upsert_zotero_link(
+        _source_link_from_details(
+            record_id,
+            details,
+            attachment,
+            linked_at=moment,
+            observed_at=moment,
+        )
+    )
+
+
+def unlink_zotero_item_from_paper(
+    record_id: str,
+    *,
+    confirmed: bool,
+    settings: Settings | None = None,
+) -> bool:
+    """Remove only ResearchMind's relationship after confirmation."""
+
+    if not confirmed:
+        raise LibraryConfirmationError(
+            "Confirm Zotero unlinking before continuing."
+        )
+    repository, _storage = _library_infrastructure(settings)
+    return repository.unlink_zotero_item(record_id)
+
+
+def import_zotero_pdf_attachment(
+    details: ZoteroItemDetails,
+    attachment_key: str,
+    *,
+    confirmed: bool,
+    settings: Settings | None = None,
+    client: ZoteroLocalApi | None = None,
+) -> LibraryImportResult:
+    """Copy one selected Zotero PDF into managed storage, then link it."""
+
+    if not confirmed:
+        raise LibraryConfirmationError(
+            "Confirm the Zotero PDF import before continuing."
+        )
+    resolved_settings = _require_zotero_enabled(settings)
+    _validate_zotero_details(details)
+    attachment = _selected_zotero_attachment(details, attachment_key)
+    if attachment is None:
+        raise ValueError("Select a Zotero PDF attachment before importing.")
+
+    repository, _storage = _library_infrastructure(resolved_settings)
+    existing_link = repository.find_zotero_link(
+        server_id=details.item.server_id,
+        library_type=details.item.library_type,
+        library_id=details.item.library_id,
+        item_key=details.item.item_key,
+    )
+    if existing_link is not None:
+        raise LibraryConflictError(
+            "This Zotero item is already linked. Open its library paper, "
+            "or explicitly unlink it before importing another attachment. "
+            "A source link does not prove that PDF contents are identical."
+        )
+
+    api = client or ZoteroLocalApi()
+    downloaded = api.download_pdf_attachment(
+        details.connection,
+        attachment,
+        max_size_bytes=resolved_settings.pdf_max_size_bytes,
+    )
+    imported = import_pdf_to_library(
+        UploadedFileData(
+            name=downloaded.filename,
+            content=downloaded.content,
+        ),
+        settings=resolved_settings,
+    )
+    try:
+        link_zotero_item_to_paper(
+            imported.entry.record.id,
+            details,
+            attachment_key=attachment.item_key,
+            confirmed=True,
+            settings=resolved_settings,
+        )
+    except Exception:
+        if not imported.duplicate:
+            try:
+                remove_library_record(
+                    imported.entry.record.id,
+                    confirmed=True,
+                    settings=resolved_settings,
+                )
+                delete_library_managed_copies(
+                    imported.entry.record.id,
+                    confirmed=True,
+                    settings=resolved_settings,
+                )
+            except (LibraryError, OSError) as cleanup_error:
+                raise LibraryImportError(
+                    "Zotero linking and import cleanup failed. "
+                    "Review the newly imported record in the local library; "
+                    "no Zotero data was changed."
+                ) from cleanup_error
+        raise
+    return imported
+
+
+def list_library_entries(
+    *,
+    kind: LibraryItemKind | None = None,
+    include_removed: bool = False,
+    settings: Settings | None = None,
+) -> list[LibraryEntry]:
+    """List restart-persistent paper/code entries without exposing paths."""
+
+    repository, _storage = _library_infrastructure(settings)
+    return repository.list_entries(
+        kind=kind,
+        include_removed=include_removed,
+    )
+
+
+def import_pdf_to_library(
+    upload: UploadedFileData,
+    *,
+    record_id: str | None = None,
+    settings: Settings | None = None,
+) -> LibraryImportResult:
+    """Validate and atomically import one browser-uploaded PDF."""
+
+    resolved_settings = settings or load_settings()
+    repository, storage = _library_infrastructure(resolved_settings)
+    asset_id = uuid4().hex
+    staged = storage.stage_pdf(
+        upload,
+        asset_id=asset_id,
+        max_size_bytes=resolved_settings.pdf_max_size_bytes,
+    )
+
+    try:
+        duplicate = repository.find_by_hash("pdf", staged.sha256)
+        if duplicate is not None:
+            if duplicate.record.removed_at is not None:
+                repository.restore_record(
+                    duplicate.record.id,
+                    updated_at=_utc_now(),
+                )
+                duplicate = repository.get_entry(duplicate.record.id)
+            return LibraryImportResult(entry=duplicate, duplicate=True)
+
+        opened = pdf_open_pdf(
+            staged.staged_path,
+            max_size_bytes=resolved_settings.pdf_max_size_bytes,
+        )
+        moment = _utc_now()
+        if record_id is None:
+            record = LibraryRecord(
+                id=uuid4().hex,
+                kind="paper",
+                title=opened.document.title,
+                created_at=moment,
+                updated_at=moment,
+            )
+            revision = 1
+        else:
+            existing = repository.get_entry(
+                record_id,
+                include_removed=True,
+            )
+            if existing.record.kind != "paper":
+                raise LibraryImportError(
+                    "A PDF revision can only belong to a paper record."
+                )
+            record = existing.record
+            revision = repository.next_revision(record_id)
+
+        asset = AssetReference(
+            id=asset_id,
+            record_id=record.id,
+            kind="pdf",
+            relative_path=staged.relative_path,
+            sha256=staged.sha256,
+            size_bytes=staged.size_bytes,
+            media_type="application/pdf",
+            revision=revision,
+            managed=True,
+            created_at=moment,
+        )
+        try:
+            if record_id is None:
+                entry = repository.create_entry(
+                    record,
+                    asset,
+                    finalize=lambda: storage.finalize(staged),
+                )
+            else:
+                entry = repository.add_revision(
+                    asset,
+                    finalize=lambda: storage.finalize(staged),
+                )
+        except LibraryDatabaseError:
+            storage.discard_final(staged)
+            duplicate = repository.find_by_hash("pdf", staged.sha256)
+            if duplicate is not None:
+                return LibraryImportResult(
+                    entry=duplicate,
+                    duplicate=True,
+                )
+            raise
+        except Exception:
+            storage.discard_final(staged)
+            raise
+        return LibraryImportResult(entry=entry)
+    finally:
+        storage.discard_staged(staged)
+
+
+def import_code_directory_to_library(
+    uploads: list[UploadedFileData],
+    *,
+    project_name: str | None = None,
+    record_id: str | None = None,
+    settings: Settings | None = None,
+) -> LibraryImportResult:
+    """Validate and atomically import one browser-selected Python directory."""
+
+    resolved_settings = settings or load_settings()
+    repository, storage = _library_infrastructure(resolved_settings)
+    asset_id = uuid4().hex
+    staged_code = storage.stage_code_directory(
+        uploads,
+        asset_id=asset_id,
+        requested_project_name=project_name,
+    )
+    staged = staged_code.asset
+
+    try:
+        duplicate = repository.find_by_hash(
+            "code_directory",
+            staged.sha256,
+        )
+        if duplicate is not None:
+            if duplicate.record.removed_at is not None:
+                repository.restore_record(
+                    duplicate.record.id,
+                    updated_at=_utc_now(),
+                )
+                duplicate = repository.get_entry(duplicate.record.id)
+            return LibraryImportResult(entry=duplicate, duplicate=True)
+
+        code_open_code_project(staged.staged_path)
+        moment = _utc_now()
+        if record_id is None:
+            record = LibraryRecord(
+                id=uuid4().hex,
+                kind="code",
+                title=staged_code.project_name,
+                created_at=moment,
+                updated_at=moment,
+            )
+            revision = 1
+        else:
+            existing = repository.get_entry(
+                record_id,
+                include_removed=True,
+            )
+            if existing.record.kind != "code":
+                raise LibraryImportError(
+                    "A code revision can only belong to a code record."
+                )
+            record = existing.record
+            revision = repository.next_revision(record_id)
+
+        asset = AssetReference(
+            id=asset_id,
+            record_id=record.id,
+            kind="code_directory",
+            relative_path=staged.relative_path,
+            sha256=staged.sha256,
+            size_bytes=staged.size_bytes,
+            media_type="application/vnd.researchmind.python-directory",
+            revision=revision,
+            managed=True,
+            created_at=moment,
+        )
+        try:
+            if record_id is None:
+                entry = repository.create_entry(
+                    record,
+                    asset,
+                    finalize=lambda: storage.finalize(staged),
+                )
+            else:
+                entry = repository.add_revision(
+                    asset,
+                    finalize=lambda: storage.finalize(staged),
+                )
+        except LibraryDatabaseError:
+            storage.discard_final(staged)
+            duplicate = repository.find_by_hash(
+                "code_directory",
+                staged.sha256,
+            )
+            if duplicate is not None:
+                return LibraryImportResult(
+                    entry=duplicate,
+                    duplicate=True,
+                )
+            raise
+        except Exception:
+            storage.discard_final(staged)
+            raise
+        return LibraryImportResult(entry=entry)
+    finally:
+        storage.discard_staged(staged)
+
+
+def open_library_paper(
+    record_id: str,
+    *,
+    settings: Settings | None = None,
+) -> OpenedDocument:
+    """Open the latest managed PDF revision after an application restart."""
+
+    resolved_settings = settings or load_settings()
+    repository, storage = _library_infrastructure(resolved_settings)
+    entry = repository.get_entry(record_id)
+    if entry.record.kind != "paper" or entry.asset.kind != "pdf":
+        raise LibraryNotFoundError(
+            "The selected library entry is not a paper."
+        )
+    path = storage.resolve_asset(entry.asset)
+    return pdf_open_pdf(
+        path,
+        max_size_bytes=resolved_settings.pdf_max_size_bytes,
+    )
+
+
+def open_library_code_project(
+    record_id: str,
+    *,
+    settings: Settings | None = None,
+) -> CodeProject:
+    """Open the latest managed Python-directory revision after restart."""
+
+    repository, storage = _library_infrastructure(settings)
+    entry = repository.get_entry(record_id)
+    if (
+        entry.record.kind != "code"
+        or entry.asset.kind != "code_directory"
+    ):
+        raise LibraryNotFoundError(
+            "The selected library entry is not a code project."
+        )
+    opened = code_open_code_project(storage.resolve_asset(entry.asset))
+    return CodeProject(
+        id=entry.record.id,
+        name=entry.record.title,
+        root_path=opened.root_path,
+        files=opened.files,
+        total_source_bytes=opened.total_source_bytes,
+        managed_by_researchmind=True,
+    )
+
+
+def remove_library_record(
+    record_id: str,
+    *,
+    confirmed: bool,
+    settings: Settings | None = None,
+) -> None:
+    """Soft-remove one record without deleting any managed file."""
+
+    if not confirmed:
+        raise LibraryConfirmationError(
+            "Confirm removal from the library before continuing."
+        )
+    repository, _storage = _library_infrastructure(settings)
+    repository.remove_record(record_id, removed_at=_utc_now())
+
+
+def restore_library_record(
+    record_id: str,
+    *,
+    settings: Settings | None = None,
+) -> None:
+    """Restore one soft-removed record while its managed asset remains."""
+
+    repository, _storage = _library_infrastructure(settings)
+    if not repository.assets_for_record(record_id):
+        raise LibraryNotFoundError(
+            "The removed record no longer has a managed asset to restore."
+        )
+    repository.restore_record(record_id, updated_at=_utc_now())
+
+
+def delete_library_managed_copies(
+    record_id: str,
+    *,
+    confirmed: bool,
+    settings: Settings | None = None,
+) -> int:
+    """Delete only ResearchMind-owned copies after a separate confirmation."""
+
+    if not confirmed:
+        raise LibraryConfirmationError(
+            "Confirm managed-copy deletion before continuing."
+        )
+    repository, storage = _library_infrastructure(settings)
+    entry = repository.get_entry(record_id, include_removed=True)
+    if entry.record.removed_at is None:
+        raise LibraryConfirmationError(
+            "Remove the library record before deleting its managed copies."
+        )
+    try:
+        repository.get_zotero_link(record_id)
+    except LibraryNotFoundError:
+        pass
+    else:
+        raise LibraryConfirmationError(
+            "Explicitly unlink the Zotero source before deleting managed copies."
+        )
+    assets = repository.assets_for_record(record_id)
+    if any(not asset.managed for asset in assets):
+        raise LibraryConfirmationError(
+            "ResearchMind never deletes external source files."
+        )
+
+    quarantined = []
+    try:
+        for asset in assets:
+            quarantined.append(storage.quarantine(asset))
+        repository.mark_assets_deleted(
+            record_id,
+            asset_ids=[asset.id for asset in assets],
+            deleted_at=_utc_now(),
+        )
+    except Exception:
+        for item in reversed(quarantined):
+            storage.restore_quarantine(item)
+        raise
+
+    for item in quarantined:
+        storage.discard_quarantine(item)
+    return len(assets)
+
+
+def backup_local_library(
+    archive_path: Path,
+    *,
+    settings: Settings | None = None,
+) -> LibraryBackupResult:
+    """Create one verified non-overwriting local-library backup."""
+
+    resolved_settings = settings or load_settings()
+    if resolved_settings.researchmind_data_dir is None:
+        raise LibraryBackupError(
+            "RESEARCHMIND_DATA_DIR is not configured."
+        )
+    paths = prepare_library_paths(
+        resolved_settings.researchmind_data_dir,
+        obsidian_vault_path=resolved_settings.obsidian_vault_path,
+    )
+    return create_library_backup(paths, archive_path)
+
+
+def restore_local_library_backup(
+    archive_path: Path,
+    target_data_dir: Path,
+    *,
+    settings: Settings | None = None,
+) -> LibraryRestoreResult:
+    """Restore a verified backup into a separate absent data directory."""
+
+    resolved_settings = settings or load_settings()
+    target = Path(target_data_dir).expanduser().resolve(strict=False)
+    current_data_dir = resolved_settings.researchmind_data_dir
+    if current_data_dir is not None:
+        current_root = current_data_dir.expanduser().resolve(strict=False)
+        if (
+            target == current_root
+            or target.is_relative_to(current_root)
+            or current_root.is_relative_to(target)
+        ):
+            raise LibraryBackupError(
+                "Restore into a separate new data root, not inside the "
+                "current RESEARCHMIND_DATA_DIR."
+            )
+    vault = resolved_settings.obsidian_vault_path
+    if vault is not None:
+        vault_root = vault.expanduser().resolve(strict=False)
+        if (
+            target == vault_root
+            or target.is_relative_to(vault_root)
+            or vault_root.is_relative_to(target)
+        ):
+            raise LibraryBackupError(
+                "The restored data directory must be separate from "
+                "the Obsidian Vault."
+            )
+    return restore_library_backup(archive_path, target)
+
+
+def _library_infrastructure(
+    settings: Settings | None,
+) -> tuple[LibraryRepository, ManagedStorage]:
+    resolved_settings = settings or load_settings()
+    if resolved_settings.researchmind_data_dir is None:
+        raise LibraryImportError(
+            "RESEARCHMIND_DATA_DIR is not configured."
+        )
+    paths = prepare_library_paths(
+        resolved_settings.researchmind_data_dir,
+        obsidian_vault_path=resolved_settings.obsidian_vault_path,
+    )
+    database_path = initialize_database(paths.database_path)
+    return LibraryRepository(database_path), ManagedStorage(paths)
+
+
+def _require_zotero_enabled(
+    settings: Settings | None,
+) -> Settings:
+    resolved_settings = settings or load_settings()
+    if not resolved_settings.zotero_local_api_enabled:
+        raise ConfigError(
+            "ZOTERO_LOCAL_API_ENABLED is false. Enable it explicitly "
+            "before connecting to Zotero."
+        )
+    return resolved_settings
+
+
+def _validate_zotero_identity(
+    browse_result: ZoteroBrowseResult,
+    item_server_id: str,
+) -> None:
+    if browse_result.connection.api_version != 3:
+        raise ValueError("Zotero API version 3 is required.")
+    if browse_result.connection.server_id != item_server_id:
+        raise ValueError("The Zotero item belongs to a different server.")
+
+
+def _validate_zotero_details(details: ZoteroItemDetails) -> None:
+    _validate_zotero_identity(
+        ZoteroBrowseResult(
+            connection=details.connection,
+            items=(details.item,),
+        ),
+        details.item.server_id,
+    )
+    if details.item.library_type != "user":
+        raise ValueError(
+            "V3-G2 supports the personal Zotero library only."
+        )
+    if any(
+        attachment.parent_item_key != details.item.item_key
+        for attachment in details.attachments
+    ):
+        raise ValueError(
+            "A Zotero attachment does not belong to the selected item."
+        )
+
+
+def _selected_zotero_attachment(
+    details: ZoteroItemDetails,
+    attachment_key: str | None,
+) -> ZoteroAttachment | None:
+    if attachment_key is None:
+        return None
+    attachment = next(
+        (
+            candidate
+            for candidate in details.attachments
+            if candidate.item_key == attachment_key
+        ),
+        None,
+    )
+    if attachment is None:
+        raise ValueError(
+            "The selected PDF attachment is not in this item result."
+        )
+    return attachment
+
+
+def _source_link_from_details(
+    record_id: str,
+    details: ZoteroItemDetails,
+    attachment: ZoteroAttachment | None,
+    *,
+    linked_at: datetime,
+    observed_at: datetime,
+) -> ZoteroSourceLink:
+    item = details.item
+    return ZoteroSourceLink(
+        id=uuid4().hex,
+        record_id=record_id,
+        server_id=item.server_id,
+        library_type=item.library_type,
+        library_id=item.library_id,
+        item_key=item.item_key,
+        item_version=item.item_version,
+        item_type=item.item_type,
+        title=item.title,
+        creators=item.creators,
+        publication_title=item.publication_title,
+        published_date=item.published_date,
+        doi=item.doi,
+        url=item.url,
+        attachment_key=(None if attachment is None else attachment.item_key),
+        attachment_version=(
+            None if attachment is None else attachment.item_version
+        ),
+        attachment_filename=(
+            None if attachment is None else attachment.filename
+        ),
+        linked_at=linked_at,
+        observed_at=observed_at,
+    )
+
+
+def _utc_now() -> datetime:
+    return datetime.now(UTC)
 
 
 def open_code_project(path: Path) -> CodeProject:
@@ -358,6 +1127,7 @@ def propose_code_change(
 ) -> CodeChangeProposal:
     """Request and validate one preview-only selected-range replacement."""
 
+    _require_editable_external_code_project(project)
     resolved_settings = settings or load_settings()
     snapshot = read_code_snapshot(project, selection.relative_path)
     validate_code_change_snapshot(project, selection, snapshot)
@@ -386,6 +1156,7 @@ def apply_code_change_proposal(
 ) -> CodeChangeApplication:
     """Apply exactly one proposal only after explicit per-action confirmation."""
 
+    _require_editable_external_code_project(project)
     if not confirmed:
         raise ValueError("Code change requires explicit confirmation before writing.")
     updated_file = code_file_from_proposal(proposal)
@@ -404,6 +1175,7 @@ def rollback_applied_code_change(
 ) -> CodeChangeRollbackApplication:
     """Roll back exactly one applied change after a second explicit consent."""
 
+    _require_editable_external_code_project(project)
     if not confirmed:
         raise ValueError("Code rollback requires explicit confirmation.")
     updated_file = code_file_from_recovery(project, receipt)
@@ -412,6 +1184,14 @@ def rollback_applied_code_change(
         project=replace_code_project_file(project, updated_file),
         receipt=rollback_receipt,
     )
+
+
+def _require_editable_external_code_project(project: CodeProject) -> None:
+    if project.managed_by_researchmind:
+        raise ValueError(
+            "Managed library code is read-only. Import a new revision instead "
+            "of changing the indexed copy in place."
+        )
 
 
 def create_code_change_audit_event(

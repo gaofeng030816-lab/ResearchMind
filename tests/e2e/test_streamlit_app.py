@@ -1,20 +1,189 @@
 """Streamlit smoke coverage for the complete M5 product loop."""
 
 from pathlib import Path
+from dataclasses import replace
 
 import pytest
 from streamlit.testing.v1 import AppTest
 
 from researchmind.app import use_cases
 from researchmind.config import Settings
+from researchmind.integration.zotero import ZoteroUnavailableError
 from researchmind.models import (
     ConfigurationCheck,
     ConfigurationReport,
     Message,
+    UploadedFileData,
+    ZoteroAttachment,
+    ZoteroBrowseResult,
+    ZoteroConnection,
+    ZoteroItem,
+    ZoteroItemDetails,
 )
 
 
 APP_PATH = Path(__file__).parents[2] / "src" / "researchmind" / "app" / "app.py"
+
+
+def test_zotero_ui_reads_only_after_explicit_buttons(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    single_page_pdf: Path,
+) -> None:
+    settings = Settings(
+        researchmind_data_dir=tmp_path / "library",
+        zotero_local_api_enabled=True,
+    )
+    use_cases.import_pdf_to_library(
+        UploadedFileData(name="paper.pdf", content=single_page_pdf.read_bytes()),
+        settings=settings,
+    )
+    connection = ZoteroConnection(server_id="server-A", api_version=3)
+    item = ZoteroItem(
+        server_id="server-A",
+        library_type="user",
+        library_id="42",
+        item_key="ITEM0001",
+        item_version=5,
+        item_type="journalArticle",
+        title="UI test paper",
+        creators=("Ada Researcher",),
+    )
+    attachment = ZoteroAttachment(
+        item_key="PDF00001",
+        item_version=2,
+        parent_item_key=item.item_key,
+        title="PDF",
+        filename="paper.pdf",
+        content_type="application/pdf",
+        link_mode="imported_file",
+    )
+    browse_result = ZoteroBrowseResult(
+        connection=connection,
+        items=(item,),
+    )
+    details = ZoteroItemDetails(
+        connection=connection,
+        item=item,
+        attachments=(
+            attachment,
+            replace(attachment, item_key="PDF00002", filename="second.pdf"),
+        ),
+    )
+    calls: list[str] = []
+
+    monkeypatch.setattr(use_cases, "load_settings", lambda: settings)
+    monkeypatch.setattr(
+        use_cases,
+        "browse_zotero_items",
+        lambda **_kwargs: calls.append("browse") or browse_result,
+    )
+    monkeypatch.setattr(
+        use_cases,
+        "get_zotero_item_details",
+        lambda *_args, **_kwargs: calls.append("details") or details,
+    )
+
+    app = AppTest.from_file(APP_PATH, default_timeout=10).run()
+    app.radio(key="workspace_navigation").set_value("library").run()
+
+    assert not app.exception
+    assert calls == []
+
+    app.button(key="zotero_browse_button").click().run()
+    assert calls == ["browse"]
+    assert app.selectbox(key="zotero_item_select").value == item.item_key
+
+    app.button(key="zotero_fetch_attachments_button").click().run()
+    assert not app.exception
+    assert calls == ["browse", "details"]
+    assert app.selectbox(key="zotero_attachment_select").value == (
+        attachment.item_key
+    )
+    assert app.button(key="zotero_import_pdf_button").disabled is True
+
+    confirmation = next(
+        checkbox for checkbox in app.checkbox
+        if "我确认建立只读来源链接" in checkbox.label
+    )
+    confirmation.check().run()
+    assert app.button(key="zotero_link_existing_button").disabled is False
+    app.selectbox(key="zotero_attachment_select").set_value("PDF00002").run()
+    assert app.button(key="zotero_link_existing_button").disabled is True
+    assert app.button(key="zotero_import_pdf_button").disabled is True
+
+    def failed_details(*_args, **_kwargs):
+        raise ZoteroUnavailableError("Zotero is unavailable.")
+
+    monkeypatch.setattr(use_cases, "get_zotero_item_details", failed_details)
+    app.button(key="zotero_fetch_attachments_button").click().run()
+    assert not app.exception
+    assert not any(
+        button.key == "zotero_import_pdf_button" for button in app.button
+    )
+
+
+def test_library_workspace_reopens_managed_paper_after_restart(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    single_page_pdf: Path,
+) -> None:
+    settings = Settings(researchmind_data_dir=tmp_path / "library")
+    imported = use_cases.import_pdf_to_library(
+        UploadedFileData(
+            name="paper.pdf",
+            content=single_page_pdf.read_bytes(),
+        ),
+        settings=settings,
+    )
+    monkeypatch.setattr(use_cases, "load_settings", lambda: settings)
+
+    app = AppTest.from_file(APP_PATH, default_timeout=10).run()
+    app.radio(key="workspace_navigation").set_value("library").run()
+
+    assert not app.exception
+    assert app.selectbox(key="library_entry_select").value == (
+        imported.entry.record.id
+    )
+
+    app.button(key=f"library_open_{imported.entry.record.id}").click().run()
+
+    assert not app.exception
+    assert app.radio(key="workspace_navigation").value == "paper"
+    assert app.session_state["opened_document"].document.title == (
+        "Fixture Research Paper"
+    )
+
+
+def test_library_workspace_reopens_managed_code_as_read_only(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    settings = Settings(researchmind_data_dir=tmp_path / "library")
+    imported = use_cases.import_code_directory_to_library(
+        [
+            UploadedFileData(
+                name="demo/main.py",
+                content=b"def answer():\n    return 42\n",
+            )
+        ],
+        settings=settings,
+    )
+    monkeypatch.setattr(use_cases, "load_settings", lambda: settings)
+
+    app = AppTest.from_file(APP_PATH, default_timeout=10).run()
+    app.radio(key="workspace_navigation").set_value("library").run()
+    app.button(key=f"library_open_{imported.entry.record.id}").click().run()
+
+    assert not app.exception
+    assert app.radio(key="workspace_navigation").value == "code"
+    project = app.session_state["opened_code_project"]
+    assert project.name == "demo"
+    assert project.managed_by_researchmind is True
+    assert not any(
+        button.key == "propose_code_change_button"
+        for button in app.button
+    )
 
 
 def test_user_can_run_safe_configuration_diagnostics(

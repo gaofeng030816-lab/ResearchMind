@@ -50,6 +50,7 @@ class CodeProject:
     root_path: Path
     files: tuple[CodeFile, ...]
     total_source_bytes: int
+    managed_by_researchmind: bool = False
 
 
 @dataclass(frozen=True)

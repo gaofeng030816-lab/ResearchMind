@@ -1,0 +1,151 @@
+---
+name: research-library
+description: Design, implement, migrate, and review ResearchMind's V3 local paper/code working library, click-import storage, SQLite repositories, durable note drafts, and optional Zotero links. Use for schema, transactions, deduplication, managed files, restart persistence, deletion, backup/recovery, or Zotero source mapping; not for PDF extraction, LLM prompts, or Obsidian rendering.
+---
+
+# Research Library
+
+Build a small local working library that gives ResearchMind stable paper/code IDs and
+cross-session state without replacing Zotero or Obsidian.
+
+Read docs/ARCHITECTURE.md for implemented G1/G2 ownership and
+V2 to V3过渡要求.md for the active gate. G2 metadata/source linking is implemented,
+but direct attachment import awaits a local-file-read gate because official /file
+returns 302 file://, not PDF bytes. Real Zotero manual acceptance also remains.
+Preserve schema v2, G1 file ownership,
+recovery, and explicit source-link semantics; do not broaden to Web API or sync.
+
+## Product Boundary
+
+The ResearchMind library may own:
+
+- imported paper and code workspace records;
+- validated managed-file references, hashes, sizes, and media/language metadata;
+- ResearchMind-specific source links and processing status;
+- explicit draft notes and selected evidence needed before Obsidian export;
+- optional links to Zotero items and their provenance/version snapshot.
+
+It does not own citation formatting, bibliography management, Zotero collections as a
+replacement, Obsidian backlinks, or the user's long-term knowledge graph.
+
+## Recommended Ownership
+
+- models: implemented LibraryRecord, AssetReference and ZoteroSourceLink;
+  NoteDraft and EvidenceSnapshot only after their later schema gate;
+- core: pure validation, deduplication, state transition, and deletion rules;
+- database: sqlite3 connection, schema, migrations, transactions, and repository
+  implementations;
+- integration/zotero: adopted Local API GET calls and vendor-to-project mapping;
+- app/use_cases.py: import, list/open, link, draft, and delete orchestration;
+- app/views and app/state.py: display/events and session state only.
+
+The database never imports Streamlit, PyMuPDF, Zotero SDK objects, LLM code, or Vault
+writers.
+
+## SQLite Contract
+
+- Prefer Python's sqlite3; do not add an ORM or server without a new architecture
+  decision.
+- Use parameterized SQL, explicit transactions, foreign-key enforcement, a schema
+  version, and project exceptions.
+- Keep migrations ordered, deterministic, idempotence-aware, and tested from each
+  supported prior version.
+- Define recovery before migration. Never claim a SQL rollback can undo an already
+  finalized external file operation.
+- Store metadata, stable IDs, hashes, versions, and relative managed-file paths. Keep
+  PDFs and source trees as files rather than database blobs.
+- Do not expose raw connections, rows, or SQLite exceptions outside database.
+
+## Import and Managed Files
+
+Browser uploads provide untrusted names and bytes. Validate extension/type, magic,
+size, encoding or parseability as appropriate, resource limits, and SHA-256 before a
+record becomes usable.
+
+Use this safe order unless the approved decision says otherwise:
+
+    validate → hash/deduplicate → stage in managed storage
+    → database transaction → atomic finalize → verify consistency
+
+Document compensation when the database and file-system steps cannot be one atomic
+transaction. Use safe internal names and relative paths; display names remain metadata.
+
+For directory upload, preserve only validated relative structure, reject traversal,
+symlinks, hidden/secret/vendor paths according to code policy, and enforce project
+count/size limits.
+
+## Identity and Deduplication
+
+- Give each ResearchMind item a stable internal ID independent of its title/path.
+- Use content hashes for exact asset duplicates.
+- Preserve source-specific keys for Zotero links; do not merge records only by title,
+  DOI, or filename without an explicit conflict workflow.
+- A new revision may share logical identity while having a new asset hash. Define
+  which selections/drafts become stale.
+- Show duplicate/link decisions to the user; never silently discard distinct files.
+
+## Deletion Semantics
+
+Keep separate actions:
+
+- remove a link/source association;
+- remove a library record while retaining an external file;
+- delete a ResearchMind-managed copy after explicit confirmation;
+- export/save a note to Obsidian.
+
+Never delete an externally owned PDF, code folder, Zotero attachment, or Vault note as
+a side effect of a catalog operation. Check dependencies and explain what will remain.
+
+## Zotero Boundary
+
+G2 uses the read-only Zotero Local API, explicitly enabled in both applications.
+Keep its fixed loopback endpoint, disabled proxies, rejected redirects, bounded
+responses and GET-only transport. Never read Zotero's SQLite database directly.
+
+Do not follow file:// or read returned attachment paths before the file-read gate.
+Current fallback is G1 click upload followed by explicit source linking. Required
+Zotero-Server-ID is documented for Zotero 10+; do not invent identity for older clients.
+
+Preserve local server ID, library/item key, object version, source mode, and last
+observed metadata. Partition durable source links by server ID. Browsing remains
+session-only; do not create a whole-library cache. Treat unavailable/disabled
+Zotero as an optional integration error, not a ResearchMind startup failure.
+
+A metadata source link does not prove two PDF files are identical. Existing source
+links must not silently retag another attachment as imported. Keep unlink explicit;
+require it before deleting a linked paper's managed copies.
+
+Web API access is a later optional mode with explicit credentials, network visibility,
+pagination/rate handling, and a separate gate. Do not add Zotero write/sync behavior
+unless specifically approved.
+
+## Draft Persistence
+
+Persist only explicit NoteDraft content and selected evidence, not every chat turn.
+Keep draft revision/stale status. Editing and previewing a draft do not write the
+Vault; final save continues through integration/obsidian and remains non-overwriting.
+
+## Security and Recovery
+
+- Keep the database and managed storage outside the user's Vault and code roots unless
+  configuration explicitly chooses a safe dedicated location.
+- Validate configured roots without logging sensitive absolute paths.
+- Use least-authority file operations, atomic replace/rename where practical, and
+  bounded backups.
+- Never store API keys in the database or export them with library backups.
+- Treat database text and imported metadata as untrusted in UI, Markdown, and prompts.
+
+## Verification
+
+Use temporary databases/storage/Vaults. Cover schema creation, migrations, rollback,
+foreign keys, duplicate and revision cases, interrupted import, path traversal,
+corruption, restart persistence, deletion semantics, backup/restore, stale selections,
+Zotero server partitions, unavailable/403/malformed fake API behavior, and invariants
+that external files and Vault notes are untouched.
+
+## Finish Check
+
+Confirm stable identity, explicit ownership, safe import order, deterministic
+migrations, recoverable failure, honest deduplication, clear deletion behavior,
+optional Zotero provenance, explicit-only draft persistence, no secrets, no raw vendor
+types outside boundaries, and actual restart/recovery test evidence.

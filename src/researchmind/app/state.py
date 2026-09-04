@@ -21,6 +21,8 @@ from researchmind.models import (
     MessageTask,
     ReadOnlyAssistantSession,
     ReadingSelection,
+    ZoteroBrowseResult,
+    ZoteroItemDetails,
 )
 from researchmind.pdf import OpenedDocument, TextMatch
 
@@ -45,6 +47,9 @@ CODE_CHANGE_PROPOSAL_KEY = "code_change_proposal"
 CODE_CHANGE_RECEIPT_KEY = "code_change_receipt"
 CODE_CHANGE_ROLLBACK_RECEIPT_KEY = "code_change_rollback_receipt"
 CODE_CHANGE_AUDIT_KEY = "code_change_audit"
+REQUESTED_WORKSPACE_KEY = "requested_workspace"
+ZOTERO_BROWSE_RESULT_KEY = "zotero_browse_result"
+ZOTERO_ITEM_DETAILS_KEY = "zotero_item_details"
 
 
 def initialize_state() -> None:
@@ -71,6 +76,9 @@ def initialize_state() -> None:
         CODE_CHANGE_RECEIPT_KEY: None,
         CODE_CHANGE_ROLLBACK_RECEIPT_KEY: None,
         CODE_CHANGE_AUDIT_KEY: [],
+        REQUESTED_WORKSPACE_KEY: None,
+        ZOTERO_BROWSE_RESULT_KEY: None,
+        ZOTERO_ITEM_DETAILS_KEY: None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -137,6 +145,54 @@ def page_number_widget_key(document_id: str) -> str:
     """Return the stable widget key for one document's page-number input."""
 
     return f"page_jump_input_{document_id}"
+
+
+def request_workspace(workspace: str) -> None:
+    if workspace not in {"paper", "code", "assistant", "library"}:
+        raise ValueError("Requested workspace is unsupported.")
+    st.session_state[REQUESTED_WORKSPACE_KEY] = workspace
+
+
+def apply_requested_workspace() -> None:
+    workspace = cast(
+        str | None,
+        st.session_state[REQUESTED_WORKSPACE_KEY],
+    )
+    if workspace is not None:
+        st.session_state["workspace_navigation"] = workspace
+        st.session_state[REQUESTED_WORKSPACE_KEY] = None
+
+
+def get_zotero_browse_result() -> ZoteroBrowseResult | None:
+    return cast(
+        ZoteroBrowseResult | None,
+        st.session_state[ZOTERO_BROWSE_RESULT_KEY],
+    )
+
+
+def set_zotero_browse_result(result: ZoteroBrowseResult) -> None:
+    st.session_state[ZOTERO_BROWSE_RESULT_KEY] = result
+    st.session_state[ZOTERO_ITEM_DETAILS_KEY] = None
+
+
+def clear_zotero_browse_result() -> None:
+    st.session_state[ZOTERO_BROWSE_RESULT_KEY] = None
+    st.session_state[ZOTERO_ITEM_DETAILS_KEY] = None
+
+
+def get_zotero_item_details() -> ZoteroItemDetails | None:
+    return cast(
+        ZoteroItemDetails | None,
+        st.session_state[ZOTERO_ITEM_DETAILS_KEY],
+    )
+
+
+def set_zotero_item_details(details: ZoteroItemDetails) -> None:
+    st.session_state[ZOTERO_ITEM_DETAILS_KEY] = details
+
+
+def clear_zotero_item_details() -> None:
+    st.session_state[ZOTERO_ITEM_DETAILS_KEY] = None
 
 
 def get_current_selection() -> ReadingSelection | None:

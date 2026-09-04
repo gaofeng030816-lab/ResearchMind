@@ -101,6 +101,11 @@ def render_code_workspace() -> None:
         f"**{project.name}** · {len(project.files):,} 个候选文件 · "
         f"{project.total_source_bytes:,} bytes"
     )
+    if project.managed_by_researchmind:
+        st.info(
+            "当前打开的是 ResearchMind 托管修订副本：可静态阅读、解释和写笔记，"
+            "但不能用 T5-B1 原地修改。修改后的目录请作为新修订重新导入。"
+        )
     _render_project_summary(
         use_cases.get_code_project_summary(project),
         goal=goal,
@@ -594,6 +599,11 @@ def _render_code_change_controls(
     project: CodeProject,
     selection: CodeSelection,
 ) -> None:
+    if project.managed_by_researchmind:
+        st.caption(
+            "托管资料库代码保持只读，以保护已登记的哈希和修订。"
+        )
+        return
     with st.expander("受控单文件修改（T5-B1）", expanded=False):
         st.warning(
             "模型只会提出当前相对路径与行范围的替换文本。生成建议不会写盘；"

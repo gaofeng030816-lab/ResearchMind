@@ -23,6 +23,14 @@ dist/
 .coverage
 htmlcov/
 
+# Local generated documents and working-library databases (never publish)
+output/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.db
+
+
 # Editor and operating-system files
 .idea/
 .vscode/

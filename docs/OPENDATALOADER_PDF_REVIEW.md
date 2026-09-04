@@ -4,7 +4,7 @@ Date: 2026-08-27
 
 ## Source reviewed
 
-The local source tree at `D:\课程资料\opendataloader-pdf-main` was reviewed for
+The local source tree at `<local-opendataloader-checkout>` was reviewed for
 reading-order, text, table, image, chart, OCR, and Python integration code. The
 repository identifies OpenDataLoader PDF as Apache-2.0 software and carries:
 
