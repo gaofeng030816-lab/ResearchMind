@@ -71,8 +71,11 @@ recoverable pre-migration copy or documented rollback path.
 Keep Zotero optional and default-off. Convert adopted Local API responses inside
 integration/zotero; preserve the fixed loopback GET-only boundary and reject
 redirects. Web API remains unapproved. Never read Zotero's SQLite directly.
-Official /file redirects to file://; the byte-response prototype is not real import.
-Keep direct import UI disabled until a local-file-read gate is explicitly approved.
+The approved Windows copy uses /file/view/url plus integration/zotero/local_files.py.
+Require configured-root and per-selection consent; keep all ancestor/file handles
+open without write/delete sharing through the bounded read. Reject aliases/network
+locations and recheck metadata/URL. Non-Windows or unconfigured roots fail closed.
+Never restore the obsolete HTTP-200 PDF prototype or follow redirects.
 Preserve server/library/item identity and version; a source link is not content-hash
 evidence. Do not silently update an attachment identity without its explicit action.
 

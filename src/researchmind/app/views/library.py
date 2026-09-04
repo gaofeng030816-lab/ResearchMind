@@ -407,7 +407,7 @@ def _render_zotero_connection() -> None:
 
     _render_zotero_link_existing(details, attachment_key)
     if attachment_key is not None:
-        _render_zotero_import_unavailable()
+        _render_zotero_import(details, attachment_key)
 
 
 def _render_zotero_link_existing(
@@ -465,17 +465,40 @@ def _render_zotero_link_existing(
             st.error(str(exc))
 
 
-def _render_zotero_import_unavailable() -> None:
-    st.info(
-        "Zotero Local API 的附件接口返回本地 file:// 文件位置，"
-        "不是 PDF 字节流。直接读取该路径的安全门禁尚未确认。"
-        "目前请先用上方 PDF 上传框选择文件，再使用“链接已有论文”。"
+def _render_zotero_import(details: ZoteroItemDetails, attachment_key: str) -> None:
+    root_scope = use_cases.zotero_attachment_approval_scope()
+    if root_scope is None:
+        st.info(
+            "直接复制需要 Windows，并在 .env 中设置 ZOTERO_ATTACHMENT_ROOT "
+            "为你批准的 Zotero 附件目录。不要填写网络盘或整个磁盘。"
+            "未配置时仍可手动上传 PDF 后链接来源。"
+        )
+    st.caption("只读复制所选的一个 PDF 到 ResearchMind；不修改 Zotero 原文件，不外发内容。")
+    confirmed = st.checkbox(
+        "我批准只读复制当前选中的 PDF，且仅允许读取已配置的附件目录。",
+        key=(
+            "zotero_import_confirm_" + _zotero_confirmation_scope(details, attachment_key)
+            + "_" + str(root_scope) + "_" + str(state.get_zotero_action_generation())
+        ),
+        disabled=root_scope is None,
     )
-    st.button(
-        "直接导入 Zotero PDF（待文件读取门禁）",
+    if st.button(
+        "复制所选 Zotero PDF 到资料库",
         key="zotero_import_pdf_button",
-        disabled=True,
-    )
+        disabled=root_scope is None or not confirmed,
+    ):
+        try:
+            result = use_cases.import_zotero_pdf_attachment(
+                details, attachment_key, confirmed=confirmed, approved_root_scope=root_scope,
+            )
+            state.clear_zotero_item_details()
+            st.success(
+                "已复用相同 PDF 并链接来源。" if result.duplicate
+                else "已复制 PDF 并链接来源；Zotero 原件未改动。"
+            )
+        except use_cases.USER_FACING_ERRORS as exc:
+            state.clear_zotero_item_details()
+            st.error(str(exc))
 
 
 def _render_entry_zotero_link(entry: LibraryEntry) -> None:

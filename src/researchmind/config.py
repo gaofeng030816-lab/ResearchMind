@@ -39,6 +39,7 @@ class Settings:
     target_language: str = DEFAULT_TARGET_LANGUAGE
     researchmind_data_dir: Path | None = None
     zotero_local_api_enabled: bool = False
+    zotero_attachment_root: str | None = field(default=None, repr=False)
     obsidian_vault_path: Path | None = None
     obsidian_subdirectory: str = DEFAULT_OBSIDIAN_SUBDIRECTORY
     context_token_budget: int = DEFAULT_CONTEXT_TOKEN_BUDGET
@@ -103,6 +104,7 @@ def load_settings(
             "ZOTERO_LOCAL_API_ENABLED",
             False,
         ),
+        zotero_attachment_root=_optional_text(values, "ZOTERO_ATTACHMENT_ROOT"),
         obsidian_vault_path=_optional_path(values, "OBSIDIAN_VAULT_PATH"),
         obsidian_subdirectory=_text_or_default(
             values,

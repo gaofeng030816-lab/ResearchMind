@@ -31,6 +31,7 @@ from researchmind.models.zotero import (
     ZoteroDownloadedFile,
     ZoteroItem,
 )
+from researchmind.integration.zotero.local_files import read_local_pdf
 
 
 LOCAL_API_BASE_URL = "http://127.0.0.1:23119/api/"
@@ -236,45 +237,68 @@ class ZoteroLocalApi:
         connection: ZoteroConnection,
         attachment: ZoteroAttachment,
         *,
+        item: ZoteroItem,
+        approved_root: str,
         max_size_bytes: int,
     ) -> ZoteroDownloadedFile:
-        """Byte-response prototype; official Local API file redirects stay blocked.
-
-        The production UI disables this path pending a local-file-read gate.
-        A fake HTTP 200 PDF does not establish real Zotero compatibility.
-        """
-
-        _validate_connection(connection)
+        """Copy one selected local PDF, checking metadata before and after reading."""
+        _validate_item_for_connection(item, connection)
         _validate_item_key(attachment.item_key)
-        if max_size_bytes <= 0:
-            raise ZoteroProtocolError(
-                "PDF download size limit must be positive."
-            )
-        response = self._get(
-            f"users/0/items/{attachment.item_key}/file",
-            expected_server_id=connection.server_id,
-            max_bytes=max_size_bytes,
-        )
-        content_type = _optional_header(
-            response.headers,
-            "Content-Type",
-        )
         if (
-            content_type is None
-            or content_type.split(";", 1)[0].strip().lower()
-            != "application/pdf"
-            or not response.body.startswith(b"%PDF-")
+            item.library_type != "user"
+            or attachment.parent_item_key != item.item_key
+            or attachment.content_type != "application/pdf"
+            or attachment.link_mode not in {"imported_file", "imported_url", "linked_file"}
+            or max_size_bytes <= 0 or not approved_root
         ):
             raise ZoteroProtocolError(
-                "The selected Zotero attachment is not a valid PDF response."
+                "Select a personal local PDF and approve its attachment directory."
             )
+        self._assert_current_attachment(connection, item, attachment)
+        url = self._attachment_url(connection, attachment)
+        content = read_local_pdf(url, approved_root, max_size_bytes=max_size_bytes)
+        self._assert_current_attachment(connection, item, attachment)
+        if self._attachment_url(connection, attachment) != url:
+            raise ZoteroProtocolError("Attachment location changed; read details and confirm again.")
         return ZoteroDownloadedFile(
-            filename=_safe_pdf_filename(
-                attachment.filename,
-                attachment.item_key,
-            ),
-            content=response.body,
+            filename=_safe_pdf_filename(attachment.filename, attachment.item_key),
+            content=content,
         )
+
+    def _assert_current_attachment(
+        self, connection: ZoteroConnection, item: ZoteroItem, attachment: ZoteroAttachment,
+    ) -> None:
+        parent_response = self._get(
+            f"users/0/items/{item.item_key}?format=json&include=data",
+            expected_server_id=connection.server_id,
+        )
+        attachment_response = self._get(
+            f"users/0/items/{attachment.item_key}?format=json&include=data",
+            expected_server_id=connection.server_id,
+        )
+        try:
+            current_item = _map_item(json.loads(parent_response.body), connection.server_id)
+            current_attachment = _map_pdf_attachment(json.loads(attachment_response.body), item)
+        except (ValueError, UnicodeError):
+            raise ZoteroProtocolError("Zotero returned malformed attachment metadata.") from None
+        if current_item != item or current_attachment != attachment:
+            raise ZoteroProtocolError("Zotero selection changed; read details and confirm again.")
+
+    def _attachment_url(
+        self, connection: ZoteroConnection, attachment: ZoteroAttachment,
+    ) -> str:
+        response = self._get(
+            f"users/0/items/{attachment.item_key}/file/view/url",
+            expected_server_id=connection.server_id,
+            max_bytes=8192,
+        )
+        content_type = _optional_header(response.headers, "Content-Type") or ""
+        if content_type.split(";", 1)[0].strip().lower() != "text/plain":
+            raise ZoteroProtocolError("Zotero did not return a plain-text attachment URL.")
+        try:
+            return response.body.decode("utf-8", errors="strict")
+        except UnicodeError:
+            raise ZoteroProtocolError("Zotero returned an invalid attachment URL.") from None
 
     def _get(
         self,
@@ -314,8 +338,7 @@ class ZoteroLocalApi:
             )
         if 300 <= response.status < 400:
             raise ZoteroProtocolError(
-                "Zotero file redirects require an approved local-file-read "
-                "boundary. Upload the PDF manually and link its source instead."
+                "Zotero redirects are rejected; use the explicit local-file-read boundary."
             )
         if response.status != 200:
             raise ZoteroProtocolError(

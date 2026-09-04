@@ -27,6 +27,7 @@ def test_load_settings_uses_safe_defaults() -> None:
     assert settings.target_language == DEFAULT_TARGET_LANGUAGE
     assert settings.researchmind_data_dir is None
     assert settings.zotero_local_api_enabled is False
+    assert settings.zotero_attachment_root is None
     assert settings.obsidian_vault_path is None
     assert settings.obsidian_subdirectory == DEFAULT_OBSIDIAN_SUBDIRECTORY
     assert settings.context_token_budget == DEFAULT_CONTEXT_TOKEN_BUDGET

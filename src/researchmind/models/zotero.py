@@ -51,7 +51,7 @@ class ZoteroAttachment:
 
 @dataclass(frozen=True)
 class ZoteroDownloadedFile:
-    """Bounded PDF bytes returned by the loopback Local API."""
+    """Bounded PDF bytes copied through the approved local read boundary."""
 
     filename: str
     content: bytes = field(repr=False)

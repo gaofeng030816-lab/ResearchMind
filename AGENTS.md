@@ -39,17 +39,21 @@ Acceptance closed on 2026-09-01 with 269 passing tests and one Windows symlink
 environment skip plus recorded package, launcher, recovery, security, performance,
 and user-confirmed journeys. It is not a public release.
 
-V3-G0 and V3-G1 are Completed. V3-G2 is Active: the user confirmed its read-only
+V3-G0, V3-G1 and V3-G2 are Completed. V3-G2: the user confirmed its read-only
 Local API architecture on 2026-09-02. Schema version 2, optional GET-only loopback
 metadata browsing, durable source snapshots, link/unlink UI, and graceful failure
-handling are implemented. On 2026-09-04 official protocol review found that attachment
-/file returns 302 file://, not PDF bytes. Direct attachment import is disabled in
-the UI pending an explicit local-file-read gate; the HTTP-200 byte prototype is not
-evidence of real Zotero import. See docs/V3_G2_ZOTERO_VALIDATION.md for test results.
+handling are implemented. The user approved selected, approved-directory, read-only
+PDF copying on 2026-09-04. The Windows implementation now uses /file/view/url,
+not HTTP-200 PDF bytes or followed redirects. ZOTERO_ATTACHMENT_ROOT is required;
+each copy needs fresh scoped consent. Held read-only handles reject network drives,
+traversal, reparse points, hardlinks and source replacement. Metadata/URL are
+rechecked; G1 validates and stores the managed copy. See docs/V3_G2_ZOTERO_VALIDATION.md.
 
-G2 remains Active until the file-read decision, its implementation/evidence, and real
-Zotero desktop manual acceptance are closed. Do not start V3-G3 or call G2 Completed
-before that evidence. No routine test contacts
+The user confirmed "G2通过验收" on 2026-09-04, closing G2 manual acceptance.
+Record this as user-reported acceptance, not a newly agent-observed live test.
+The existing automated baseline is 374 passed / 1 environment skip.
+V3-G3 remains Pending; acceptance does not adopt CCv2/pdf.js or start implementation.
+No routine test contacts
 localhost; no Zotero write, direct Zotero SQLite read, Web API credential, background
 sync, group-library workflow, or whole-library cache is implemented.
 
@@ -118,10 +122,11 @@ Implemented V3-G1/G2 choices:
   path, type, magic, size, UTF-8, exclusion, parseability, and hash validation.
 - `ZOTERO_LOCAL_API_ENABLED` defaults false; when true, the standard-library client
   sends only explicit GET requests to the fixed `127.0.0.1:23119/api/` boundary;
-- HTTP redirects are rejected. Do not follow file:// or read local attachment paths
-  until the separate file-read gate is approved. Manual PDF upload plus explicit
-  source linking remains available. Required Zotero-Server-ID is documented for
-  Zotero 10+; missing identity fails closed rather than inventing a fallback;
+- HTTP redirects remain rejected. Only the selected /file/view/url result may enter
+  integration/zotero/local_files.py after configured-root and scoped consent checks.
+  Direct copying is Windows-only; other systems/unconfigured roots keep manual
+  upload plus linking. Paths never enter source snapshots or prompts.
+  Zotero-Server-ID requires Zotero 10+; missing identity fails closed;
 - only the selected personal-library item's bounded metadata and optional PDF source
   snapshot persist; browse results and attachment lists remain session-only.
 
@@ -157,7 +162,8 @@ Current ownership:
 
 Current adopted infrastructure ownership:
 
-- integration/zotero owns optional Zotero Local API GET calls and vendor mapping;
+- integration/zotero owns optional Local API GET calls, vendor mapping, and the
+  approved single-file Windows read boundary; it never writes Zotero sources;
 
 After the corresponding later V3 gate is approved:
 

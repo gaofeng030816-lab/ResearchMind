@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from hashlib import sha256
+import os
 from pathlib import Path
 from typing import Literal
 from uuid import uuid4
@@ -311,6 +313,20 @@ def browse_zotero_items(
     )
 
 
+def zotero_attachment_approval_scope(
+    *, settings: Settings | None = None,
+) -> str | None:
+    """Bind explicit copy consent to configured root without exposing its path."""
+    resolved = settings or load_settings()
+    if (
+        os.name != "nt"
+        or not resolved.zotero_local_api_enabled
+        or not resolved.zotero_attachment_root
+    ):
+        return None
+    return sha256(resolved.zotero_attachment_root.encode("utf-8")).hexdigest()
+
+
 def get_zotero_item_details(
     browse_result: ZoteroBrowseResult,
     item_key: str,
@@ -414,6 +430,7 @@ def import_zotero_pdf_attachment(
     attachment_key: str,
     *,
     confirmed: bool,
+    approved_root_scope: str | None = None,
     settings: Settings | None = None,
     client: ZoteroLocalApi | None = None,
 ) -> LibraryImportResult:
@@ -424,6 +441,16 @@ def import_zotero_pdf_attachment(
             "Confirm the Zotero PDF import before continuing."
         )
     resolved_settings = _require_zotero_enabled(settings)
+    if not resolved_settings.zotero_attachment_root:
+        raise ConfigError(
+            "Set ZOTERO_ATTACHMENT_ROOT to an explicitly approved local attachment "
+            "directory before copying a Zotero PDF."
+        )
+    expected_scope = zotero_attachment_approval_scope(settings=resolved_settings)
+    if expected_scope is None or approved_root_scope != expected_scope:
+        raise LibraryConfirmationError(
+            "Attachment directory changed or is unsupported; confirm again."
+        )
     _validate_zotero_details(details)
     attachment = _selected_zotero_attachment(details, attachment_key)
     if attachment is None:
@@ -447,6 +474,8 @@ def import_zotero_pdf_attachment(
     downloaded = api.download_pdf_attachment(
         details.connection,
         attachment,
+        item=details.item,
+        approved_root=resolved_settings.zotero_attachment_root,
         max_size_bytes=resolved_settings.pdf_max_size_bytes,
     )
     imported = import_pdf_to_library(

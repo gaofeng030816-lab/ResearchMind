@@ -50,6 +50,7 @@ CODE_CHANGE_AUDIT_KEY = "code_change_audit"
 REQUESTED_WORKSPACE_KEY = "requested_workspace"
 ZOTERO_BROWSE_RESULT_KEY = "zotero_browse_result"
 ZOTERO_ITEM_DETAILS_KEY = "zotero_item_details"
+ZOTERO_ACTION_GENERATION_KEY = "zotero_action_generation"
 
 
 def initialize_state() -> None:
@@ -79,6 +80,7 @@ def initialize_state() -> None:
         REQUESTED_WORKSPACE_KEY: None,
         ZOTERO_BROWSE_RESULT_KEY: None,
         ZOTERO_ITEM_DETAILS_KEY: None,
+        ZOTERO_ACTION_GENERATION_KEY: 0,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -188,11 +190,17 @@ def get_zotero_item_details() -> ZoteroItemDetails | None:
 
 
 def set_zotero_item_details(details: ZoteroItemDetails) -> None:
+    st.session_state[ZOTERO_ACTION_GENERATION_KEY] += 1
     st.session_state[ZOTERO_ITEM_DETAILS_KEY] = details
 
 
 def clear_zotero_item_details() -> None:
+    st.session_state[ZOTERO_ACTION_GENERATION_KEY] += 1
     st.session_state[ZOTERO_ITEM_DETAILS_KEY] = None
+
+
+def get_zotero_action_generation() -> int:
+    return int(st.session_state[ZOTERO_ACTION_GENERATION_KEY])
 
 
 def get_current_selection() -> ReadingSelection | None:

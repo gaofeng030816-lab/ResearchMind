@@ -1,6 +1,6 @@
 # ResearchMind 系统架构（V2 Accepted + V3-G1/G2 增量）
 
-版本：2.0.0rc1 V2 Accepted + V3-G1/G2 source increment · 同步日期：2026-09-04 · 状态：V3-G0/G1 Completed，V3-G2 Active（元数据/来源链接已实现，附件读取门禁与人工验收待确认），T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
+版本：2.0.0rc1 V2 Accepted + V3-G1/G2 source increment · 同步日期：2026-09-04 · 状态：V3-G0/G1 Completed，V3-G2 Completed（2026-09-04 用户确认人工验收通过）；V3-G3 Pending，T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
 
 > 验收口径：项目于 2026-09-01 完成 **V2 Internal Acceptance**。用户于 2026-08-31
 > 明确将自动公式区域识别、图片公式 OCR 和整页 PDF→LaTeX 排除在 V2 验收之外；
@@ -51,7 +51,7 @@ ResearchMind 连接的是 Zotero 与 Obsidian 所代表的科研工作流：帮�
 
 | 软件 | 职责 | ResearchMind 与之的关系 |
 |------|------|------------------------|
-| Zotero | 管理论文与 PDF、文献元数据（DOI/作者/标题）、文献分类与检索 | 外部文献管理工具；ResearchMind 不替代；G2 已提供可选元数据来源，直接附件导入待门禁（第 14 节） |
+| Zotero | 管理论文与 PDF、文献元数据（DOI/作者/标题）、文献分类与检索 | 外部文献管理工具；ResearchMind 不替代；G2 已提供可选元数据来源，批准目录内 Windows 只读复制（第 14 节） |
 | ResearchMind | 打开并阅读 PDF、文本选择、翻译、论文上下文解释、多轮对话和知识沉淀；默认只读打开一个本地 Python 文件夹、选择代码符号/行并生成独立 CodeContext 解释或可选代码笔记；显式确认论文到代码的证据链接；对当前选择提供 T5-B1 单范围受控替换 | 本职工作（见 1.3）；代码笔记只写 Vault Markdown；T4 链接不自动生成；T5-B1 只写一个已选既有 `.py` 范围且不执行代码、不隐式合并上下文 |
 | Obsidian | 长期知识管理：Markdown 笔记、标签、双向链接、知识组织、用户自己的知识体系 | ResearchMind 知识沉淀的最终目的地（第 13 节） |
 
@@ -80,7 +80,7 @@ ResearchMind 连接的是 Zotero 与 Obsidian 所代表的科研工作流：帮�
 14. **本地工作资料库（V3-G1）**：点击/拖放导入 PDF 或 Python 目录，跨重启列出
     并重新打开，显式创建修订、软移除/恢复，并在单独确认后删除托管副本。
 15. **可选 Zotero 来源（V3-G2）**：用户显式启用并点击后，只读浏览个人资料库，
-    把一个条目链接到已上传论文。直接附件导入已停用，等待本地文件读取门禁。
+    把一个条目链接到已上传论文，或单独确认后复制批准目录内的一个 PDF。
 
 ## 2. 架构原则
 
@@ -193,7 +193,7 @@ V1 继续选择 Streamlit：
 | Translation | `translation/` | 实现（V1 仅一个 provider，见第 10 节） |
 | AI | `llm/`（provider、prompts、严格助手/替换解析）+ `app/use_cases.py`（编排）+ `core/`（对话裁剪、助手预算与 proposal 纯规则） | 实现（含 T5-A/T5-B1） |
 | Integration / Obsidian | `integration/obsidian/` | 实现 |
-| Integration / Zotero | `integration/zotero/` + `models/zotero.py`（第 14 节） | V3-G2 GET-only Local API 实现；人工验收待确认 |
+| Integration / Zotero | `integration/zotero/` + `models/zotero.py`（第 14 节） | V3-G2 GET-only Local API 实现；用户确认人工验收通过 |
 | UI | `app/`（views、state、app.py） | 实现 |
 
 ### 4.3 基础设施与核心业务的分离
@@ -697,10 +697,18 @@ identity mismatch 都转换为项目错误，urllib 对象/异常不会越界。
 变化会使 UI 确认失效，详情读取失败会清理旧详情。删除托管副本前必须先解除来源。
 ResearchMind 不写 Zotero、不直接读 Zotero SQLite、不后台同步、不缓存整个资料库。
 
-2026-09-04 官方协议复核更正：`/file` 返回 `302 file://`，不是 PDF 字节流；
-`/file/view/url` 则返回本地 URL 文本。现有 download/import 字节响应用例只通过
-了 fake HTTP-200 测试，不能作为真实附件导入实现。直接导入 UI 已停用；所有
-重定向均拒绝，不自动读取本地文件。该读取边界尚需单独确认及测试。
+2026-09-04 用户批准单附件、本地批准目录、只读复制边界。当前实现改为
+GET `/file/view/url`，保留所有 HTTP 重定向拒绝，不再把 HTTP-200 PDF 原型当作
+真实协议。配置 `ZOTERO_ATTACHMENT_ROOT` 后，每次复制需绑定来源、版本、附件和
+配置目录的确认；前后重读元数据及 URL，变化则拒绝，要求重新读取详情和确认。
+
+`integration/zotero/local_files.py` 独占 Windows 本地读取：严格解析 URL/路径，
+仅固定本地磁盘；从盘根到目标逐级以 OPEN_REPARSE_POINT 打开并保持句柄，
+不给 write/delete sharing；校验实际句柄路径、类型、大小，拒绝网络盘/UNC、
+路径逃逸、junction/符号链接/其他重解析点和硬链接。只读有界 PDF 字节交给
+G1 可解析性、哈希、暂存/事务/原子完成流程；不写源文件，不持久化本地 URL/路径。
+非 Windows、未配置目录、锁冲突或异常均安全失败，回退为手动上传后链接。
+fake HTTP + 真实临时文件 + SQLite 的验证不代替真实 Zotero desktop 人工验收。
 `Zotero-Server-ID` 官方支持为 Zotero 10+；缺失时当前 adapter 安全失败。
 协议依据见 [官方 Local API 文档](https://www.zotero.org/support/dev/web_api/v3/local_api)。
 
@@ -820,7 +828,7 @@ T5-B1 另有 `code_change_proposal`、apply/rollback receipt 和 session-only au
 
 | 顶层工作区 | 文件 | 组成 |
 |------|------|------|
-| 本地资料库 | `app/views/library.py` | G1 点击导入、重开、修订、移除/恢复与删除；G2 显式浏览/来源链接；直接附件导入待门禁 |
+| 本地资料库 | `app/views/library.py` | G1 点击导入、重开、修订、移除/恢复与删除；G2 显式浏览/来源链接；批准目录内 Windows 单 PDF 复制 |
 | 论文阅读与笔记 | `app/views/reader.py`、`actions.py`、`conversation.py`、`knowledge.py` | PDF 打开/阅读/搜索/选择；翻译、LaTeX、解释与追问；KnowledgeNote 和 Obsidian 导出 |
 | 代码学习与复现 | `app/views/code_workspace.py` | 独立打开一个本地 Python 文件夹；初学/科研复现目标；静态项目概览；文件/符号/行选择；CodeContext 预览和非执行解释；可选代码 KnowledgeNote 预览/Obsidian 保存；显式证据链接；T5-B1 proposal/diff/确认/取消/恢复/回滚/审计 |
 | 只读研究助手 | `app/views/read_only_assistant.py` | 显示三个工具可用性；输入问题；开始/继续/停止；每步待发送结果；会话内审计元数据和独立 final |
@@ -1074,8 +1082,9 @@ PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、�
   网络客户端或 SSRF 入口；
 - API v3 和 `Zotero-Server-ID` 在 probe 后每次重验；412 或返回不同 identity
   立即停止，不把不同 Zotero 数据库的条目合并；
-- 元数据、搜索长度、条目数、creator 数和响应大小受限；直接附件导入 UI 禁用。
-  HTTP-200 PDF 原型有类型/大小/magic/G1 哈希校验，但不支持官方本地文件重定向；
+- 元数据与 URL 响应有界；单 PDF 复制需配置批准目录和逐次确认。
+  Windows 持有祖先/文件句柄阻止复制期间写入、删除或替换；拒绝重解析点/硬链接，
+  G1 继续验证 PDF 可解析性、大小和哈希；元数据及 URL 前后变化时拒绝；
 - routine 测试只用 fake transport，不探测 localhost；诊断只报告显式开关状态；
 - 来源 snapshot 是未信任显示数据，不自动进入 prompt、Markdown 或 Obsidian；
 - unlink、资料库软移除和托管副本删除相互独立；有来源链接时先 unlink 才能
@@ -1093,7 +1102,7 @@ V2 to V3过渡要求.md 管理。在对应阶段完成前，下表的 Pending �
 
 | 未来能力 | 当前架构留下的接口 | V1 状态 |
 |----------|--------------------|---------|
-| Zotero 元数据集成 | `integration/zotero` → 项目模型 → use cases → `zotero_links`（第 14 节） | V3-G2 只读个人资料库实现；人工验收待确认 |
+| Zotero 元数据集成 | `integration/zotero` → 项目模型 → use cases → `zotero_links`（第 14 节） | V3-G2 只读个人资料库实现；用户确认人工验收通过 |
 | VS Code / 更多代码语言 | 当前 T3 本地 Python CodeContext 是证据基线；IDE、Notebook、Julia/R 等需另行评估 | 不实现 |
 | 网页等其他内容源 | 同上 | 不实现 |
 | 页面级划词/高亮/标注 | TextBlock 已带 bbox 坐标，届时只需在 UI 层实现 | 不实现 |
@@ -1153,8 +1162,8 @@ PRODUCT_SPEC.md、ARCHITECTURE.md 与 V2→V3 过渡要求的当前实现口径�
 
 后续若修改产品范围、架构边界或开发里程碑，必须同步检查这三份文档，避免再次出现术语或范围漂移。
 
-V3-G0/G1 已完成。G2 元数据/来源链接已实现；直接附件导入待本地文件读取门禁，
-真实 Zotero desktop 人工验收未完成，因此仍为 Active。G1/G2 都没有新增第三方
+V3-G0/G1/G2 已完成。G2 元数据/来源链接与批准目录内 Windows 单 PDF 复制已实现；
+用户于 2026-09-04 明确确认“G2通过验收”，按用户人工验收反馈关闭阶段。G1/G2 都没有新增第三方
 运行时依赖；最新全量回归见 V3_G2_ZOTERO_VALIDATION.md，既有 Windows symlink
 环境 skip 保留。当前仍无 CCv2/pdf.js 生产组件、自动公式识别、持久笔记草稿或
-非 Python 解析器；G2 文件读取门禁和人工验收关闭前不启动 G3。
+非 Python 解析器；G3 保持 Pending；本次验收确认不自动采用 CCv2/pdf.js 或启动实现。

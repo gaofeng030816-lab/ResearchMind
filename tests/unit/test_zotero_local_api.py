@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from email.message import Message as HeaderMessage
 from io import BytesIO
 import json
+from pathlib import Path
 from urllib.request import FileHandler, HTTPHandler
 from urllib.response import addinfourl
 
@@ -116,28 +117,28 @@ def test_probe_list_items_and_pdf_attachment_mapping() -> None:
         assert headers["Zotero-API-Version"] == "3"
 
 
-def test_pdf_byte_response_prototype_uses_attachment_key_and_size_limit() -> None:
-    transport = FakeTransport(
-        [
-            _response(
-                b"%PDF-1.7\nfixture",
-                server_id="server-A",
-                content_type="application/pdf",
-            )
-        ]
-    )
+def test_real_url_protocol_reads_a_locked_synthetic_file(tmp_path: Path) -> None:
+    from researchmind.integration.zotero.local_api import _map_item
+    source = tmp_path / "paper.pdf"
+    source.write_bytes(b"%PDF-1.7\nfixture")
+    responses = _copy_responses(source)
+    transport = FakeTransport(responses + responses)
     client = ZoteroLocalApi(transport=transport)
 
     downloaded = client.download_pdf_attachment(
         _connection(),
         _pdf_attachment(),
+        item=_map_item(_paper_item(), "server-A"),
+        approved_root=str(tmp_path),
         max_size_bytes=1024,
     )
 
     assert downloaded.filename == "paper.pdf"
     assert downloaded.content.startswith(b"%PDF-")
-    assert transport.calls[0][0] == "users/0/items/PDF12345/file"
-    assert transport.calls[0][2] == 1024
+    assert transport.calls[2][0] == "users/0/items/PDF12345/file/view/url"
+    assert transport.calls[2][2] == 8192
+    assert len(transport.calls) == 6
+    assert downloaded.content == source.read_bytes()
 
 
 @pytest.mark.parametrize(
@@ -256,9 +257,7 @@ def test_official_file_redirect_is_blocked_without_local_file_read(
     monkeypatch.setattr(FileHandler, "file_open", forbid_file_read)
     client = ZoteroLocalApi(transport=UrllibZoteroTransport())
     with pytest.raises(ZoteroProtocolError, match="local-file-read") as error:
-        client.download_pdf_attachment(
-            _connection(), _pdf_attachment(), max_size_bytes=1024,
-        )
+        client._get("users/0/items/PDF12345/file", expected_server_id="server-A")
     assert urls == ["http://127.0.0.1:23119/api/users/0/items/PDF12345/file"]
     assert "private.pdf" not in str(error.value)
 
@@ -302,8 +301,47 @@ def test_unavailable_and_oversized_responses_remain_project_errors() -> None:
         )
     )
     with pytest.raises(ZoteroProtocolError, match="size limit"):
-        oversized.download_pdf_attachment(
-            _connection(), _pdf_attachment(), max_size_bytes=4,
+        oversized._get("", expected_server_id="server-A", max_bytes=4)
+
+
+def _copy_responses(source: Path) -> list[ZoteroHttpResponse]:
+    return [
+        _response(json.dumps(_paper_item()).encode(), server_id="server-A"),
+        _response(json.dumps(_attachment_item()).encode(), server_id="server-A"),
+        _response(source.as_uri().encode(), server_id="server-A", content_type="text/plain"),
+    ]
+
+
+@pytest.mark.parametrize("change_after_read", [False, True])
+def test_copy_rejects_stale_metadata(tmp_path: Path, change_after_read: bool) -> None:
+    from researchmind.integration.zotero.local_api import _map_item
+    source = tmp_path / "paper.pdf"
+    source.write_bytes(b"%PDF-1.7\nfixture")
+    responses = _copy_responses(source) + _copy_responses(source)
+    changed = _attachment_item()
+    changed["version"] = 8
+    changed["data"]["version"] = 8
+    responses[4 if change_after_read else 1] = _response(
+        json.dumps(changed).encode(), server_id="server-A",
+    )
+    transport = FakeTransport(responses)
+    with pytest.raises(ZoteroProtocolError, match="selection changed"):
+        ZoteroLocalApi(transport=transport).download_pdf_attachment(
+            _connection(), _pdf_attachment(), item=_map_item(_paper_item(), "server-A"),
+            approved_root=str(tmp_path), max_size_bytes=1024,
+        )
+    assert len(transport.calls) == (5 if change_after_read else 2)
+
+
+def test_copy_rejects_url_change_after_read(tmp_path: Path) -> None:
+    from researchmind.integration.zotero.local_api import _map_item
+    source = tmp_path / "paper.pdf"
+    source.write_bytes(b"%PDF-1.7\nfixture")
+    responses = _copy_responses(source) + _copy_responses(tmp_path / "other.pdf")
+    with pytest.raises(ZoteroProtocolError, match="location changed"):
+        ZoteroLocalApi(transport=FakeTransport(responses)).download_pdf_attachment(
+            _connection(), _pdf_attachment(), item=_map_item(_paper_item(), "server-A"),
+            approved_root=str(tmp_path), max_size_bytes=1024,
         )
 
 

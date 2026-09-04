@@ -10,8 +10,8 @@ cross-session state without replacing Zotero or Obsidian.
 
 Read docs/ARCHITECTURE.md for implemented G1/G2 ownership and
 V2 to V3过渡要求.md for the active gate. G2 metadata/source linking is implemented,
-but direct attachment import awaits a local-file-read gate because official /file
-returns 302 file://, not PDF bytes. Real Zotero manual acceptance also remains.
+and the user-approved Windows single-attachment copy is implemented via
+/file/view/url plus locked local read handles. The user confirmed G2 manual acceptance on 2026-09-04; G2 is Completed.
 Preserve schema v2, G1 file ownership,
 recovery, and explicit source-link semantics; do not broaden to Web API or sync.
 
@@ -102,9 +102,12 @@ G2 uses the read-only Zotero Local API, explicitly enabled in both applications.
 Keep its fixed loopback endpoint, disabled proxies, rejected redirects, bounded
 responses and GET-only transport. Never read Zotero's SQLite database directly.
 
-Do not follow file:// or read returned attachment paths before the file-read gate.
-Current fallback is G1 click upload followed by explicit source linking. Required
-Zotero-Server-ID is documented for Zotero 10+; do not invent identity for older clients.
+Never follow HTTP redirects. The approved copy reads only a selected /file/view/url
+inside ZOTERO_ATTACHMENT_ROOT after scoped confirmation. local_files.py owns
+Windows handle locks and rejects network paths/drives, traversal, reparse points
+and hardlinks; other systems fail closed. Recheck source/version/URL before and after
+reading, then use G1 validation/storage. Paths are ephemeral, never durable metadata.
+Manual upload plus linking remains the fallback. Zotero-Server-ID requires Zotero 10+.
 
 Preserve local server ID, library/item key, object version, source mode, and last
 observed metadata. Partition durable source links by server ID. Browsing remains

@@ -24,11 +24,14 @@ and managed-code read-only behavior. Real browser file selection is still manual
 evidence; AppTest must not be described as proving click/drag behavior.
 
 G2's metadata/source-link implementation and automated regression evidence are in
-docs/V3_G2_ZOTERO_VALIDATION.md. Official /file returns 302 file://, so a fake HTTP-200
-PDF does not prove real import. Verify redirect rejection and the disabled direct
-import UI until a separate file-read gate closes. G2 remains Active until that
-decision, implementation/evidence, and real Zotero manual acceptance are complete;
-fake HTTP tests and AppTest do not substitute for desktop acceptance.
+docs/V3_G2_ZOTERO_VALIDATION.md. The approved Windows copy uses /file/view/url and
+locked local handles, not the obsolete HTTP-200 PDF prototype. Verify rejected
+redirects, network paths/drives, traversal, junctions/hardlinks, concurrent writes/
+rename/delete, bounded bytes, source-version/URL changes, consent invalidation,
+G1 parser/hash/storage and failed-link compensation. Use only synthetic files.
+G2 is Completed: the user confirmed manual acceptance on 2026-09-04; the recorded
+regression is 374 passed / 1 environment skip. Keep user-reported manual evidence
+separate from agent-observed execution and fake HTTP/AppTest. G3 remains Pending.
 
 Protect this loop in proportion to the change:
 

@@ -1,10 +1,10 @@
 # ResearchMind 产品规格说明书
 
-版本：2.0.0rc1 V2 Accepted + V3-G1/G2 source increment · 同步日期：2026-09-04 · 状态：V3-G0/G1 Completed，V3-G2 Active（元数据/来源链接已实现，附件读取门禁与人工验收待确认），T5-BX 未批准，不对外发布
+版本：2.0.0rc1 V2 Accepted + V3-G1/G2 source increment · 同步日期：2026-09-04 · 状态：V3-G0/G1 Completed，V3-G2 Completed（2026-09-04 用户确认人工验收通过）；V3-G3 Pending，T5-BX 未批准，不对外发布
 配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
 
 > 本文件描述已验收 `2.0.0rc1` 和其上的 V3-G1/G2 当前已实现能力；这不是公开
-> 发布或稳定公共 API 承诺。G2 的直接附件导入门禁与真实 Zotero 人工验收尚未关闭，其余
+> 发布或稳定公共 API 承诺。G2 的批准目录内 Windows 复制已实现，真实 Zotero 人工验收已由用户确认通过，其余
 > V3 目标也未实现。后续状态和采用门禁由 V2→V3 过渡要求管理。
 
 ## 1. 产品概述
@@ -59,8 +59,10 @@ V3-G2 又增加一个默认关闭的可选入口：
 **点击上传 PDF → 点击读取 Zotero 个人资料库 → 选择条目/附件 → 链接已有论文**
 
 它不写 Zotero、不后台同步、不缓存整库，也不替代 Zotero 的集合/引用管理。
-直接附件导入暂不可用：官方 `/file` 返回 `302 file://`，自动读取本地路径的
-安全门禁尚未批准。当前 adapter 要求 Zotero 10+ 的 server identity，缺失时失败。
+另一路径是：配置批准的附件目录 → 选择一个 PDF → 单独确认 → Windows 只读
+复制 → G1 校验/托管 → 来源链接。使用 /file/view/url，HTTP 重定向仍拒绝；不支持
+网络路径、越界、重解析点或硬链接。原件不变；非 Windows/未配置时手动上传后链接。
+当前 adapter 要求 Zotero 10+ 的 server identity，缺失时失败，真实桌面验收仍待完成。
 
 ## 2. 目标用户与核心场景
 
@@ -85,8 +87,8 @@ V3-G2 又增加一个默认关闭的可选入口：
 
 - **V3-G1 已实现**：跨重启管理 ResearchMind 本地论文/代码工作资料库并点击/
   拖放导入 PDF 或 Python 目录；
-- **V3-G2 部分实现**：可选从 Local API 获取个人资料库条目，链接文献元数据/
-  附件来源；直接附件导入待读取门禁，真实 Zotero 人工验收待完成；
+- **V3-G2 已验收**：可选从 Local API 获取个人资料库条目，链接文献元数据/
+  附件来源及批准目录内 Windows 单 PDF 复制；真实 Zotero 人工验收已由用户确认通过；
 - 在 PDF 文字层直接划词翻译或解释并保留页码/几何位置；
 - 识别常用数学公式区域，生成可编辑、可校验、可追溯的 LaTeX 候选；
 - 在现有 CodeContext 架构中支持 Python、C、Java、Julia 和 R；
@@ -439,7 +441,7 @@ T5-B1 在普通代码解释旁提供一条独立受控修改旅程：
 | T5-B1（Completed） | 当前选择单范围受控替换 | strict proposal、diff、逐次确认、恢复副本、SHA-256 冲突和安全回滚；无执行权限；261 项回归（1 项 symlink 环境 skip） |
 | 2.0.0rc1 / T6（Completed） | 本地内部候选 | 自动门禁、代码索引优化、隔离安装/启动/诊断/恢复、用户确认的论文/代码/T5-B1 旅程，以及可选 Code→Obsidian 代码笔记已进入内部冻结；不公开发布 |
 | V3-G1（Completed） | 本地工作资料库与点击导入 | sqlite3 schema v1、托管 PDF/Python assets、重启重开、去重/修订、移除/删除和备份/恢复；不公开发布 |
-| V3-G2（Active） | 可选 Zotero 只读来源 | GET-only 元数据、schema v2、显式 browse/link/unlink；直接附件导入停用，文件读取门禁与人工验收未关闭；回归见 G2 验证记录 |
+| V3-G2（Completed） | 可选 Zotero 只读来源 | GET-only 元数据、schema v2、显式 browse/link/unlink；批准目录内 Windows 单 PDF 复制及自动测试已完成，用户已确认人工验收通过；回归见 G2 验证记录 |
 | V3-G3–G7 | 页面划词、显式草稿、公式、多语言和加固 | 尚未启动，不提前描述为实现 |
 
 ## 8. V2 内部验收标准
@@ -458,8 +460,9 @@ T5-B1 在普通代码解释旁提供一条独立受控修改旅程：
 
 V3 需求已由用户确认；G0 规则同步和 G1 本地工作资料库已经完成。用户于
 2026-09-02 确认 G2 只读方案，元数据/来源链接已实现。2026-09-04 官方协议复核
-发现附件返回本地文件重定向，已停用直接导入并纠正完成声明。2.0.0rc1 的
+发现附件返回本地文件重定向，当时停用直接导入并纠正完成声明；随后已按用户
+批准边界完成 Windows 单 PDF 复制和自动测试，用户已确认真实桌面验收通过。2.0.0rc1 的
 功能需求与验收标准保持独立，G1/G2 可回退而不改写 V2 基线。
 
-G2 仍需附件读取门禁及真实 Zotero desktop 人工验收，完成前保持 Active，不启动 G3。G2
+G2 已实现安全读取，用户于 2026-09-04 确认验收通过，状态为 Completed。G3 保持 Pending。G2
 确认不授权 Web API、Zotero 写入/同步、组资料库产品流或全库缓存。

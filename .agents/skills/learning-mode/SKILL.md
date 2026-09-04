@@ -72,14 +72,17 @@ Implemented V3-G1 library path:
     browser upload → validated bytes/name → managed file
     → sqlite3 library record/hash/asset revision → reopen by stable ID
 
-Implemented active V3-G2 metadata path, real Zotero manual acceptance still pending:
+Implemented V3-G2 metadata path; user-confirmed manual acceptance on 2026-09-04:
 
     explicit enable + click → loopback Local API GET → project item/attachment
     → explicit link to a G1-uploaded PDF → ZoteroSourceLink
 
-Direct attachment import is disabled: official /file returns 302 file://, not PDF
-bytes. Reading that local path needs a separate approved boundary. Explain that
-fake byte-response tests are a prototype, not verified Zotero PDF import.
+The accepted G2 copy path is:
+configured attachment directory + selected PDF + explicit consent → /file/view/url
+→ locked Windows read → G1 PDF validation/hash/managed copy → source link.
+HTTP redirects are still rejected. Think of it as borrowing one file to photocopy:
+Zotero keeps its original, ResearchMind owns only its copy. Fake protocol/temporary
+file tests verify implementation, not real Zotero desktop acceptance.
 
 Browsing stays in the session. Only chosen source snapshots persist. Explain that
 linking metadata is an association, not proof that two PDFs have identical content;

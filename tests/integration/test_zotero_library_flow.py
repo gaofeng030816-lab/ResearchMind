@@ -80,7 +80,11 @@ class FakeZoteroClient:
         attachment: ZoteroAttachment,
         *,
         max_size_bytes: int,
+        item: ZoteroItem,
+        approved_root: str,
     ) -> ZoteroDownloadedFile:
+        assert item == self.item
+        assert approved_root
         assert connection == self.connection
         assert attachment == self.attachment
         assert len(self.pdf_bytes) <= max_size_bytes
@@ -110,6 +114,7 @@ def test_selected_zotero_pdf_imports_links_and_reopens_after_restart(
     settings = Settings(
         researchmind_data_dir=tmp_path / "library",
         zotero_local_api_enabled=True,
+        zotero_attachment_root=str(tmp_path),
     )
     client = FakeZoteroClient(single_page_pdf.read_bytes())
 
@@ -128,6 +133,7 @@ def test_selected_zotero_pdf_imports_links_and_reopens_after_restart(
         details,
         client.attachment.item_key,
         confirmed=True,
+        approved_root_scope=use_cases.zotero_attachment_approval_scope(settings=settings),
         settings=settings,
         client=client,
     )
@@ -154,6 +160,7 @@ def test_selected_zotero_pdf_imports_links_and_reopens_after_restart(
             details,
             client.attachment.item_key,
             confirmed=True,
+            approved_root_scope=use_cases.zotero_attachment_approval_scope(settings=settings),
             settings=settings,
             client=client,
         )
@@ -181,6 +188,7 @@ def test_existing_managed_paper_can_link_without_downloading_again(
     settings = Settings(
         researchmind_data_dir=tmp_path / "library",
         zotero_local_api_enabled=True,
+        zotero_attachment_root=str(tmp_path),
     )
     client = FakeZoteroClient(single_page_pdf.read_bytes())
     imported = use_cases.import_pdf_to_library(
@@ -217,6 +225,7 @@ def test_existing_managed_paper_can_link_without_downloading_again(
             details,
             client.attachment.item_key,
             confirmed=True,
+            approved_root_scope=use_cases.zotero_attachment_approval_scope(settings=settings),
             settings=settings,
             client=client,
         )
@@ -233,6 +242,7 @@ def test_linked_paper_requires_explicit_unlink_before_copy_deletion(
     settings = Settings(
         researchmind_data_dir=tmp_path / "library",
         zotero_local_api_enabled=True,
+        zotero_attachment_root=str(tmp_path),
     )
     client = FakeZoteroClient(single_page_pdf.read_bytes())
     details = ZoteroItemDetails(
@@ -242,7 +252,10 @@ def test_linked_paper_requires_explicit_unlink_before_copy_deletion(
     )
     imported = use_cases.import_zotero_pdf_attachment(
         details, client.attachment.item_key,
-        confirmed=True, settings=settings, client=client,
+        confirmed=True,
+        approved_root_scope=use_cases.zotero_attachment_approval_scope(settings=settings),
+        settings=settings,
+        client=client,
     )
     record_id = imported.entry.record.id
     use_cases.remove_library_record(record_id, confirmed=True, settings=settings)

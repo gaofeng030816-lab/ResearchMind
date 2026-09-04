@@ -6,7 +6,7 @@
 > T6-D 已完成本地内部候选封口；不会上传包、创建公开 Release 或对外发布。
 > 用户于 2026-09-01 确认 V2 验收通过，并已在独立对话给出 V3 要求。
 > V3-G0/G1 已完成；V3-G2 已实现可选 Zotero Local API 元数据/来源链接，
-> 直接附件导入待本地文件读取门禁，真实 Zotero desktop 人工验收未完成。页面划词、自动公式、持久笔记草稿和
+> 批准范围内的 Windows PDF 只读复制已实现，真实 Zotero desktop 人工验收已由用户确认通过。页面划词、自动公式、持久笔记草稿和
 > 多语言解析尚未进入生产。
 
 ResearchMind 是一个本地运行的 AI 科研阅读与知识沉淀工作台。它负责打开
@@ -25,7 +25,7 @@ Obsidian 继续管理长期知识，ResearchMind 专注于“读懂论文并沉�
 - 对相同内容精确去重；可为既有记录显式导入新修订，不静默覆盖；
 - 资料库移除/恢复与“另行确认删除托管副本”分开；不会删除外部文件或 Vault；
 - Zotero 默认关闭；显式启用后可按按钮读取个人资料库、选择一个条目/PDF 附件，
-  为已上传论文建立来源链接；unlink 不删除任一侧文件。直接附件导入暂不可用；
+  为已上传论文建立来源链接，或在批准目录内只读复制一个 PDF；unlink 不删除任一侧文件；
 - 可生成带 manifest/SHA-256 的资料库备份，并验证后恢复到全新的数据目录；
 - 打开本地数字版 PDF，浏览、翻页、按页跳转、缩放和全文搜索；
 - 按阅读顺序显示可复制文本块，并改善常见双栏论文的段落顺序；
@@ -245,8 +245,12 @@ T4 链接不会调用模型，也不会把整个仓库发给模型或自动关�
 ## 数据与备份
 
 Zotero 兼容性说明（2026-09-04）：当前身份校验要求 Zotero 10+ 提供的
-`Zotero-Server-ID`，缺失时提示错误。官方附件接口返回 `302 file://`，因此直接
-导入暂被禁用，待确认安全本地读取方案；可先点击上传 PDF 再链接来源。依据见
+`Zotero-Server-ID`，缺失时提示错误。HTTP 重定向仍拒绝；复制走 `/file/view/url`
+和独立 Windows 安全读取边界。先在 `.env` 设置 `ZOTERO_ATTACHMENT_ROOT` 为批准的
+本地附件目录，再选择条目/PDF、勾选只读复制确认并点击复制。不得填写整个磁盘、
+网络盘或 UNC 路径；符号链接、junction、硬链接、重解析点和越界路径均拒绝。
+目录不必等于 Zotero 数据目录：请填写真正存放所选 PDF 的附件目录。不要把
+ResearchMind 数据目录放入 Zotero 附件目录。无配置或非 Windows 时仍可上传后链接。依据见
 [官方 Local API 文档](https://www.zotero.org/support/dev/web_api/v3/local_api)。
 
 - 经 G1 点击导入的 PDF/Python 目录复制到 `RESEARCHMIND_DATA_DIR/assets/`；
@@ -303,7 +307,7 @@ $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 
 ## 升级与回滚
 
-当前是已验收 V2 基线加 G1/G2 source increment（G2 附件导入和人工验收未完成）；它不是公开发布，也不承诺稳定
+当前是已验收 V2 基线加 G1/G2 source increment（G2 复制实现已验证，用户已确认人工验收通过）；它不是公开发布，也不承诺稳定
 公共 API。升级前：
 
 1. 记录当前 Git commit 或保存当前 wheel/source 工件；

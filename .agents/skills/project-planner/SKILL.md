@@ -20,12 +20,14 @@ adopt a dependency or change architecture.
 V3-G0 and V3-G1 are completed. G1 adopted standard-library sqlite3, explicit
 RESEARCHMIND_DATA_DIR, managed PDF/Python assets, immutable revisions, separated
 remove/delete, and verified backup/restore. Preserve that contract instead of
-re-planning persistence from scratch. V3-G2 was confirmed on 2026-09-02 and is
-Active: GET-only metadata browsing and schema v2 source links are implemented.
-Official /file returns 302 file:// rather than PDF bytes: direct import is disabled
-pending a separate local-file-read gate. Fake HTTP-200 PDF tests do not close this
-protocol gap. The file-read decision and real Zotero manual acceptance remain. Read
-docs/V3_G2_ZOTERO_VALIDATION.md before closing G2 or planning G3 implementation.
+re-planning persistence from scratch. V3-G2 is Completed following the user's
+2026-09-04 manual acceptance confirmation: GET-only metadata browsing and schema v2 source links are implemented.
+The user approved single-PDF reads inside a configured attachment directory on
+2026-09-04. Windows copying now uses /file/view/url, scoped consent, locked ancestor/
+file handles, and G1 validation/storage. HTTP redirects remain rejected.
+Manual evidence is the user's explicit acceptance, not agent-observed live execution.
+G3 remains Pending. Read docs/V3_G2_ZOTERO_VALIDATION.md and the G3 gate before
+planning a separately requested G3 implementation.
 Web API/sync, CCv2/pdf.js adoption, formula-recognition providers and Tree-sitter
 packages still require their own named decisions.
 

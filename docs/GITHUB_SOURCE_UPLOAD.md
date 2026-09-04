@@ -18,7 +18,7 @@ not a release, a distribution upload, or completion of any development gate.
 - Future uploads must start from the published snapshot lineage. Never force-push
   the older local development history over the public branch.
 
-## Development status
+## Development status at upload time
 
 V2 `2.0.0rc1` remains the accepted internal baseline. V3-G1 is implemented and G2
 is active. The owner approved the selected, approved-directory, read-only Zotero

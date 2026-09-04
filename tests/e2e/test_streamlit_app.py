@@ -112,6 +112,47 @@ def test_zotero_ui_reads_only_after_explicit_buttons(
     assert app.button(key="zotero_link_existing_button").disabled is True
     assert app.button(key="zotero_import_pdf_button").disabled is True
 
+    settings = replace(settings, zotero_attachment_root=str(tmp_path / "attachments"))
+    app.run()
+    def copy_consent():
+        return next(c for c in app.checkbox if str(c.key).startswith("zotero_import_confirm_"))
+    copy_consent().check().run()
+    assert app.button(key="zotero_import_pdf_button").disabled is False
+    settings = replace(settings, zotero_attachment_root=str(tmp_path / "other-attachments"))
+    app.run()
+    assert app.button(key="zotero_import_pdf_button").disabled is True
+    copy_consent().check().run()
+    app.selectbox(key="zotero_attachment_select").set_value("PDF00001").run()
+    assert app.button(key="zotero_import_pdf_button").disabled is True
+    copy_consent().check().run()
+    copied = []
+    def fake_copy(selected, key, **kwargs):
+        from types import SimpleNamespace
+        copied.append(key)
+        assert selected == details
+        assert kwargs["confirmed"] is True
+        assert kwargs["approved_root_scope"] == use_cases.zotero_attachment_approval_scope(settings=settings)
+        return SimpleNamespace(duplicate=False)
+    monkeypatch.setattr(use_cases, "import_zotero_pdf_attachment", fake_copy)
+    assert not copied
+    app.button(key="zotero_import_pdf_button").click().run()
+    assert not app.exception
+    assert copied == ["PDF00001"]
+    app.run()
+    assert not any(b.key == "zotero_import_pdf_button" for b in app.button)
+    app.button(key="zotero_fetch_attachments_button").click().run()
+    assert app.button(key="zotero_import_pdf_button").disabled is True
+
+    def failed_copy(*args, **kwargs):
+        raise ZoteroUnavailableError("Synthetic offline failure")
+    monkeypatch.setattr(use_cases, "import_zotero_pdf_attachment", failed_copy)
+    copy_consent().check().run()
+    app.button(key="zotero_import_pdf_button").click().run()
+    assert not app.exception
+    assert any("Synthetic offline" in e.value for e in app.error)
+    app.run()
+    assert not any(b.key == "zotero_import_pdf_button" for b in app.button)
+
     def failed_details(*_args, **_kwargs):
         raise ZoteroUnavailableError("Zotero is unavailable.")
 
