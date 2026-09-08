@@ -6,6 +6,10 @@ build-backend = "setuptools.build_meta"
 name = "researchmind"
 version = "2.0.0rc1"
 description = "AI-powered research reading and knowledge capture workspace"
+license-files = [
+    "THIRD_PARTY_NOTICES.md",
+    "src/researchmind/pdf/viewer_component/LICENSE.pdfjs.txt",
+]
 requires-python = ">=3.12"
 dependencies = [
     "openai>=3.5,<4",
@@ -24,6 +28,17 @@ test = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+researchmind = [
+    "pyproject.toml",
+    "pdf/viewer_component/frontend/assets/**/*",
+    "pdf/viewer_component/THIRD_PARTY_NOTICES.md",
+    "pdf/viewer_component/LICENSE.pdfjs.txt",
+]
 
 [tool.pytest.ini_options]
 addopts = "-ra"

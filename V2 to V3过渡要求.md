@@ -1,6 +1,6 @@
 # ResearchMind V2 → V3 过渡要求与实施门禁
 
-版本：2026-09-04 · 当前实现基线：2.0.0rc1 V2 Accepted + V3-G1/G2 增量 · 当前阶段：V3-G0/G1 Completed；V3-G2 Completed（2026-09-04 用户确认人工验收通过）；V3-G3 Pending· 不对外发布
+版本：2026-09-08 · 当前实现基线：2.0.0rc1 V2 Accepted + V3-G1/G2/G3 增量 · 当前阶段：V3-G0/G1/G2/G3 Completed；V3-G4 尚未启动 · 不对外发布
 
 ## 1. 文档目的与权威边界
 
@@ -16,8 +16,9 @@
 - AGENTS.md：所有任务必须遵守的顶层开发、安全和测试规则；
 - .agents/skills：规划、实现、PDF、上下文、资料库、测试和学习工作流。
 
-整体 V3 方向已经由用户明确批准，可以进行 G0 规划。数据库、文件所有权、Zotero
-模式、PDF 组件、公式服务和多语言解析依赖仍须在对应门禁确认后进入生产。
+整体 V3 方向已经由用户明确批准。数据库/文件所有权、Zotero 只读模式和 PDF
+组件已分别在 G1、G2、G3 关闭门禁；公式服务和多语言解析依赖仍须在后续对应
+门禁确认后进入生产。
 
 ## 2. V3 产品目标
 
@@ -195,7 +196,7 @@ ZoteroSourceLink；其余概念仍须在对应门禁固定 schema：
 | V3-G0 规则与架构入口 | Completed | 同步 AGENTS/Skills/规划文档，固定门禁 | 七个 Skill 有效；文档/差异检查通过；无生产代码/依赖改动 |
 | V3-G1 本地资料库与点击导入 | Completed | SQLite、迁移、托管文件、论文/代码导入和资料库打开 | 重启、迁移、补偿、去重、修订、删除、备份/恢复和 AppTest 已覆盖 |
 | V3-G2 Zotero 只读连接 | Completed（用户确认） | API 浏览/链接及批准目录内 Windows 单 PDF 复制已实现 | 374 passed / 1 skip；真实 Zotero 人工验收已由用户确认通过 |
-| V3-G3 PDF 文字层与自适应工作台 | Pending | CCv2/pdf.js 划词、全宽/分栏、AI 快捷键、滚轮证据 | 五类 PDF、真实浏览器、滚动/防抖/窄屏 |
+| V3-G3 PDF 文字层与自适应工作台 | Completed（用户确认） | CCv2/pdf.js 划词、全宽/分栏、AI 快捷键、滚轮交互 | 用户确认物理触控板并批准采用；正式 ReadingSelection 对账、回退、Edge 8/8、wheel 与 486 passed / 1 skip 已完成 |
 | V3-G4 划词翻译与显式笔记草稿 | Pending | 选择即翻译、证据篮、编辑/预览/可选保存 | fake provider、包含/排除、重启、Vault 非覆盖 |
 | V3-G5 公式识别与 LaTeX | Pending | 区域检测、crop 识别、编辑接受和笔记 | 标注公式集、结构质量、隐私、错误 UX、性能 |
 | V3-G6 多语言 CodeContext | Pending | Python/C/Java/Julia/R 静态解析 | 五语言 fixture、Python parity、无执行、性能 |
@@ -294,13 +295,30 @@ G1 校验大小、PDF magic/可解析性，再走暂存/哈希/事务/原子完�
 根据 [Zotero 官方 Local API 文档](https://www.zotero.org/support/dev/web_api/v3/local_api)，
 必需的 `Zotero-Server-ID` 由 Zotero 10+ 提供；缺失时安全失败，不虚构稳定身份。
 用户于 2026-09-04 明确回复“G2通过验收”，据此关闭 G2 人工门禁并标记
-Completed。未提供逐项截图、版本或哈希，不补造测量值；G3 保持 Pending。
+Completed。未提供逐项截图、版本或哈希，不补造测量值；G3 已按后续用户要求启动隔离 Spike。
 
 ### V3-G3：PDF 文字层与工作台
 
-先完成独立 CCv2/pdf.js 选择 Spike；只有真实浏览器证据通过才进入 production。
-同时固定 paper-only、paper+code、窄屏、AI 快捷键和滚轮交互状态。PyMuPDF 仍是
-后端来源，除非单独证据决定替换。
+2026-09-04 已按用户要求启动隔离事件契约实验，详见
+[G3 实验记录](docs/V3_G3_PDF_WORKSPACE_SPIKE.md)。已补充合成文字 inline CCv2
+实验页及自动测试；又以官方 v2 模板固定 PDF.js 6.3.289，完成本地两页合成
+数字 PDF 的真实 Edge 鼠标划词、事件字段、回调后画布稳定、换页失效、双栏文字项
+和无外部请求验证。后续隔离工作区又验证了专属滚动区的中部滚动、边缘 80px
+累积翻页、650ms 锁定与静默解锁、首页/末页边界、选择保护、输入区快捷键抑制、
+仅论文全宽、桌面分栏和 600px 自动堆叠。随后五类 hash 锁定代表性 PDF 完成
+12/12 次数字文字选择、原生复制一致性和 PyMuPDF 服务端文字/几何对账；扫描
+PDF 正确降级。跨行复制、双实例、209 页长文档按 revision 复用和清洁实验 wheel
+安装运行也已记录。
+
+用户于 2026-09-07 明确反馈物理触控板验收通过并确认正式采纳 CCv2/pdf.js。
+2026-09-08 完成生产接入：pdf/viewer_component 本地加载 hash 绑定且不超过 10 MiB
+的 PDF；客户端选择事件必须由当前页 PyMuPDF 重新核对文字和几何后才建立
+ReadingSelection；重复、过期、跨页和伪造事件被拒绝。旧 PyMuPDF 页面图像和
+文字块继续作为回退。正式 Edge 152 验收 8/8 项通过，0 页面错误、0 外部请求；
+生产 wheel 为 1,041,404 bytes，恰有一个 JS 和一个 CSS，并含组件清单、声明与
+Apache-2.0 许可证，不含 node_modules/source map。最终联合回归为 486 passed /
+1 个既有 Windows symlink 环境 skip。G3 标记 Completed；G4 是下一计划阶段，
+本次验收不自动启动 G4。
 
 ### V3-G4：划词翻译与显式笔记
 

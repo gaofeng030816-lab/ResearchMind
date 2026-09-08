@@ -22,9 +22,11 @@ Always label behavior as one of:
 - approved design not yet implemented;
 - proposed future work.
 
-The 2.0.0rc1 V2 baseline is implemented and accepted. V3-G0 is governance and design
-work; it does not itself add production persistence, Zotero, text-layer selection,
-formula OCR, extra languages, or editable drafts.
+The 2.0.0rc1 V2 baseline is implemented and accepted. V3-G0–G3 are Completed: G1 adds
+the local working library, G2 adds optional GET-only Zotero links and approved local
+PDF copying, and G3 adds the adopted CCv2/pdf.js text layer with PyMuPDF reconciliation
+and workspace interaction. G4–G7, including persistent drafts, formula OCR/recognition
+and extra code languages, have not started.
 
 ## Teaching Priorities
 
@@ -88,10 +90,14 @@ Browsing stays in the session. Only chosen source snapshots persist. Explain tha
 linking metadata is an association, not proof that two PDFs have identical content;
 unlinking is separate from deleting any file, and Zotero itself is never written.
 
-Recommended V3 paper interaction path, only after its gate:
+Current G3 paper interaction path:
 
     CCv2/pdf.js text-layer event → validated ReadingSelection
-    → translate/explain → user adds chosen result to evidence basket
+    → existing translate/LaTeX/explain/KnowledgeNote actions
+
+Planned G4 continuation, only after its gate:
+
+    user adds chosen result to evidence basket
     → editable NoteDraft → preview → explicit Obsidian save
 
 Recommended formula path, only after its gate:

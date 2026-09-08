@@ -39,7 +39,7 @@ Acceptance closed on 2026-09-01 with 269 passing tests and one Windows symlink
 environment skip plus recorded package, launcher, recovery, security, performance,
 and user-confirmed journeys. It is not a public release.
 
-V3-G0, V3-G1 and V3-G2 are Completed. V3-G2: the user confirmed its read-only
+V3-G0, V3-G1, V3-G2 and V3-G3 are Completed. V3-G2: the user confirmed its read-only
 Local API architecture on 2026-09-02. Schema version 2, optional GET-only loopback
 metadata browsing, durable source snapshots, link/unlink UI, and graceful failure
 handling are implemented. The user approved selected, approved-directory, read-only
@@ -51,8 +51,31 @@ rechecked; G1 validates and stores the managed copy. See docs/V3_G2_ZOTERO_VALID
 
 The user confirmed "G2通过验收" on 2026-09-04, closing G2 manual acceptance.
 Record this as user-reported acceptance, not a newly agent-observed live test.
-The existing automated baseline is 374 passed / 1 environment skip.
-V3-G3 remains Pending; acceptance does not adopt CCv2/pdf.js or start implementation.
+The accepted G2 automated baseline is 374 passed / 1 environment skip. V3-G3 is also
+Completed, with a current combined regression of 486 passed / 1 environment skip.
+Its evidence began with an isolated selection contract, synthetic inline CCv2 harness,
+and official-template PDF.js 6.3.289 packaged experiment. Edge 152 passed synthetic
+mouse selection, bounded event fields, bitmap stability, page invalidation, two-column
+text, focused edge-only wheel pagination, debounce/bounds, selection protection,
+input-safe Ctrl+Shift+A, desktop split/600px stacking, and no outbound requests. Five
+hash-locked representative PDFs pass 12/12 sampled digital selections with native-copy
+parity and server-side PyMuPDF text/geometry reconciliation; a scanned PDF degrades
+without inventing a selection. Cross-line copying, two viewer instances and a loaded-
+revision handshake pass; a 9.1 MiB, 209-page sample showed about 230/238 ms page changes
+and 119,420 bytes settled heap growth in one representative run. The user separately
+reported physical-trackpad acceptance and approved production CCv2/pdf.js adoption on
+2026-09-07.
+
+Production now owns the bundled component under pdf/viewer_component: unchanged PDFs
+up to 10 MiB render locally, untrusted browser events become ReadingSelection only
+after current-page PyMuPDF text/geometry reconciliation, and stale/duplicate events are
+rejected. The legacy PyMuPDF image/text-block reader remains the graceful fallback.
+Paper-only is full width, paper+code uses responsive columns, and input-safe
+Ctrl+Shift+A controls the AI panel. A 1,041,404-byte production wheel contains exactly
+one JS and one CSS asset, the Streamlit manifest, notices and Apache-2.0 license; it has
+no node_modules or source maps. Edge 152 production acceptance passed 8/8 checks with
+no page errors or external requests. See docs/V3_G3_PDF_WORKSPACE_SPIKE.md. V3-G4 is
+the next planned stage and has not started.
 No routine test contacts
 localhost; no Zotero write, direct Zotero SQLite read, Web API credential, background
 sync, group-library workflow, or whole-library cache is implemented.
@@ -113,7 +136,7 @@ Preserve Python 3.12, one local Streamlit process, PyMuPDF, the OpenAI-compatibl
 provider, python-dotenv, pytest, src-layout, dataclasses, type hints, and beginner-
 readable modules unless a specific decision changes them.
 
-Implemented V3-G1/G2 choices:
+Implemented V3-G1/G2/G3 choices:
 
 - standard-library sqlite3 with schema version 2, no ORM or database server;
 - ResearchMind-managed PDF/Python files plus metadata/hashes/relative paths in SQLite,
@@ -129,13 +152,15 @@ Implemented V3-G1/G2 choices:
   Zotero-Server-ID requires Zotero 10+; missing identity fails closed;
 - only the selected personal-library item's bounded metadata and optional PDF source
   snapshot persist; browse results and attachment lists remain session-only.
+- Streamlit Custom Components v2 with locally bundled pdfjs-dist 6.3.289 provides the
+  adopted browser text layer; PyMuPDF remains the trusted parser/reconciler and
+  compatibility renderer. Viewer bytes are hash-bound and capped at 10 MiB; no local
+  PDF path or unverified client bbox becomes selection provenance.
 
 Candidates not implemented until later gates close:
 
 - Zotero Web API, group-library product workflow, writes, and sync; never direct
   Zotero SQLite;
-- CCv2/pdf.js text layer for browser selection and event provenance while retaining
-  PyMuPDF as the backend parser until evidence says otherwise;
 - a dedicated formula detector/recognizer boundary operating on selected page regions;
 - Tree-sitter plus language grammar packages only after Python/C/Java/Julia/R parity,
   Windows packaging, performance, license, and maintenance evidence.
@@ -164,11 +189,14 @@ Current adopted infrastructure ownership:
 
 - integration/zotero owns optional Local API GET calls, vendor mapping, and the
   approved single-file Windows read boundary; it never writes Zotero sources;
+- pdf/viewer_component owns the adopted CCv2/pdf.js UI, event validation and PyMuPDF
+  reconciliation; app/state.py alone stores transient component events/sequences and
+  app/use_cases.py maps verified results into application flow;
 
 After the corresponding later V3 gate is approved:
 
-- pdf owns any adopted viewer-selection/formula adapter, but not LLM, translation,
-  database, or Vault orchestration;
+- pdf may add a formula detector/recognizer adapter, but it still does not own LLM,
+  translation, database, or Vault orchestration;
 - code may add language parser adapters that map to existing project models, but
   remains non-executing and default read-only.
 

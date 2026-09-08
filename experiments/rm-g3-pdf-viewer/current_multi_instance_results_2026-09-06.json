@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-09-06",
+  "status": "isolated_spike_evidence",
+  "browser": "Microsoft Edge 152.0.4191.62",
+  "fixture": "synthetic_two_page_digital_pdf",
+  "viewer_count": 2,
+  "second_preview_empty_before_first_submit": true,
+  "second_submit_disabled_before_first_submit": true,
+  "first_accepted": true,
+  "first_preview_empty_before_second_submit": true,
+  "second_accepted": true,
+  "first_acceptance_preserved": true,
+  "page_errors": 0,
+  "external_requests": 0,
+  "passed": true
+}

@@ -428,6 +428,31 @@ def test_reader_warns_when_document_has_no_extractable_text(
     )
 
 
+def test_reader_keeps_pymupdf_fallback_when_browser_viewer_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    single_page_pdf: Path,
+) -> None:
+    monkeypatch.setattr(
+        use_cases,
+        "load_pdf_text_layer_source",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            use_cases.PdfViewerError("synthetic viewer failure")
+        ),
+    )
+    app = AppTest.from_file(APP_PATH, default_timeout=10).run()
+    app.text_input(key="pdf_path_input").set_value(str(single_page_pdf))
+    app.button(key="open_pdf_button").click().run()
+
+    assert not app.exception
+    assert app.image
+    assert any(
+        "浏览器文字层不可用" in warning.value
+        and "synthetic viewer failure" in warning.value
+        for warning in app.warning
+    )
+    assert any("ResearchMind introduction" in code.value for code in app.code)
+
+
 def test_context_evidence_is_visible_before_explanation(
     monkeypatch: pytest.MonkeyPatch,
     structured_pdf: Path,

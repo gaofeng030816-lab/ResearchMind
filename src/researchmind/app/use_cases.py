@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -130,10 +131,14 @@ from researchmind.models import (
     ZoteroSourceLink,
 )
 from researchmind.pdf import (
+    DEFAULT_PDF_VIEWER_MAX_SIZE_BYTES,
     OpenedDocument,
     PdfError,
+    PdfViewerError,
+    PdfViewerSource,
     TextMatch,
     extract_page,
+    load_pdf_viewer_source as pdf_load_pdf_viewer_source,
     open_pdf as pdf_open_pdf,
     render_figure_images,
     render_page_image,
@@ -1294,6 +1299,124 @@ def open_pdf(path: Path, *, settings: Settings | None = None) -> OpenedDocument:
 
     resolved_settings = settings or load_settings()
     return pdf_open_pdf(path, max_size_bytes=resolved_settings.pdf_max_size_bytes)
+
+
+def load_pdf_text_layer_source(
+    path: Path,
+    *,
+    expected_sha256: str,
+    max_size_bytes: int,
+) -> PdfViewerSource:
+    """Load unchanged bytes for the adopted local browser text-layer viewer."""
+
+    return pdf_load_pdf_viewer_source(
+        path,
+        expected_sha256=expected_sha256,
+        max_size_bytes=max_size_bytes,
+        viewer_max_size_bytes=DEFAULT_PDF_VIEWER_MAX_SIZE_BYTES,
+    )
+
+
+def mount_pdf_text_layer(
+    source: PdfViewerSource,
+    *,
+    page: int,
+    page_count: int,
+    scale: float,
+    key: str,
+    on_selection: Callable[[], None],
+    on_page_turn: Callable[[], None],
+) -> None:
+    """Mount the adopted viewer while keeping its object inside the PDF boundary."""
+
+    from researchmind.pdf.viewer_component import mount_pdf_viewer
+
+    mount_pdf_viewer(
+        source,
+        page=page,
+        page_count=page_count,
+        scale=scale,
+        key=key,
+        on_selection=on_selection,
+        on_page_turn=on_page_turn,
+    )
+
+
+def create_pdf_text_layer_selection(
+    source: PdfViewerSource,
+    document: OpenedDocument,
+    event: object,
+    *,
+    instance: str,
+    last_sequence: int,
+) -> tuple[ReadingSelection, int]:
+    """Reconcile an untrusted browser event into a current ReadingSelection."""
+
+    from researchmind.pdf.viewer_component import reconcile_selection
+
+    return reconcile_selection(
+        source,
+        document,
+        event,
+        instance=instance,
+        last_sequence=last_sequence,
+    )
+
+
+def validate_pdf_text_layer_page_turn(
+    source: PdfViewerSource,
+    event: object,
+    *,
+    instance: str,
+    current_page: int,
+    page_count: int,
+    last_sequence: int,
+) -> tuple[int, int]:
+    """Return a trusted adjacent page and accepted browser sequence."""
+
+    from researchmind.pdf.viewer_component import reconcile_page_turn
+
+    turn = reconcile_page_turn(
+        source,
+        event,
+        instance=instance,
+        current_page=current_page,
+        page_count=page_count,
+        last_sequence=last_sequence,
+    )
+    return turn.target_page, turn.sequence
+
+
+def mount_ai_panel_shortcut(
+    *,
+    key: str,
+    last_sequence: int,
+    on_toggle: Callable[[], None],
+) -> None:
+    """Mount the input-safe G3 shortcut listener."""
+
+    from researchmind.pdf.viewer_component import mount_workspace_shortcut
+
+    mount_workspace_shortcut(
+        key=key,
+        last_sequence=last_sequence,
+        on_toggle=on_toggle,
+    )
+
+
+def validate_ai_panel_shortcut(
+    event: object,
+    *,
+    last_sequence: int,
+) -> int:
+    """Validate the fixed shortcut and return its accepted sequence."""
+
+    from researchmind.pdf.viewer_component import reconcile_shortcut
+
+    return reconcile_shortcut(
+        event,
+        last_sequence=last_sequence,
+    ).sequence
 
 
 def get_page_view(

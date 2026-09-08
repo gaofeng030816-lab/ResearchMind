@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-09-07",
+  "status": "isolated_spike_evidence",
+  "browser": "Microsoft Edge 152.0.4191.62",
+  "sample": {
+    "id": "statistical_learning",
+    "pdf_bytes": 9115188,
+    "page_count": 209,
+    "private_path_recorded": false,
+    "document_text_recorded": false
+  },
+  "before": {
+    "behavior": "pdf.js document reused but the complete base64 payload was sent on every rerun",
+    "initial_render_ms": 2312.02,
+    "jump_page_20_ms": 868.64,
+    "next_page_21_ms": 1132.1,
+    "heap_after_initial_bytes": 56507129,
+    "heap_after_page_20_bytes": 93728041,
+    "heap_after_page_21_bytes": 118201674
+  },
+  "after": {
+    "behavior": "loaded revision handshake omits PDF bytes after the browser cache is ready",
+    "initial_render_ms": 1541.22,
+    "jump_page_20_ms": 230.23,
+    "next_page_21_ms": 238.35,
+    "page_one_resource": "reused",
+    "page_one_payload": "omitted",
+    "page_twenty_resource": "reused",
+    "page_twenty_payload": "omitted",
+    "page_twenty_one_resource": "reused",
+    "page_twenty_one_payload": "omitted",
+    "heap_after_initial_bytes": 56714469,
+    "heap_after_page_20_bytes": 45174052,
+    "heap_after_page_21_bytes": 45293472,
+    "page_errors": 0,
+    "external_requests": 0
+  },
+  "derived": {
+    "initial_render_reduction_percent": 33.34,
+    "page_20_latency_reduction_percent": 73.49,
+    "page_21_latency_reduction_percent": 78.95,
+    "before_page_20_heap_growth_bytes": 37220912,
+    "before_page_21_heap_growth_bytes": 24473633,
+    "after_page_20_to_21_heap_growth_bytes": 119420
+  },
+  "limitations": [
+    "These are representative single-run measurements, not a statistical benchmark distribution.",
+    "The sample page 1 has no selectable text items; page 20 and page 21 exercise digital text.",
+    "Physical-trackpad behavior remains a separate manual gate."
+  ],
+  "passed": true
+}

@@ -1,0 +1,21 @@
+.viewer-root { color: var(--st-text-color); }
+.viewer-status { overflow-wrap: anywhere; }
+.viewer-scroll { max-width: 100%; max-height: min(72vh, 760px); overflow: auto;
+  margin-bottom: .75rem; outline-offset: 2px; }
+.page-shell { position: relative;
+  border: 1px solid color-mix(in srgb, var(--st-text-color), transparent 65%); }
+.pdf-canvas { position: absolute; inset: 0; }
+.textLayer { position: absolute; inset: 0; overflow: clip; line-height: 1; opacity: 1;
+  text-align: initial; text-size-adjust: none; forced-color-adjust: none; transform-origin: 0 0;
+  --min-font-size: 1; --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size)); }
+.textLayer :is(span, br) { color: transparent; position: absolute; white-space: pre;
+  cursor: text; transform-origin: 0 0; user-select: text; }
+.textLayer > :not(.markedContent), .textLayer .markedContent span:not(.markedContent) {
+  z-index: 1; --font-height: 0; font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1; --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv)); }
+.textLayer .markedContent { display: contents; }
+.textLayer ::selection { background: rgba(0, 80, 255, .3); color: transparent; }
+.selection-preview { min-height: 2rem; max-height: 8rem; overflow: auto; white-space: pre-wrap; }
+.selection-submit { padding: .4rem .8rem; }

@@ -51,6 +51,17 @@ REQUESTED_WORKSPACE_KEY = "requested_workspace"
 ZOTERO_BROWSE_RESULT_KEY = "zotero_browse_result"
 ZOTERO_ITEM_DETAILS_KEY = "zotero_item_details"
 ZOTERO_ACTION_GENERATION_KEY = "zotero_action_generation"
+PDF_VIEWER_PENDING_EVENTS_KEY = "pdf_viewer_pending_events"
+PDF_VIEWER_EVENT_SEQUENCES_KEY = "pdf_viewer_event_sequences"
+AI_PANEL_OPEN_KEY = "ai_panel_open"
+AI_SHORTCUT_INSTANCE = "researchmind_ai_panel_shortcut"
+AI_SHORTCUT_COMPONENT_KEY = "researchmind_workspace_shortcut"
+
+_PDF_VIEWER_EVENT_FIELDS = {
+    "selection": "submitted",
+    "page_turn": "page_turn",
+    "shortcut": "toggle",
+}
 
 
 def initialize_state() -> None:
@@ -81,6 +92,9 @@ def initialize_state() -> None:
         ZOTERO_BROWSE_RESULT_KEY: None,
         ZOTERO_ITEM_DETAILS_KEY: None,
         ZOTERO_ACTION_GENERATION_KEY: 0,
+        PDF_VIEWER_PENDING_EVENTS_KEY: {},
+        PDF_VIEWER_EVENT_SEQUENCES_KEY: {},
+        AI_PANEL_OPEN_KEY: True,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -105,6 +119,8 @@ def set_opened_document(document: OpenedDocument) -> None:
     st.session_state[KNOWLEDGE_PANEL_OPEN_KEY] = False
     st.session_state[LAST_SAVED_PATH_KEY] = None
     st.session_state[EVIDENCE_LINKS_KEY] = []
+    st.session_state[PDF_VIEWER_PENDING_EVENTS_KEY] = {}
+    st.session_state[PDF_VIEWER_EVENT_SEQUENCES_KEY] = {}
     _clear_read_only_assistant_session()
     page_widget_key = page_number_widget_key(document.document.id)
     if page_widget_key in st.session_state:
@@ -227,6 +243,136 @@ def set_current_selection_from_reader(
 
 def selection_text_widget_key(document_id: str) -> str:
     return f"selection_text_{document_id}"
+
+
+def pdf_viewer_key(document_id: str, content_sha256: str) -> str:
+    """Return a revision-specific CCv2 element key."""
+
+    return f"pdf_viewer_{document_id}_{content_sha256[:16]}"
+
+
+def capture_pdf_viewer_event(
+    component_key: str,
+    *,
+    instance: str,
+    event_kind: str,
+) -> None:
+    """Copy one transient CCv2 trigger into application-owned pending state."""
+
+    field = _PDF_VIEWER_EVENT_FIELDS.get(event_kind)
+    if field is None:
+        raise ValueError("Unsupported PDF viewer event kind.")
+    component_state = st.session_state.get(component_key)
+    event = (
+        component_state.get(field)
+        if isinstance(component_state, dict)
+        else getattr(component_state, field, None)
+    )
+    if event is None:
+        return
+    pending = dict(
+        cast(
+            dict[str, object],
+            st.session_state[PDF_VIEWER_PENDING_EVENTS_KEY],
+        )
+    )
+    pending[_pdf_viewer_event_key(instance, event_kind)] = event
+    st.session_state[PDF_VIEWER_PENDING_EVENTS_KEY] = pending
+
+
+def take_pdf_viewer_event(
+    instance: str,
+    event_kind: str,
+) -> object | None:
+    """Pop one pending component event before the next component mount."""
+
+    if event_kind not in _PDF_VIEWER_EVENT_FIELDS:
+        raise ValueError("Unsupported PDF viewer event kind.")
+    pending = dict(
+        cast(
+            dict[str, object],
+            st.session_state[PDF_VIEWER_PENDING_EVENTS_KEY],
+        )
+    )
+    value = pending.pop(_pdf_viewer_event_key(instance, event_kind), None)
+    st.session_state[PDF_VIEWER_PENDING_EVENTS_KEY] = pending
+    return value
+
+
+def get_pdf_viewer_sequence(instance: str, event_kind: str) -> int:
+    if event_kind not in _PDF_VIEWER_EVENT_FIELDS:
+        raise ValueError("Unsupported PDF viewer event kind.")
+    sequences = cast(
+        dict[str, int],
+        st.session_state[PDF_VIEWER_EVENT_SEQUENCES_KEY],
+    )
+    value = sequences.get(_pdf_viewer_event_key(instance, event_kind), 0)
+    return value if type(value) is int and value >= 0 else 0
+
+
+def accept_pdf_viewer_selection(
+    instance: str,
+    sequence: int,
+    selection: ReadingSelection,
+    *,
+    document_id: str,
+) -> None:
+    """Advance provenance state only for a server-verified selection."""
+
+    _accept_pdf_viewer_sequence(instance, "selection", sequence)
+    set_current_selection_from_reader(selection, document_id=document_id)
+
+
+def accept_pdf_viewer_page_turn(
+    instance: str,
+    sequence: int,
+    page_number: int,
+) -> None:
+    """Advance one verified wheel event and update the trusted page."""
+
+    set_current_page_number(page_number)
+    _accept_pdf_viewer_sequence(instance, "page_turn", sequence)
+
+
+def is_ai_panel_open() -> bool:
+    return bool(st.session_state[AI_PANEL_OPEN_KEY])
+
+
+def toggle_ai_panel() -> None:
+    st.session_state[AI_PANEL_OPEN_KEY] = not is_ai_panel_open()
+
+
+def accept_ai_panel_shortcut(sequence: int) -> None:
+    _accept_pdf_viewer_sequence(
+        AI_SHORTCUT_INSTANCE,
+        "shortcut",
+        sequence,
+    )
+    toggle_ai_panel()
+
+
+def _accept_pdf_viewer_sequence(
+    instance: str,
+    event_kind: str,
+    sequence: int,
+) -> None:
+    if type(sequence) is not int or sequence <= get_pdf_viewer_sequence(
+        instance,
+        event_kind,
+    ):
+        raise ValueError("PDF viewer event sequence is stale.")
+    sequences = dict(
+        cast(
+            dict[str, int],
+            st.session_state[PDF_VIEWER_EVENT_SEQUENCES_KEY],
+        )
+    )
+    sequences[_pdf_viewer_event_key(instance, event_kind)] = sequence
+    st.session_state[PDF_VIEWER_EVENT_SEQUENCES_KEY] = sequences
+
+
+def _pdf_viewer_event_key(instance: str, event_kind: str) -> str:
+    return f"{instance}:{event_kind}"
 
 
 def get_current_conversation() -> Conversation | None:

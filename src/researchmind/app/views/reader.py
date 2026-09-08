@@ -1,5 +1,6 @@
 """Streamlit reader view for local PDF navigation and search."""
 
+from functools import partial
 from pathlib import Path
 
 import streamlit as st
@@ -10,6 +11,19 @@ from researchmind.app import state, use_cases
 @st.cache_resource(show_spinner=False)
 def _cached_open_pdf(path_text: str) -> use_cases.OpenedDocument:
     return use_cases.open_pdf(Path(path_text))
+
+
+@st.cache_data(show_spinner=False, max_entries=4)
+def _cached_pdf_viewer_source(
+    path_text: str,
+    expected_sha256: str,
+    max_size_bytes: int,
+) -> use_cases.PdfViewerSource:
+    return use_cases.load_pdf_text_layer_source(
+        Path(path_text),
+        expected_sha256=expected_sha256,
+        max_size_bytes=max_size_bytes,
+    )
 
 
 def render_reader() -> None:
@@ -39,6 +53,26 @@ def render_reader() -> None:
         f"{document.document.num_pages} 页  ·  "
         f"作者：{', '.join(document.document.authors) or '未提供'}"
     )
+    viewer_key = state.pdf_viewer_key(
+        document.document.id,
+        document.content_sha256,
+    )
+    viewer_source: use_cases.PdfViewerSource | None = None
+    viewer_error: str | None = None
+    try:
+        viewer_source = _cached_pdf_viewer_source(
+            str(document.document.path),
+            document.content_sha256,
+            document.max_size_bytes,
+        )
+        _process_pending_viewer_events(
+            document,
+            viewer_source,
+            viewer_key=viewer_key,
+        )
+    except use_cases.USER_FACING_ERRORS as exc:
+        viewer_error = str(exc)
+
     text_coverage = use_cases.get_document_text_coverage(document)
     if text_coverage.is_limited:
         if text_coverage.pages_with_text == 0:
@@ -108,11 +142,56 @@ def render_reader() -> None:
         st.error(str(exc))
         return
 
-    st.image(
-        page_view.image_png,
-        caption=f"第 {page_view.page.page_number} 页",
-        width="stretch",
-    )
+    viewer_mounted = False
+    if viewer_source is not None and zoom <= 2.5:
+        st.caption(
+            "PDF.js 文字层在本机浏览器渲染。拖选后先在组件内预览，"
+            "点击“确认使用当前选择”才会由 PyMuPDF 重新核对文字与位置。"
+        )
+        try:
+            use_cases.mount_pdf_text_layer(
+                viewer_source,
+                page=page_view.page.page_number,
+                page_count=document.document.num_pages,
+                scale=float(zoom),
+                key=viewer_key,
+                on_selection=partial(
+                    state.capture_pdf_viewer_event,
+                    viewer_key,
+                    instance=viewer_key,
+                    event_kind="selection",
+                ),
+                on_page_turn=partial(
+                    state.capture_pdf_viewer_event,
+                    viewer_key,
+                    instance=viewer_key,
+                    event_kind="page_turn",
+                ),
+            )
+            viewer_mounted = True
+        except use_cases.USER_FACING_ERRORS as exc:
+            viewer_error = str(exc)
+    elif viewer_source is not None:
+        viewer_error = (
+            "PDF.js 文字层的已验收缩放范围为 0.5–2.5；"
+            "当前使用 PyMuPDF 兼容页面图像。"
+        )
+
+    if viewer_mounted:
+        with st.expander("兼容页面图像（PDF.js 不可用时使用）"):
+            st.image(
+                page_view.image_png,
+                caption=f"第 {page_view.page.page_number} 页",
+                width="stretch",
+            )
+    else:
+        if viewer_error:
+            st.warning(f"浏览器文字层不可用：{viewer_error}")
+        st.image(
+            page_view.image_png,
+            caption=f"第 {page_view.page.page_number} 页 · 兼容模式",
+            width="stretch",
+        )
     if page_view.figure_images:
         with st.expander(
             f"检测到 {len(page_view.figure_images)} 个嵌入图表/图片区域"
@@ -231,3 +310,60 @@ def render_reader() -> None:
                 on_click=state.set_current_page_number,
                 args=(match.page_number,),
             )
+
+
+def _process_pending_viewer_events(
+    document: use_cases.OpenedDocument,
+    source: use_cases.PdfViewerSource,
+    *,
+    viewer_key: str,
+) -> None:
+    page_turn_event = state.take_pdf_viewer_event(viewer_key, "page_turn")
+    if page_turn_event is not None:
+        try:
+            target_page, sequence = use_cases.validate_pdf_text_layer_page_turn(
+                source,
+                page_turn_event,
+                instance=viewer_key,
+                current_page=state.get_current_page_number(),
+                page_count=document.document.num_pages,
+                last_sequence=state.get_pdf_viewer_sequence(
+                    viewer_key,
+                    "page_turn",
+                ),
+            )
+            state.accept_pdf_viewer_page_turn(
+                viewer_key,
+                sequence,
+                target_page,
+            )
+            st.success(f"触控板/滚轮已翻到第 {target_page} 页。")
+        except use_cases.USER_FACING_ERRORS as exc:
+            st.error(f"滚轮翻页事件已拒绝：{exc}")
+
+    selection_event = state.take_pdf_viewer_event(viewer_key, "selection")
+    if selection_event is None:
+        return
+    try:
+        selection, sequence = use_cases.create_pdf_text_layer_selection(
+            source,
+            document,
+            selection_event,
+            instance=viewer_key,
+            last_sequence=state.get_pdf_viewer_sequence(
+                viewer_key,
+                "selection",
+            ),
+        )
+        state.accept_pdf_viewer_selection(
+            viewer_key,
+            sequence,
+            selection,
+            document_id=document.document.id,
+        )
+        st.success(
+            f"已验证第 {selection.locator['page_number']} 页的 PDF 文字层选择；"
+            "可继续使用现有翻译、LaTeX 或解释功能。"
+        )
+    except use_cases.USER_FACING_ERRORS as exc:
+        st.error(f"PDF 选择未通过服务端对账：{exc}")

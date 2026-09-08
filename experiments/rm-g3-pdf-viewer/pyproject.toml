@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=77.0.3", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rm-g3-pdf-viewer"
+version = "0.0.1"
+description = "Isolated ResearchMind G3 PDF text-layer experiment"
+readme = "README.md"
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+requires-python = ">=3.12"
+authors = [{ name = "ResearchMind contributors" }]
+dependencies = ["streamlit>=1.62,<2", "PyMuPDF>=1.28,<2"]
+
+[project.optional-dependencies]
+fixture = ["reportlab>=4,<5"]
+
+[tool.setuptools.packages.find]
+include = ["rm_g3_pdf_viewer*"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+rm_g3_pdf_viewer = ["frontend/build/**/*", "pyproject.toml"]

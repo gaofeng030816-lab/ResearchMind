@@ -19,3 +19,7 @@ class PdfPageError(PdfError):
 
 class PdfRenderError(PdfError):
     """Raised when a page cannot be rendered as an image."""
+
+
+class PdfViewerError(PdfError):
+    """Raised when the optional browser text-layer viewer cannot be used safely."""

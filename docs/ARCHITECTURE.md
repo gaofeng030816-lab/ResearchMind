@@ -1,6 +1,6 @@
-# ResearchMind 系统架构（V2 Accepted + V3-G1/G2 增量）
+# ResearchMind 系统架构（V2 Accepted + V3-G1/G2/G3 增量）
 
-版本：2.0.0rc1 V2 Accepted + V3-G1/G2 source increment · 同步日期：2026-09-04 · 状态：V3-G0/G1 Completed，V3-G2 Completed（2026-09-04 用户确认人工验收通过）；V3-G3 Pending，T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
+版本：2.0.0rc1 V2 Accepted + V3-G1/G2/G3 source increment · 同步日期：2026-09-08 · 状态：V3-G0/G1/G2/G3 Completed；V3-G4 尚未启动，T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
 
 > 验收口径：项目于 2026-09-01 完成 **V2 Internal Acceptance**。用户于 2026-08-31
 > 明确将自动公式区域识别、图片公式 OCR 和整页 PDF→LaTeX 排除在 V2 验收之外；
@@ -30,7 +30,8 @@
 > standard-library sqlite3 保存记录/资产元数据，ResearchMind 数据目录保存托管
 > PDF/Python 副本；资料库记录、修订、移除、托管副本删除和备份/恢复均有明确
 > 语义。V3-G2 又加入默认关闭、只读的 Zotero Local API 来源连接；它只保存用户
-> 明确链接条目的来源快照。两阶段均未引入 PDF 文字层、公式识别、非 Python
+> 明确链接条目的来源快照。V3-G3 采用本地 CCv2/pdf.js 文字层，并由 PyMuPDF
+> 对当前页候选选择做服务端文字/几何对账；它没有引入公式识别、非 Python
 > 解析、草稿/对话持久化，也不改变 V2 外部项目的受控写入合同。
 
 ## 1. 产品定位与系统边界
@@ -188,7 +189,7 @@ V1 继续选择 Streamlit：
 |----------|------------------------------|---------|
 | Core | `core/`（纯函数）+ `models/`（共享 dataclass） | 实现 |
 | Database / Library | `database/` + `models/library.py` + `app/views/library.py` | V3-G1 实现 |
-| PDF | `pdf/` | 实现 |
+| PDF | `pdf/` | 实现；G3 含本地 CCv2/pdf.js 文字层与 PyMuPDF 服务端对账 |
 | Code Source | `code/` | T3 默认只读；T5-B1 仅 `change_writer.py` 可对当前选择目标建立恢复副本并原子替换/回滚 |
 | Translation | `translation/` | 实现（V1 仅一个 provider，见第 10 节） |
 | AI | `llm/`（provider、prompts、严格助手/替换解析）+ `app/use_cases.py`（编排）+ `core/`（对话裁剪、助手预算与 proposal 纯规则） | 实现（含 T5-A/T5-B1） |
@@ -503,6 +504,15 @@ PDF 标注、高亮、书签、OCR、语义表格识别、图片公式识别、�
 7. **有界渲染缓存**：页面和嵌入图像 PNG 在 `pdf/` 内按文件修订、页码和缩放缓存，缓存条目有上限；源文件大小、时间或文件标识变化后自动重新渲染，仍保留每次调用的扩展名、魔数和大小校验；
 8. **文本可提取性诊断**：应用层统计有文本页面比例；不超过 10% 时，UI 明示扫描版/图像型 PDF 的 OCR 限制，避免用户误以为 AI 已获得论文正文；
 9. **已知局限**（诚实声明，Future Work 解决）：复杂混排、非标准标题、碎片化/二维公式、扫描版 PDF、矢量图表和语义表格的提取质量仍有限；公式候选可能拆成多个块或含少量邻近文字，必须对照页面图像；提取异常统一转成 `PdfExtractionError` 抛给调用层。
+10. **G3 本地文字层**：`pdf/viewer_component/` 用 Streamlit CCv2 挂载锁定的
+    pdfjs-dist 6.3.289；PDF bytes 必须匹配打开时 SHA-256 且不超过 10 MiB，资源
+    从 wheel 本地加载，不上传到外部服务；
+11. **可信选择对账**：浏览器只产生候选事件。服务端重验 revision、instance、
+    page、sequence、engine、文字与几何；最终 ReadingSelection 的文字和 bbox 只
+    来自当前 PDF 的 PyMuPDF 页面快照，客户端 bbox 不直接成为 provenance；
+12. **交互与回退**：文字层支持显式确认、聚焦页边缘滚轮翻页与 loaded-revision
+    资源复用；重复/过期事件失败关闭。组件失败、文件变化、过大或缩放超门禁时
+    保留原 PyMuPDF 页面图像和复制文字块。
 
 ## 10. Translation 模块
 
@@ -829,7 +839,7 @@ T5-B1 另有 `code_change_proposal`、apply/rollback receipt 和 session-only au
 | 顶层工作区 | 文件 | 组成 |
 |------|------|------|
 | 本地资料库 | `app/views/library.py` | G1 点击导入、重开、修订、移除/恢复与删除；G2 显式浏览/来源链接；批准目录内 Windows 单 PDF 复制 |
-| 论文阅读与笔记 | `app/views/reader.py`、`actions.py`、`conversation.py`、`knowledge.py` | PDF 打开/阅读/搜索/选择；翻译、LaTeX、解释与追问；KnowledgeNote 和 Obsidian 导出 |
+| 论文阅读与笔记 | `app/views/reader.py`、`actions.py`、`conversation.py`、`knowledge.py` | G3 本地 PDF.js 文字层/确认选择与 PyMuPDF 回退；翻译、LaTeX、解释与追问；KnowledgeNote 和 Obsidian 导出；仅论文全宽、论文+代码响应式分栏、Ctrl+Shift+A AI 面板 |
 | 代码学习与复现 | `app/views/code_workspace.py` | 独立打开一个本地 Python 文件夹；初学/科研复现目标；静态项目概览；文件/符号/行选择；CodeContext 预览和非执行解释；可选代码 KnowledgeNote 预览/Obsidian 保存；显式证据链接；T5-B1 proposal/diff/确认/取消/恢复/回滚/审计 |
 | 只读研究助手 | `app/views/read_only_assistant.py` | 显示三个工具可用性；输入问题；开始/继续/停止；每步待发送结果；会话内审计元数据和独立 final |
 
@@ -946,7 +956,8 @@ T6-A 改变的是入口和学习组织，不扩大工具权限：
     - `reader.py`：打开、元数据、页面/文本块/嵌入位图区域提取、页面与图表裁剪渲染（含缩放）
     - `layout.py`：文本块阅读顺序、复制友好的断行整理和轻量结构角色分类
     - `search.py`：文档内文本搜索
-    - `errors.py`：PdfExtractionError 等
+    - `viewer_component/`：G3 CCv2/pdf.js 本地资源、事件契约和 PyMuPDF 文字/几何对账
+    - `errors.py`：PdfExtractionError、PdfViewerError 等
   - `translation/`
     - `base.py`：TranslationProvider 协议
     - `errors.py`：TranslationError
@@ -1105,7 +1116,7 @@ V2 to V3过渡要求.md 管理。在对应阶段完成前，下表的 Pending �
 | Zotero 元数据集成 | `integration/zotero` → 项目模型 → use cases → `zotero_links`（第 14 节） | V3-G2 只读个人资料库实现；用户确认人工验收通过 |
 | VS Code / 更多代码语言 | 当前 T3 本地 Python CodeContext 是证据基线；IDE、Notebook、Julia/R 等需另行评估 | 不实现 |
 | 网页等其他内容源 | 同上 | 不实现 |
-| 页面级划词/高亮/标注 | TextBlock 已带 bbox 坐标，届时只需在 UI 层实现 | 不实现 |
+| 页面级划词/高亮/标注 | G3 采用 CCv2/pdf.js 文字层和 PyMuPDF 对账；当前实现同页划词与确认选择，不含持久高亮/标注 | 划词已实现；持久高亮/标注不实现 |
 | OCR / 语义表格 / 图片公式 / 图表内容识别 | 在 `pdf/` 内新增能力，不影响其他模块 | 不实现；V1.3.2 仅对用户选择的文字层做 LaTeX 转换 |
 | 论文/代码工作资料库 | `database/` + managed assets + library view | V3-G1 已实现 |
 | 跨会话对话、证据篮与 NoteDraft | 后续单独 schema/门禁；不得复用会话对象做隐式保存 | 不实现 |
@@ -1162,8 +1173,16 @@ PRODUCT_SPEC.md、ARCHITECTURE.md 与 V2→V3 过渡要求的当前实现口径�
 
 后续若修改产品范围、架构边界或开发里程碑，必须同步检查这三份文档，避免再次出现术语或范围漂移。
 
-V3-G0/G1/G2 已完成。G2 元数据/来源链接与批准目录内 Windows 单 PDF 复制已实现；
-用户于 2026-09-04 明确确认“G2通过验收”，按用户人工验收反馈关闭阶段。G1/G2 都没有新增第三方
-运行时依赖；最新全量回归见 V3_G2_ZOTERO_VALIDATION.md，既有 Windows symlink
-环境 skip 保留。当前仍无 CCv2/pdf.js 生产组件、自动公式识别、持久笔记草稿或
-非 Python 解析器；G3 保持 Pending；本次验收确认不自动采用 CCv2/pdf.js 或启动实现。
+V3-G0/G1/G2/G3 已完成。G2 元数据/来源链接与批准目录内 Windows 单 PDF 复制已实现，
+用户于 2026-09-04 确认验收。G3 在隔离 CCv2/pdf.js 6.3.289 实验完成代表性语料、
+可信对账、跨行、双实例、滚轮/布局、长文档和安装 wheel 证据后，用户于
+2026-09-07 报告物理触控板验收通过并批准正式采用。生产组件位于
+`pdf/viewer_component/`：只接收 hash 绑定、上限 10 MiB 的本地 PDF bytes；浏览器
+事件经 `app/state.py` 暂存，再由当前页 PyMuPDF 文字/几何快照核对后映射为
+ReadingSelection。旧页面图像/文字块保留为回退；仅论文全宽、论文+代码分栏和
+输入安全 Ctrl+Shift+A 已接入正式工作台。Edge 152 正式验收 8/8 通过，0 page
+errors、0 external requests；1,041,404-byte wheel 含恰好一个 JS/CSS、组件清单与
+Apache-2.0 许可证，不含 node_modules/source maps。最终联合回归为 486 passed /
+1 个既有 Windows symlink 环境 skip。当前仍无自动公式识别、图片 OCR、持久
+NoteDraft 或非 Python 解析器；G4 尚未启动。完整证据见
+[G3 验收记录](V3_G3_PDF_WORKSPACE_SPIKE.md)。

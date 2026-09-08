@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "status": "isolated_spike_evidence",
+  "engine": "pdf.js/6.3.289 + PyMuPDF/1.28.2",
+  "browser": "152.0.4191.62",
+  "external_request_count": 0,
+  "documents": [
+    {
+      "id": "code_security",
+      "sample_page": 3,
+      "expected_text_layer": true,
+      "page_error_count": 0,
+      "required_attempts": 3,
+      "selection_attempts": 3,
+      "clipboard_matches": 3,
+      "reconciled_attempts": 3,
+      "locator_status_counts": {
+        "verified_text_geometry": 3
+      },
+      "failures": [],
+      "text_items": 563,
+      "passed": true
+    },
+    {
+      "id": "tidy_data",
+      "sample_page": 1,
+      "expected_text_layer": true,
+      "page_error_count": 0,
+      "required_attempts": 3,
+      "selection_attempts": 3,
+      "clipboard_matches": 3,
+      "reconciled_attempts": 3,
+      "locator_status_counts": {
+        "verified_unique_text_anchor": 1,
+        "verified_text_geometry": 2
+      },
+      "failures": [],
+      "text_items": 54,
+      "passed": true
+    },
+    {
+      "id": "statistical_learning",
+      "sample_page": 20,
+      "expected_text_layer": true,
+      "page_error_count": 0,
+      "required_attempts": 3,
+      "selection_attempts": 3,
+      "clipboard_matches": 3,
+      "reconciled_attempts": 3,
+      "locator_status_counts": {
+        "verified_text_geometry": 3
+      },
+      "failures": [],
+      "text_items": 102,
+      "passed": true
+    },
+    {
+      "id": "chinese_scan",
+      "sample_page": 1,
+      "expected_text_layer": false,
+      "page_error_count": 0,
+      "text_items": 0,
+      "degraded_without_selection": true,
+      "passed": true
+    },
+    {
+      "id": "pdfua_invoice",
+      "sample_page": 1,
+      "expected_text_layer": true,
+      "page_error_count": 0,
+      "required_attempts": 3,
+      "selection_attempts": 3,
+      "clipboard_matches": 3,
+      "reconciled_attempts": 3,
+      "locator_status_counts": {
+        "verified_unique_text_anchor": 1,
+        "verified_text_geometry": 2
+      },
+      "failures": [],
+      "text_items": 96,
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Visible text spans are sampled at 20%, 50%, and 80% of the page, not exhaustively labeled.",
+    "Automated wheel events are not physical-trackpad evidence.",
+    "Mathematical text-layer selection is not formula recognition or LaTeX reconstruction."
+  ],
+  "aggregate": {
+    "documents_passed": 5,
+    "digital_selection_attempts": 12,
+    "native_copy_matches": 12,
+    "server_reconciliations": 12,
+    "verified_text_geometry": 10,
+    "verified_unique_text_anchor": 2,
+    "external_requests": 0
+  },
+  "passed": true
+}

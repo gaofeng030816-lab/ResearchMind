@@ -31,7 +31,15 @@ rename/delete, bounded bytes, source-version/URL changes, consent invalidation,
 G1 parser/hash/storage and failed-link compensation. Use only synthetic files.
 G2 is Completed: the user confirmed manual acceptance on 2026-09-04; the recorded
 regression is 374 passed / 1 environment skip. Keep user-reported manual evidence
-separate from agent-observed execution and fake HTTP/AppTest. G3 remains Pending.
+separate from agent-observed execution and fake HTTP/AppTest. G3 is also Completed.
+Its isolated evidence covers five representative PDFs with 12/12 sampled digital
+selections, PyMuPDF reconciliation, cross-line/multi-instance behavior, wheel/
+shortcut/layout checks, long-document payload reuse, and an installed experimental
+wheel. The user separately reported physical-trackpad acceptance and approved formal
+adoption on 2026-09-07. Production Edge acceptance then passed 8/8 with 0 page errors
+and 0 external requests; the 1,041,404-byte wheel has exactly one JS/CSS plus manifest
+and license, and the combined regression is 486 passed / 1 environment skip. See
+docs/V3_G3_PDF_WORKSPACE_SPIKE.md. G4 has not started.
 
 Protect this loop in proportion to the change:
 

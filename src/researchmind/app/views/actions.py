@@ -153,4 +153,11 @@ def _selection_location_label(locator: dict[str, object]) -> str:
         bbox_label = ", ".join(f"{float(value):.1f}" for value in bbox)
     else:
         bbox_label = "未提供"
+    origin = locator.get("origin")
+    if origin == "pdfjs_text_layer_reconciled_with_pymupdf":
+        status = locator.get("locator_status", "已核对")
+        return (
+            f"第 {page} 页 · PDF.js 文字层 / PyMuPDF 服务端对账（{status}）"
+            f" · 文本块 {block} · bbox {bbox_label}"
+        )
     return f"第 {page} 页 · 文本块 {block} · bbox {bbox_label}"

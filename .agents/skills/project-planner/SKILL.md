@@ -26,10 +26,16 @@ The user approved single-PDF reads inside a configured attachment directory on
 2026-09-04. Windows copying now uses /file/view/url, scoped consent, locked ancestor/
 file handles, and G1 validation/storage. HTTP redirects remain rejected.
 Manual evidence is the user's explicit acceptance, not agent-observed live execution.
-G3 remains Pending. Read docs/V3_G2_ZOTERO_VALIDATION.md and the G3 gate before
-planning a separately requested G3 implementation.
-Web API/sync, CCv2/pdf.js adoption, formula-recognition providers and Tree-sitter
-packages still require their own named decisions.
+G3 is Completed. After its isolated corpus, reconciliation, interaction, performance,
+license and wheel evidence, the user reported physical-trackpad acceptance and
+approved production CCv2/pdf.js adoption on 2026-09-07. The production path uses
+hash-bound local bytes, a 10 MiB viewer limit, server-side PyMuPDF text/geometry
+reconciliation, stale/duplicate rejection, and the V2 image/text fallback. Formal
+Edge acceptance passed 8/8 with no page errors or external requests; the combined
+regression is 486 passed / 1 environment skip. Read
+docs/V3_G3_PDF_WORKSPACE_SPIKE.md before planning changes to that contract.
+G4 is the next planned stage and is not active. Zotero Web API/sync, formula-
+recognition providers and Tree-sitter packages still require their own named decisions.
 
 ## Product Test
 

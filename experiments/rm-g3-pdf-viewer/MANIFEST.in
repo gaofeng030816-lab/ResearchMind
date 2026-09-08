@@ -1,0 +1,4 @@
+recursive-include rm_g3_pdf_viewer/frontend/build *
+include pyproject.toml
+include LICENSE
+include THIRD_PARTY_NOTICES.md

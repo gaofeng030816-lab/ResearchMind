@@ -1,11 +1,11 @@
 # ResearchMind 产品规格说明书
 
-版本：2.0.0rc1 V2 Accepted + V3-G1/G2 source increment · 同步日期：2026-09-04 · 状态：V3-G0/G1 Completed，V3-G2 Completed（2026-09-04 用户确认人工验收通过）；V3-G3 Pending，T5-BX 未批准，不对外发布
-配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
+版本：2.0.0rc1 V2 Accepted + V3-G1/G2/G3 source increment · 同步日期：2026-09-08 · 状态：V3-G0/G1/G2/G3 Completed；V3-G4 尚未启动，T5-BX 未批准，不对外发布
+配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
 
-> 本文件描述已验收 `2.0.0rc1` 和其上的 V3-G1/G2 当前已实现能力；这不是公开
-> 发布或稳定公共 API 承诺。G2 的批准目录内 Windows 复制已实现，真实 Zotero 人工验收已由用户确认通过，其余
-> V3 目标也未实现。后续状态和采用门禁由 V2→V3 过渡要求管理。
+> 本文件描述已验收 `2.0.0rc1` 和其上的 V3-G1/G2/G3 当前已实现能力；这不是
+> 公开发布或稳定公共 API 承诺。G2 Zotero 只读复制和 G3 PDF 文字层的人工门禁
+> 已由用户确认；G4–G7 尚未实现。后续状态和采用门禁由 V2→V3 过渡要求管理。
 
 ## 1. 产品概述
 
@@ -62,7 +62,8 @@ V3-G2 又增加一个默认关闭的可选入口：
 另一路径是：配置批准的附件目录 → 选择一个 PDF → 单独确认 → Windows 只读
 复制 → G1 校验/托管 → 来源链接。使用 /file/view/url，HTTP 重定向仍拒绝；不支持
 网络路径、越界、重解析点或硬链接。原件不变；非 Windows/未配置时手动上传后链接。
-当前 adapter 要求 Zotero 10+ 的 server identity，缺失时失败，真实桌面验收仍待完成。
+当前 adapter 要求 Zotero 10+ 的 server identity，缺失时失败；用户已于
+2026-09-04 确认真实桌面人工验收通过。
 
 ## 2. 目标用户与核心场景
 
@@ -442,7 +443,8 @@ T5-B1 在普通代码解释旁提供一条独立受控修改旅程：
 | 2.0.0rc1 / T6（Completed） | 本地内部候选 | 自动门禁、代码索引优化、隔离安装/启动/诊断/恢复、用户确认的论文/代码/T5-B1 旅程，以及可选 Code→Obsidian 代码笔记已进入内部冻结；不公开发布 |
 | V3-G1（Completed） | 本地工作资料库与点击导入 | sqlite3 schema v1、托管 PDF/Python assets、重启重开、去重/修订、移除/删除和备份/恢复；不公开发布 |
 | V3-G2（Completed） | 可选 Zotero 只读来源 | GET-only 元数据、schema v2、显式 browse/link/unlink；批准目录内 Windows 单 PDF 复制及自动测试已完成，用户已确认人工验收通过；回归见 G2 验证记录 |
-| V3-G3–G7 | 页面划词、显式草稿、公式、多语言和加固 | 尚未启动，不提前描述为实现 |
+| V3-G3（Completed） | 页面划词与自适应工作台 | 用户确认触控板并批准正式 CCv2/pdf.js；选择经 PyMuPDF 对账进入 ReadingSelection，旧阅读器回退、全宽/分栏、AI 快捷键、Edge 8/8、wheel 和 486 passed / 1 skip 已完成 |
+| V3-G4–G7 | 显式草稿、公式、多语言和加固 | 尚未启动；不得把 G3 文字层选择描述为自动公式识别或持久笔记草稿 |
 
 ## 8. V2 内部验收标准
 
@@ -464,5 +466,9 @@ V3 需求已由用户确认；G0 规则同步和 G1 本地工作资料库已经�
 批准边界完成 Windows 单 PDF 复制和自动测试，用户已确认真实桌面验收通过。2.0.0rc1 的
 功能需求与验收标准保持独立，G1/G2 可回退而不改写 V2 基线。
 
-G2 已实现安全读取，用户于 2026-09-04 确认验收通过，状态为 Completed。G3 保持 Pending。G2
-确认不授权 Web API、Zotero 写入/同步、组资料库产品流或全库缓存。
+G2 已实现安全读取，用户于 2026-09-04 确认验收通过。G3 的隔离证据完成后，
+用户于 2026-09-07 确认物理触控板验收并正式采纳 CCv2/pdf.js；2026-09-08 已接入
+正式 ReadingSelection、PyMuPDF 回退、全宽/分栏和 AI 快捷键。Edge 正式验收
+8/8、0 页面错误/外部请求，生产 wheel 与最终 486 passed / 1 skip 通过。G3 状态
+为 Completed；G4 尚未启动。G2 确认不授权 Web API、Zotero 写入/同步、组资料库
+产品流或全库缓存。

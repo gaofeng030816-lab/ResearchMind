@@ -1,0 +1,7 @@
+[project]
+name = "researchmind"
+version = "2.0.0rc1"
+
+[[tool.streamlit.component.components]]
+name = "pdf_viewer"
+asset_dir = "pdf/viewer_component/frontend/assets"

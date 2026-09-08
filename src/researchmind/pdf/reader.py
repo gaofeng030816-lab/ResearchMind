@@ -28,6 +28,7 @@ from researchmind.pdf.layout import (
 
 
 DEFAULT_PDF_MAX_SIZE_BYTES = DEFAULT_PDF_MAX_SIZE_MB * 1024 * 1024
+DEFAULT_PDF_VIEWER_MAX_SIZE_BYTES = 10 * 1024 * 1024
 PDF_MAGIC = b"%PDF-"
 MAX_RENDER_ZOOM = 5.0
 MIN_FIGURE_DIMENSION = 24.0
@@ -47,6 +48,15 @@ class OpenedDocument:
     document: Document
     pages: tuple[Page, ...]
     max_size_bytes: int = field(repr=False)
+    content_sha256: str = field(default="", repr=False)
+
+
+@dataclass(frozen=True)
+class PdfViewerSource:
+    """Validated immutable bytes passed only to the local browser PDF viewer."""
+
+    content: bytes = field(repr=False)
+    revision: str
 
 
 def open_pdf(
@@ -58,6 +68,8 @@ def open_pdf(
 
     validated_path = _validate_pdf_file(path, max_size_bytes=max_size_bytes)
 
+    initial_revision = _file_revision(validated_path)
+    content_sha256 = _content_sha256(validated_path)
     try:
         with pymupdf.open(validated_path) as source:
             if source.needs_pass:
@@ -88,11 +100,16 @@ def open_pdf(
         raise PdfExtractionError(
             f"Could not read PDF file: {validated_path.name}"
         ) from exc
+    if _file_revision(validated_path) != initial_revision:
+        raise PdfExtractionError(
+            f"PDF changed while it was being opened: {validated_path.name}"
+        )
 
     return OpenedDocument(
         document=document,
         pages=pages,
         max_size_bytes=max_size_bytes,
+        content_sha256=content_sha256,
     )
 
 
@@ -122,6 +139,54 @@ def render_page_image(
         _file_revision(source_path),
         page_number,
         normalized_zoom,
+    )
+
+
+def load_pdf_viewer_source(
+    path: Path,
+    *,
+    expected_sha256: str,
+    max_size_bytes: int,
+    viewer_max_size_bytes: int = DEFAULT_PDF_VIEWER_MAX_SIZE_BYTES,
+) -> PdfViewerSource:
+    """Read one unchanged local PDF for the bounded browser viewer."""
+
+    from researchmind.pdf.errors import PdfViewerError
+
+    if (
+        not isinstance(expected_sha256, str)
+        or len(expected_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in expected_sha256)
+    ):
+        raise PdfViewerError("The opened PDF revision is invalid. Reopen the PDF.")
+    source_path = _validate_pdf_file(path, max_size_bytes=max_size_bytes)
+    if (
+        isinstance(viewer_max_size_bytes, bool)
+        or not isinstance(viewer_max_size_bytes, int)
+        or viewer_max_size_bytes <= 0
+    ):
+        raise PdfViewerError("PDF viewer size limit must be a positive integer.")
+    try:
+        size = source_path.stat().st_size
+    except OSError as exc:
+        raise PdfViewerError("PDF is no longer readable by the text-layer viewer.") from exc
+    if size > viewer_max_size_bytes:
+        limit_mib = viewer_max_size_bytes // (1024 * 1024)
+        raise PdfViewerError(
+            f"Browser text-layer viewing currently supports PDFs up to {limit_mib} MiB."
+        )
+    try:
+        content = source_path.read_bytes()
+    except OSError as exc:
+        raise PdfViewerError("PDF is no longer readable by the text-layer viewer.") from exc
+    actual_sha256 = hashlib.sha256(content).hexdigest()
+    if actual_sha256 != expected_sha256:
+        raise PdfViewerError(
+            "PDF changed after it was opened. Reopen it before using browser selection."
+        )
+    return PdfViewerSource(
+        content=content,
+        revision=f"sha256:{actual_sha256}",
     )
 
 
@@ -369,6 +434,17 @@ def _metadata_authors(metadata: dict[str, object]) -> list[str]:
 def _document_id(path: Path) -> str:
     normalized_path = str(path).casefold().encode("utf-8")
     return hashlib.sha256(normalized_path).hexdigest()[:16]
+
+
+def _content_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    try:
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+    except OSError as exc:
+        raise PdfValidationError(f"PDF file is not readable: {path.name}") from exc
+    return digest.hexdigest()
 
 
 def _validate_page_number(
