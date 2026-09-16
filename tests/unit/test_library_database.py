@@ -45,10 +45,12 @@ def test_new_database_is_migrated_and_validated(tmp_path: Path) -> None:
         "library_records",
         "asset_references",
         "zotero_links",
+        "note_drafts",
+        "evidence_snapshots",
     } <= tables
 
 
-def test_schema_v1_migrates_to_v2_without_losing_library_records(
+def test_schema_v1_migrates_to_current_without_losing_library_records(
     tmp_path: Path,
 ) -> None:
     database_path = tmp_path / "v1.sqlite3"
@@ -71,11 +73,12 @@ def test_schema_v1_migrates_to_v2_without_losing_library_records(
                 None,
             ),
         )
-
     initialize_database(database_path)
 
     with sqlite3.connect(database_path) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == (
+            LATEST_SCHEMA_VERSION
+        )
         assert connection.execute(
             "SELECT title FROM library_records WHERE id = ?",
             ("paper-before-g2",),
@@ -83,6 +86,86 @@ def test_schema_v1_migrates_to_v2_without_losing_library_records(
         assert connection.execute(
             "SELECT COUNT(*) FROM zotero_links"
         ).fetchone()[0] == 0
+        assert connection.execute(
+            "SELECT COUNT(*) FROM note_drafts"
+        ).fetchone()[0] == 0
+
+
+def test_schema_v2_migrates_to_v3_without_losing_sources(
+    tmp_path: Path,
+) -> None:
+    database_path = tmp_path / "v2.sqlite3"
+    with sqlite3.connect(database_path) as connection:
+        for version in (1, 2):
+            for statement in library_schema._MIGRATIONS[version]:
+                connection.execute(statement)
+        connection.execute("PRAGMA user_version = 2")
+        connection.execute(
+            """
+            INSERT INTO library_records(
+                id, kind, title, created_at, updated_at, removed_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "paper-before-g4",
+                "paper",
+                "Existing G2 paper",
+                "2026-09-02T08:00:00+00:00",
+                "2026-09-02T08:00:00+00:00",
+                None,
+            ),
+        )
+        connection.execute(
+            """
+            INSERT INTO zotero_links(
+                id, record_id, server_id, library_type, library_id,
+                item_key, item_version, item_type, title, creators_json,
+                publication_title, published_date, doi, url,
+                attachment_key, attachment_version, attachment_filename,
+                linked_at, observed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                "zotero-before-g4",
+                "paper-before-g4",
+                "server-before-g4",
+                "user",
+                "42",
+                "ITEMG400",
+                7,
+                "journalArticle",
+                "Existing G2 paper",
+                "[]",
+                "Journal",
+                "2026",
+                None,
+                None,
+                None,
+                None,
+                None,
+                "2026-09-02T08:00:00+00:00",
+                "2026-09-02T08:00:00+00:00",
+            ),
+        )
+
+    initialize_database(database_path)
+
+    with sqlite3.connect(database_path) as connection:
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert connection.execute(
+            "SELECT title FROM library_records WHERE id = ?",
+            ("paper-before-g4",),
+        ).fetchone()[0] == "Existing G2 paper"
+        assert connection.execute(
+            "SELECT COUNT(*) FROM note_drafts"
+        ).fetchone()[0] == 0
+        assert connection.execute(
+            "SELECT COUNT(*) FROM evidence_snapshots"
+        ).fetchone()[0] == 0
+        assert connection.execute(
+            "SELECT server_id FROM zotero_links WHERE id = ?",
+            ("zotero-before-g4",),
+        ).fetchone()[0] == "server-before-g4"
 
 
 def test_failed_migration_rolls_back_all_new_schema_objects(

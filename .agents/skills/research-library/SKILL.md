@@ -12,8 +12,15 @@ Read docs/ARCHITECTURE.md for implemented G1/G2 ownership and
 V2 to V3过渡要求.md for the active gate. G2 metadata/source linking is implemented,
 and the user-approved Windows single-attachment copy is implemented via
 /file/view/url plus locked local read handles. The user confirmed G2 manual acceptance on 2026-09-04; G2 is Completed.
-Preserve schema v2, G1 file ownership,
-recovery, and explicit source-link semantics; do not broaden to Web API or sync.
+G3 and G4 are Completed. The user confirmed G4 manual acceptance on 2026-09-09.
+Schema v3 has separate NoteDraft/EvidenceSnapshot tables, optimistic revisions,
+source-state checks, use cases, and backup/restore. G4 binds exact managed paper
+revisions to explicit source/translation evidence, exposes the persistent basket,
+restores drafts across sessions and invalidates an export preview when durable or
+source state changes. Preserve G1 file ownership/recovery and G2 source-link semantics;
+do not broaden to Web API or sync. G5 is Completed without a schema migration: only
+explicitly accepted formula LaTeX may reuse the existing EvidenceSnapshot table.
+Raw crops, recognizer responses and unaccepted candidates remain session-only.
 
 ## Product Boundary
 
@@ -30,8 +37,8 @@ replacement, Obsidian backlinks, or the user's long-term knowledge graph.
 
 ## Recommended Ownership
 
-- models: implemented LibraryRecord, AssetReference and ZoteroSourceLink;
-  NoteDraft and EvidenceSnapshot only after their later schema gate;
+- models: implemented LibraryRecord, AssetReference, ZoteroSourceLink, NoteDraft and
+  EvidenceSnapshot;
 - core: pure validation, deduplication, state transition, and deletion rules;
 - database: sqlite3 connection, schema, migrations, transactions, and repository
   implementations;
@@ -126,7 +133,9 @@ unless specifically approved.
 
 Persist only explicit NoteDraft content and selected evidence, not every chat turn.
 Keep draft revision/stale status. Editing and previewing a draft do not write the
-Vault; final save continues through integration/obsidian and remains non-overwriting.
+Vault; final save continues through integration/obsidian, requires a still-current
+revision/SHA-256-bound preview and remains non-overwriting. The database never stores
+the resulting Vault path as ownership of that external note.
 
 ## Security and Recovery
 

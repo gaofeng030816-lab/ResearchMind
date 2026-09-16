@@ -39,10 +39,18 @@ V3-G1/G2 adopted the following persistence shape:
 
 - database owns sqlite3 connections, schema versions, migrations, transactions, and
   repository implementations;
-- models owns LibraryRecord, AssetReference and ZoteroSourceLink; NoteDraft and
-  evidence snapshots remain later-gate concepts;
+- models owns LibraryRecord, AssetReference, ZoteroSourceLink, NoteDraft,
+  EvidenceSnapshot and the session-only NoteDraftPreview; completed G4 persists only
+  explicitly created drafts/evidence in schema v3, while conversation/session objects
+  remain transient;
 - core owns pure import, deduplication, deletion-state, and draft-selection rules;
 - integration/zotero owns the optional Zotero HTTP boundary and vendor JSON mapping.
+
+Completed G4 also keeps deterministic draft rendering and Vault I/O separate:
+app/use_cases.py reloads the current revision/evidence/source states, the Markdown
+renderer creates one exact preview, and integration/obsidian alone performs exclusive
+file creation. Never let a View write Markdown directly or let an unsaved/stale/
+hash-mismatched preview reach the writer.
 
 Do not create generic services, managers, repositories, adapters, or utilities without
 a demonstrated second use. Third-party objects and Streamlit UploadedFile values must
@@ -85,6 +93,11 @@ Keep viewer events, PDF extraction, and formula recognition separate. A CCv2/pdf
 selection event becomes a project ReadingSelection only after page/text/geometry and
 document-revision validation. Formula model output is an untrusted candidate that
 must cross strict LaTeX validation and explicit user edit/acceptance before capture.
+The completed G5 implementation keeps FormulaRegion/FormulaCrop/FormulaCandidate in
+models, local detection/cropping in pdf, provider networking in llm, transient raw
+bytes/candidates in app/state.py, and orchestration/revalidation in app/use_cases.py.
+Do not persist raw crops or unaccepted output, reuse consent across hashes, or add a
+local model/weight without a new dependency gate.
 
 ### Multilingual code
 

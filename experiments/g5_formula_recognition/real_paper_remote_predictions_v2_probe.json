@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "authorization": {
+    "scope": "18_hash_locked_formula_crops",
+    "destination": "dots_studio",
+    "model_revision": "dots3-note-prev",
+    "confirmed_on": "2026-09-13",
+    "case_count": 18
+  },
+  "predictions": [
+    {
+      "case_id": "1707.06347v2-009",
+      "status": "ok",
+      "latex": "L_t^{CLIP+VF+S}(\\theta) = \\hat{\\mathbb{E}}_t \\left[ L_t^{CLIP}(\\theta) - c_1 L_t^{VF}(\\theta) + c_2 S[\\pi_\\theta](s_t) \\right], \\tag{9}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 24943.27
+    },
+    {
+      "case_id": "2205.07246v3-004",
+      "status": "ok",
+      "latex": "\\tau_{t} = \\begin{cases} \\frac{1}{\\bar{C}}, & \\text{if } t = 0, \\\\ \\lambda \\tau_{t-1} + (1 - \\lambda) \\frac{1}{\\mu B} \\sum_{b=1}^{\\mu B} \\max(q_{b}), & \\text{otherwise,} \\end{cases} \\tag{5}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 31489.442
+    }
+  ]
+}

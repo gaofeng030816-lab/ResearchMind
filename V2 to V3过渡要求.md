@@ -1,6 +1,6 @@
 # ResearchMind V2 → V3 过渡要求与实施门禁
 
-版本：2026-09-08 · 当前实现基线：2.0.0rc1 V2 Accepted + V3-G1/G2/G3 增量 · 当前阶段：V3-G0/G1/G2/G3 Completed；V3-G4 尚未启动 · 不对外发布
+版本：2026-09-13 · 当前实现基线：2.0.0rc1 V2 Accepted + V3-G1–G5 增量 · 当前阶段：V3-G0–G5 Completed；G6/G7 Pending · 不对外发布
 
 ## 1. 文档目的与权威边界
 
@@ -197,8 +197,8 @@ ZoteroSourceLink；其余概念仍须在对应门禁固定 schema：
 | V3-G1 本地资料库与点击导入 | Completed | SQLite、迁移、托管文件、论文/代码导入和资料库打开 | 重启、迁移、补偿、去重、修订、删除、备份/恢复和 AppTest 已覆盖 |
 | V3-G2 Zotero 只读连接 | Completed（用户确认） | API 浏览/链接及批准目录内 Windows 单 PDF 复制已实现 | 374 passed / 1 skip；真实 Zotero 人工验收已由用户确认通过 |
 | V3-G3 PDF 文字层与自适应工作台 | Completed（用户确认） | CCv2/pdf.js 划词、全宽/分栏、AI 快捷键、滚轮交互 | 用户确认物理触控板并批准采用；正式 ReadingSelection 对账、回退、Edge 8/8、wheel 与 486 passed / 1 skip 已完成 |
-| V3-G4 划词翻译与显式笔记草稿 | Pending | 选择即翻译、证据篮、编辑/预览/可选保存 | fake provider、包含/排除、重启、Vault 非覆盖 |
-| V3-G5 公式识别与 LaTeX | Pending | 区域检测、crop 识别、编辑接受和笔记 | 标注公式集、结构质量、隐私、错误 UX、性能 |
+| V3-G4 划词翻译与显式笔记草稿 | Completed（用户确认） | schema v3 草稿/证据、准确翻译预览、显式证据篮、可编辑正文、同版预览与明确 Vault 输出 | 42 focused；425 passed / 1 skip；G3 联合 524 passed / 1 skip；Edge 8/8；用户确认通过 |
+| V3-G5 公式识别与 LaTeX | Completed | 区域检测、单 crop 识别、编辑接受和可选笔记证据 | 20 合成 + 18 真实标注、隐私/错误/性能、Edge 假服务旅程、全量回归 |
 | V3-G6 多语言 CodeContext | Pending | Python/C/Java/Julia/R 静态解析 | 五语言 fixture、Python parity、无执行、性能 |
 | V3-G7 V3 加固与内部验收 | Pending | 数据恢复、安全、性能、完整旅程和人工验收 | 全量回归、迁移/恢复、浏览器、隐私、用户确认 |
 
@@ -317,19 +317,63 @@ ReadingSelection；重复、过期、跨页和伪造事件被拒绝。旧 PyMuPD
 文字块继续作为回退。正式 Edge 152 验收 8/8 项通过，0 页面错误、0 外部请求；
 生产 wheel 为 1,041,404 bytes，恰有一个 JS 和一个 CSS，并含组件清单、声明与
 Apache-2.0 许可证，不含 node_modules/source map。最终联合回归为 486 passed /
-1 个既有 Windows symlink 环境 skip。G3 标记 Completed；G4 是下一计划阶段，
-本次验收不自动启动 G4。
+1 个既有 Windows symlink 环境 skip。G3 标记 Completed；G4 后续已单独启动并
+于 2026-09-09 完成，本段保留 G3 关闭时的历史边界。
 
 ### V3-G4：划词翻译与显式笔记
 
 把 G3 的 ReadingSelection 接入现有独立 TranslationProvider；引入证据篮和持久
 NoteDraft。用户可编辑 Markdown，预览和保存分开，未选中的对话不进入笔记。
 
+本阶段于 2026-09-08 启动，用户同日确认 G4-A。G4-B 已把数据库提升到 schema
+v3，并实现 `note_drafts` 与 `evidence_snapshots`、纯校验、乐观 revision、显式
+证据包含/排序、来源 stale/detached 判断、应用 use cases 和备份恢复。测试仅使用
+临时数据；G4-B 专项 40 passed，联合回归 513 passed / 1 个既有 Windows symlink
+环境 skip。G4-C 随后实现准确选择/目标语言预览、点击后才调用翻译、资料库修订
+绑定、原文/译文独立加入，以及包含/排序/移除证据篮；兼容消息选择默认为空。
+G4-C 当时的默认生产套件为 418 passed / 1 skip，含 G3 实验的联合回归为
+517 passed / 1 skip。
+
+G4-C 已把 G3 选择接入翻译卡和证据篮：划词只填充本地卡片，仍需点击后才将准确
+选择发送给现有翻译服务；证据也只有点击后持久化。G4-D 已实现可编辑 Markdown
+正文、显式本地保存、由持久修订与已包含证据确定性合成的预览，以及需再次确认的
+非覆盖 Vault 交接。未保存编辑、证据/来源状态变化或预览 SHA-256 不一致都会阻止
+旧预览写入；最终文件字节与所确认预览一致。
+
+G4-E 的聚焦集合为 42 passed；默认生产回归为 425 passed / 1 个既有 Windows
+symlink 环境 skip；包含两套 G3 PDF 实验的联合回归为 524 passed / 1 skip。
+隔离本机 Edge 152 旅程 8/8 通过，覆盖无自动 Vault 写、未保存编辑拦截、显式
+本地保存、当前来源预览、确认写入和新浏览器会话重开；0 page errors，0 external
+requests。用户于 2026-09-09 明确回复“G4通过验收”，G4 据此标记 Completed。
+该确认不启动 G5，也不授权公式识别器、OCR、远程 crop 传输或新依赖。方案、实现
+证据与回滚见
+[G4 架构与验证](docs/V3_G4_NOTE_COMPOSER_DECISION.md)。
+
 ### V3-G5：公式识别
 
 固定真实数学论文/合成标注语料、现有 V2/Spike baseline 和采用阈值，再比较候选。
 生产版本必须有公式 provenance、严格 LaTeX 校验、用户编辑/接受、失败回退和 crop
 外发提示。整篇 PDF→LaTeX 不在本阶段。
+
+G5 已完成。LaTeX_OCR_PRO 因 GPL-3.0、旧 TensorFlow、缺少数据/权重和 shell
+边界被拒绝；pix2tex 0.1.4 虽为 MIT，但因默认下载未固定哈希的外部权重、重依赖、
+Python 3.12/Windows/CPU 证据不足而延后，均未安装或执行。当前采用窄
+FormulaRecognizer 协议和既有 dots3-note-prev 的单 crop 视觉 adapter。
+
+生产链路只在本机检测当前页并生成一张 bounded PNG；显示精确 hash、模型和外发范围
+后，用户必须为该 crop 单独勾选并点击。候选经过严格 LaTeX 校验，仍须编辑/接受才
+渲染，且只有已接受内容可选加入 G4 证据篮。raw crop、未接受输出和 provider 原始
+响应不持久化，不发送路径、PDF、正文、历史或笔记。
+
+20 条合成集达到 100% coverage、95% normalized exact、99.41% mean token
+similarity 和 100% structural exact，全部预设阈值通过。用户授权的三篇论文固定
+18 个 region：detector 保留 18/18，候选由 128 减到 78；recognizer 18/18 返回且
+100% strict-valid、95.09% token、100% structure。真实 exact 只有 11.11%，说明
+它是需人工确认的候选而非原源码恢复。Edge 152 假服务完整旅程 10/10，无页面错误，
+识别前无外联；生产回归 474 passed / 1 个既有环境 skip，加入 G3 实验为
+573 passed / 1 skip。详见
+[G5 架构与质量门禁](docs/V3_G5_FORMULA_RECOGNITION_DECISION.md)。G5 完成不自动
+启动 G6，也不授权本地权重、批量/后台识别或整篇 PDF→LaTeX。
 
 ### V3-G6：多语言代码
 

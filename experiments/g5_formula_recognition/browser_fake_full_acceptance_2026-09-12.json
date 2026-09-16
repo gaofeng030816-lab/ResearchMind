@@ -1,0 +1,20 @@
+{
+  "browser": "152.0.4191.66",
+  "checks": [
+    "the synthetic 20-page PDF opens in the paper workspace",
+    "page navigation reaches the finite-sum page",
+    "local detector finds one bounded formula region",
+    "crop preview exposes exact hash and bounded transfer scope",
+    "recognition and candidate editing stay unavailable before consent",
+    "exact-crop consent enables only the explicit recognition button",
+    "recognizer output remains editable and unsaved before acceptance",
+    "explicit acceptance unlocks rendering and evidence capture",
+    "only accepted LaTeX enters the persistent evidence basket",
+    "the pre-recognition journey produces no external request or page error"
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "cropSha256": "58b7bf3abe0f8cea2b77e3aac56656f8bf64120bf82320da35ba60ca4085e639",
+  "fullFakeFlow": true,
+  "failure": null
+}

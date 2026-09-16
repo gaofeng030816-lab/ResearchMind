@@ -1,11 +1,14 @@
 # ResearchMind 产品规格说明书
 
-版本：2.0.0rc1 V2 Accepted + V3-G1/G2/G3 source increment · 同步日期：2026-09-08 · 状态：V3-G0/G1/G2/G3 Completed；V3-G4 尚未启动，T5-BX 未批准，不对外发布
-配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
+版本：2.0.0rc1 V2 Accepted + V3-G1–G5 source increment · 同步日期：2026-09-13 · 状态：V3-G0–G5 Completed；G6/G7 Pending，T5-BX 未批准，不对外发布
+配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
 
-> 本文件描述已验收 `2.0.0rc1` 和其上的 V3-G1/G2/G3 当前已实现能力；这不是
+> 本文件描述已验收 `2.0.0rc1` 和其上的 V3-G1–G5 当前已实现能力；这不是
 > 公开发布或稳定公共 API 承诺。G2 Zotero 只读复制和 G3 PDF 文字层的人工门禁
-> 已由用户确认；G4–G7 尚未实现。后续状态和采用门禁由 V2→V3 过渡要求管理。
+> 已由用户确认；G4 的持久草稿/证据、点击翻译、可编辑 Markdown、同版预览和
+> 明确 Vault 输出也已于 2026-09-09 通过用户验收。G5 已完成本地单公式检测/crop、
+> 逐 crop 外发确认、可编辑/校验/接受和可选公式证据；G6–G7 尚未启动。后续状态和
+> 采用门禁由 V2→V3 过渡要求管理。
 
 ## 1. 产品概述
 
@@ -411,13 +414,13 @@ T5-B1 在普通代码解释旁提供一条独立受控修改旅程：
 | 长期知识管理/双向链接体系（Obsidian 已有） | 永不（不替代 Obsidian） |
 | 在 PDF 页面图像上精细划词（文字层选择） | Post-V2 候选；等待 V3 要求，不阻塞 V2 验收 |
 | PDF 标注、高亮、书签 | Post-V2 候选；等待 V3 要求 |
-| 图片公式 OCR、自动公式区域识别、自动整页公式重建、语义表格识别、OCR、图表内容理解 | 用户已明确排除于 V2；作为 V3 候选。V2 仅把用户确认的数字文字层选择交给现有 LLM 做受限 LaTeX 转换 |
+| 整页/整篇 PDF→LaTeX、扫描整页 OCR、语义表格和图表内容理解 | G5 只检测当前页 bounded 候选并识别用户确认的一张 crop；不得扩成批量、后台或原源码恢复 |
 | 通用 TeX 文档编辑/编译、宏执行、LaTeX 文件或网络访问 | 不属于当前科研阅读闭环；确有文档生成需求时单独评审 |
 | 页面定位（跳转到原文位置高亮） | Post-V2 候选；等待 V3 要求 |
 | 高级章节树、跨页图表语义关联与学习式结构识别 | Post-V2 候选；当前仅有保守规则线索 |
 | Zotero 写入/双向同步、Web API、组资料库产品流或全库缓存 | G2 仅实现默认关闭的个人资料库 Local API 只读流；其他能力需独立门禁 |
 | 跨论文搜索、复杂 RAG | 候选（未排期，确需再评估） |
-| 跨会话对话、证据篮和 NoteDraft 持久化 | G1 数据库只服务工作资料库；草稿属于后续独立门禁 |
+| 跨会话对话、证据篮和 NoteDraft 持久化 | G4 已实现显式草稿/证据、证据篮、可编辑正文、同版预览与明确 Vault 输出；对话仍不持久 |
 | Julia/R/C/C++/Notebook、跨文件调用图或 IDE 深度集成 | T3 仅支持本地 UTF-8 Python；其他来源另行评估 |
 | 自动 Paper ↔ Code 发现、模型推断链接、联合论文/代码 prompt | T4 仅实现用户确认、会话内链接；自动化需后续独立评测 |
 | 超出 T5-B1 当前选择单范围的代码生成/修改；运行 shell/测试、安装依赖或其他模型工具 | 未授权；执行需独立 T5-BX 沙箱 Spike 与权限门禁 |
@@ -444,7 +447,9 @@ T5-B1 在普通代码解释旁提供一条独立受控修改旅程：
 | V3-G1（Completed） | 本地工作资料库与点击导入 | sqlite3 schema v1、托管 PDF/Python assets、重启重开、去重/修订、移除/删除和备份/恢复；不公开发布 |
 | V3-G2（Completed） | 可选 Zotero 只读来源 | GET-only 元数据、schema v2、显式 browse/link/unlink；批准目录内 Windows 单 PDF 复制及自动测试已完成，用户已确认人工验收通过；回归见 G2 验证记录 |
 | V3-G3（Completed） | 页面划词与自适应工作台 | 用户确认触控板并批准正式 CCv2/pdf.js；选择经 PyMuPDF 对账进入 ReadingSelection，旧阅读器回退、全宽/分栏、AI 快捷键、Edge 8/8、wheel 和 486 passed / 1 skip 已完成 |
-| V3-G4–G7 | 显式草稿、公式、多语言和加固 | 尚未启动；不得把 G3 文字层选择描述为自动公式识别或持久笔记草稿 |
+| V3-G4（Completed） | 划词翻译与显式笔记草稿 | schema v3、点击翻译、来源绑定、显式证据篮、可编辑正文、同版预览与确认式非覆盖 Vault 输出；425 passed / 1 skip，G3 联合 524 passed / 1 skip，Edge 8/8，用户确认通过 |
+| V3-G5（Completed） | 单公式识别与 LaTeX | 本地检测/crop、精确外发预览和逐次同意、provider-neutral recognizer、可编辑/严格校验/接受、可选 G4 证据；48 focused、474 production / 1 skip |
+| V3-G6–G7 | 多语言和加固 | 尚未启动 |
 
 ## 8. V2 内部验收标准
 
@@ -470,5 +475,9 @@ G2 已实现安全读取，用户于 2026-09-04 确认验收通过。G3 的隔�
 用户于 2026-09-07 确认物理触控板验收并正式采纳 CCv2/pdf.js；2026-09-08 已接入
 正式 ReadingSelection、PyMuPDF 回退、全宽/分栏和 AI 快捷键。Edge 正式验收
 8/8、0 页面错误/外部请求，生产 wheel 与最终 486 passed / 1 skip 通过。G3 状态
-为 Completed；G4 尚未启动。G2 确认不授权 Web API、Zotero 写入/同步、组资料库
+为 Completed。G4 于 2026-09-08 启动并在 2026-09-09 由用户确认验收；现已实现
+schema v3 显式草稿/证据、准确翻译预览、点击调用、资料库来源绑定、证据篮、
+可编辑 Markdown、revision/SHA-256 绑定预览和确认式非覆盖 Vault 输出。最终
+联合回归为 524 passed / 1 skip，Edge 152 为 8/8。G2/G4 确认不授权 Web API、
+Zotero 写入/同步、组资料库
 产品流或全库缓存。

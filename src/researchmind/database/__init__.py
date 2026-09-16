@@ -19,6 +19,7 @@ from researchmind.database.backup import (
     restore_library_backup,
 )
 from researchmind.database.repository import LibraryRepository
+from researchmind.database.note_draft_repository import NoteDraftRepository
 from researchmind.database.schema import (
     LATEST_SCHEMA_VERSION,
     initialize_database,
@@ -49,6 +50,7 @@ __all__ = [
     "LibraryMigrationError",
     "LibraryNotFoundError",
     "LibraryRepository",
+    "NoteDraftRepository",
     "LibrarySchemaError",
     "LibraryVersionError",
     "ManagedStorage",

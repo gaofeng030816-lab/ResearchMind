@@ -1,0 +1,10 @@
+{
+  "browser": "152.0.4191.66",
+  "checks": [
+    "the synthetic 20-page PDF opens in the paper workspace",
+    "page navigation reaches the finite-sum page"
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "cropSha256": null
+}

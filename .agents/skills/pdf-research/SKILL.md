@@ -11,8 +11,14 @@ Preserve the accepted PyMuPDF V2 baseline until a V3 gate adopts a measured chan
 Read docs/ARCHITECTURE.md for current behavior, V2 to V3过渡要求.md for the active
 gate, and docs/PDF_FORMULA_LATEX_SPIKE.md when formula recognition is involved.
 V3-G3 adopted a locally bundled CCv2/pdf.js 6.3.289 text layer on top of the stable
-G1 PDF identity/revision. It did not adopt a formula detector, OCR, recognizer, or
-whole-PDF conversion.
+G1 PDF identity/revision. V3-G4 subsequently completed click-only translation and
+explicit evidence/draft capture from verified ReadingSelection values. V3-G5 is
+Completed: `pdf/formulas.py` owns revision-bound local detection and one bounded PNG
+crop; `llm/formula_recognizer.py` owns the narrow provider protocol and adopted
+OpenAI-compatible remote adapter. Exact crop preview/consent, edit/validate/accept and
+optional evidence capture are required. No local OCR weight, scanned-page OCR or
+whole-PDF conversion is adopted; read
+docs/V3_G5_FORMULA_RECOGNITION_DECISION.md.
 
 ## Separate the Responsibilities
 
@@ -41,8 +47,8 @@ The current G3 browser-selection contract is:
    current-page PyMuPDF text/geometry reconciliation;
 4. reject stale/duplicate/cross-instance events and retain the V2 image/text fallback.
 
-Better mathematics remains a later gate: separately benchmark formula detectors and
-recognizers on labeled crops, and adopt only a provider that meets that gate.
+Further detector precision or a local recognizer remains a new measured change:
+benchmark on the locked G5 corpora and do not weaken the adopted per-crop boundary.
 
 Native st.pdf may be compared for viewing, but its packaged dependency and event
 surface must be verified; it is not assumed to expose the selection provenance V3

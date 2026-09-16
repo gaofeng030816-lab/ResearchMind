@@ -160,3 +160,39 @@ def test_schema_v1_backup_restores_then_migrates_to_current_version(
         assert connection.execute(
             "SELECT COUNT(*) FROM zotero_links"
         ).fetchone()[0] == 0
+
+
+def test_backup_and_restore_preserve_explicit_note_draft(
+    tmp_path: Path,
+) -> None:
+    settings = Settings(researchmind_data_dir=tmp_path / "library")
+    draft = use_cases.create_note_draft(
+        "Durable draft",
+        body_markdown="## Editable\n",
+        settings=settings,
+    )
+    draft, evidence = use_cases.add_note_evidence(
+        draft.id,
+        kind="question",
+        content="Why does this converge?",
+        source_label="User question",
+        origin="user_question",
+        expected_draft_revision=1,
+        settings=settings,
+    )
+    archive = tmp_path / "draft-library.zip"
+    use_cases.backup_local_library(archive, settings=settings)
+    restored_root = tmp_path / "restored-draft-library"
+
+    use_cases.restore_local_library_backup(
+        archive,
+        restored_root,
+        settings=settings,
+    )
+    restored = Settings(researchmind_data_dir=restored_root)
+
+    assert use_cases.get_note_draft(draft.id, settings=restored) == draft
+    assert use_cases.list_note_evidence(
+        draft.id,
+        settings=restored,
+    ) == [evidence]

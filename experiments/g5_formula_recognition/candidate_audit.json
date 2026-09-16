@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-09-09",
+  "candidate": {
+    "name": "LaTeX_OCR_PRO",
+    "upstream": "https://github.com/LinXueyuanStdio/LaTeX_OCR_PRO",
+    "citation_year_in_readme": 2024,
+    "snapshot_files": 110,
+    "snapshot_bytes": 1219390
+  },
+  "inspection": {
+    "candidate_code_executed": false,
+    "dependencies_installed": false,
+    "files_copied_into_researchmind": false,
+    "license": "GPL-3.0",
+    "data_submodule_present": false,
+    "model_weights_present": false,
+    "declared_cpu_runtime": "Python 3.5 + TensorFlow 1.12.2",
+    "declared_gpu_runtime": "TensorFlow GPU 1.15.5 + CUDA 9.0 + cuDNN 7.0"
+  },
+  "useful_concepts": [
+    {"concept": "tight grayscale crop with bounded padding", "status": "implemented_clean_room_g5_a"},
+    {"concept": "formula-aware token normalization before scoring", "status": "implemented_clean_room_g5_a"},
+    {"concept": "exact, token-edit and structure quality evidence", "status": "implemented_clean_room_g5_a"},
+    {"concept": "fixed reference LaTeX rendered into reproducible image fixtures", "status": "implemented_clean_room_g5_a"},
+    {"concept": "separate top-ranked and alternate decoder candidates", "status": "design_input_for_g5_b"},
+    {"concept": "render-back visual comparison", "status": "deferred_until_safe_renderer_decision"}
+  ],
+  "rejected_for_direct_production_adoption": [
+    "GPL source is not copied into the current ResearchMind codebase",
+    "the declared Python and TensorFlow stack is incompatible with Python 3.12",
+    "the snapshot contains neither the data submodule nor usable model weights",
+    "PDF conversion and normalization invoke shell commands with shell=true",
+    "the Django demo accepts path-like input and is not the bounded crop contract",
+    "reported historical scores are not reproducible from this snapshot"
+  ],
+  "key_file_sha256": {
+    "README.md": "7000205F923C9713995722246DA579A170516F74C0C1529A289C02C85DCE2A4F",
+    "LICENSE": "3972DC9744F6499F0F9B2DBF76696F2AE7AD8AF9B23DDE66D6AF86C9DFB36986",
+    "requirements.txt": "3CEC61696B1B1A3B5A5A2AAE56BFC7CCFE210DD0DAE1EE305DE304205BC85E22",
+    "requirements-gpu.txt": "4C5185EC4F81D5C1941F7A322671124B1970C5ED7DB530142EF8B3D098FB15C7",
+    "predict.py": "06C53E4921E362A20A72E5583E2C3915DE98F719999F67CE6671BC0F48636E54",
+    "model/utils/image.py": "83A8D09381B8B8525927707509268E686D32F87110CD87D65DEFEC1134839E35",
+    "model/evaluation/text.py": "62B778AC58FC53DB45E09A935A6BF9A652606F4101E110E1B90D96D45DFD3412",
+    "model/evaluation/image.py": "7BF6F24EA91573E37DCCEC975853E2B2FA5B2F0DF0B94839A073B65DC871A5D1",
+    "data_preprocess/preprocess_formulas.py": "13C681DE63F6A6C86DBB08B5D08BD4F3B0D64A5B3C0C1644E9401264AC0B3025"
+  }
+}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from itertools import count
 from pathlib import Path
 import re
@@ -12,7 +13,10 @@ from researchmind.integration.obsidian.errors import (
     VaultConfigurationError,
     VaultWriteError,
 )
-from researchmind.integration.obsidian.markdown import render_markdown
+from researchmind.integration.obsidian.markdown import (
+    MAX_DRAFT_EXPORT_CHARACTERS,
+    render_markdown,
+)
 from researchmind.models import KnowledgeNote
 
 
@@ -38,9 +42,35 @@ def write_note_to_vault(
     """Render and exclusively create one Markdown file inside the Vault."""
 
     markdown = render_markdown(note)
+    return write_markdown_to_vault(
+        title=note.title,
+        markdown=markdown,
+        created_at=note.created_at,
+        vault_path=vault_path,
+        subdirectory=subdirectory,
+    )
+
+
+def write_markdown_to_vault(
+    *,
+    title: str,
+    markdown: str,
+    created_at: datetime,
+    vault_path: Path,
+    subdirectory: str,
+) -> Path:
+    """Exclusively create one already-previewed Markdown document."""
+
+    if (
+        not isinstance(markdown, str)
+        or not markdown.strip()
+        or "\x00" in markdown
+        or len(markdown) > MAX_DRAFT_EXPORT_CHARACTERS
+    ):
+        raise MarkdownRenderError("Markdown export content is invalid or too large.")
     output_directory = _prepare_output_directory(vault_path, subdirectory)
     filename_stem = (
-        f"{note.created_at.date().isoformat()}-{sanitize_filename(note.title)}"
+        f"{created_at.date().isoformat()}-{sanitize_filename(title)}"
     )
 
     for collision_index in count(1):

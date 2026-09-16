@@ -23,3 +23,7 @@ class PdfRenderError(PdfError):
 
 class PdfViewerError(PdfError):
     """Raised when the optional browser text-layer viewer cannot be used safely."""
+
+
+class PdfFormulaError(PdfError):
+    """Raised when a formula region or crop cannot be produced safely."""

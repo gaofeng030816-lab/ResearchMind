@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-09-13",
+  "candidate": {
+    "name": "pix2tex",
+    "version": "0.1.4",
+    "upstream": "https://github.com/lukas-blecher/LaTeX-OCR/",
+    "package_source": "PyPI wheel metadata",
+    "wheel_sha256": "a024309508fc3e8a4ce5241e095276626d098df53e609410013f2ec35a4b7612",
+    "wheel_bytes": 427031,
+    "license": "MIT"
+  },
+  "inspection": {
+    "wheel_installed": false,
+    "candidate_code_executed": false,
+    "model_weights_downloaded": false,
+    "network_inference_run": false,
+    "requires_python_declared": false,
+    "windows_specific_dependency": "pyreadline3>=3.4.1",
+    "runtime_dependencies": [
+      "torch>=1.7.1",
+      "opencv-python-headless>=4.1.1.26",
+      "transformers>=4.18.0",
+      "tokenizers>=0.13.0",
+      "x-transformers==0.15.0",
+      "timm==0.5.4",
+      "albumentations>=0.5.2,<=1.4.24"
+    ]
+  },
+  "supply_chain_findings": [
+    "Constructing the default CLI model downloads weights.pth and image_resizer.pth when the checkpoint is absent.",
+    "The checkpoint downloader follows redirects and writes downloaded bytes without a pinned artifact hash.",
+    "The wheel contains no inference weights, so an offline fixed-corpus comparison is not available from the wheel alone.",
+    "The metadata does not declare a Requires-Python bound, so Python 3.12 compatibility is not established by packaging metadata.",
+    "The dependency set is materially larger than the current ResearchMind runtime and needs a separate Windows CPU/GPU packaging spike."
+  ],
+  "decision": {
+    "production_adoption": "deferred",
+    "reason": "The license is acceptable, but offline weight provenance, pinned downloads, Python 3.12 and Windows packaging, model size, cold start, CPU latency and fixed-corpus quality are not proven.",
+    "g5_effect": "No local model dependency or weight is adopted. The narrow FormulaRecognizer boundary remains available for a later local adapter."
+  }
+}

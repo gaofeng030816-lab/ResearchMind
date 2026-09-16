@@ -1,6 +1,6 @@
-# ResearchMind 系统架构（V2 Accepted + V3-G1/G2/G3 增量）
+# ResearchMind 系统架构（V2 Accepted + V3-G1–G5 增量）
 
-版本：2.0.0rc1 V2 Accepted + V3-G1/G2/G3 source increment · 同步日期：2026-09-08 · 状态：V3-G0/G1/G2/G3 Completed；V3-G4 尚未启动，T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
+版本：2.0.0rc1 V2 Accepted + V3-G1–G5 source increment · 同步日期：2026-09-13 · 状态：V3-G0–G5 Completed；G6/G7 Pending，T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
 
 > 验收口径：项目于 2026-09-01 完成 **V2 Internal Acceptance**。用户于 2026-08-31
 > 明确将自动公式区域识别、图片公式 OCR 和整页 PDF→LaTeX 排除在 V2 验收之外；
@@ -33,6 +33,16 @@
 > 明确链接条目的来源快照。V3-G3 采用本地 CCv2/pdf.js 文字层，并由 PyMuPDF
 > 对当前页候选选择做服务端文字/几何对账；它没有引入公式识别、非 Python
 > 解析、草稿/对话持久化，也不改变 V2 外部项目的受控写入合同。
+>
+> V3-G4 已于 2026-09-09 完成并由用户确认验收。除 schema v3、持久
+> NoteDraft/EvidenceSnapshot、准确翻译发送预览和显式证据篮外，G4-D 已加入
+> 可编辑正文、显式本地保存、确定性来源附录、revision/SHA-256 绑定预览和明确
+> 的非覆盖 Vault 交接。`KnowledgeNote` 和 Conversation 仍是既有会话路径，
+> 不会自动迁移或成为证据。V3-G5 已采用本地、revision-bound 的公式区域检测和
+> 单 crop 渲染，以及 provider-neutral FormulaRecognizer 和现有 OpenAI-compatible
+> 视觉 adapter。远程模式必须先展示精确 crop/hash/模型/外发范围并逐条确认；输出
+> 只有严格校验、编辑并明确接受后才渲染，且只能由用户选择是否进入 G4 证据篮。
+> 它不是整篇 PDF→LaTeX 或原论文 TeX 源码恢复，也未采用本地 OCR 权重。
 
 ## 1. 产品定位与系统边界
 
@@ -122,16 +132,17 @@ ZIP/manifest、哈希/托管文件暂存，以及 V3-G2 的 loopback HTTP。这�
 - 向量数据库、复杂 RAG 系统：V1 的上下文是"当前论文 + 当前选择"，不需要全文向量检索；
 - ORM：V3-G1 已采用标准库 sqlite3；当前不引入 ORM 或数据库服务器。
 
-### 3.3 数据库：V1/V2 历史边界与 V3-G1/G2 当前实现
+### 3.3 数据库：V1/V2 历史边界与 V3-G1/G2/G4 当前实现
 
 V1/V2 的历史判断仍成立：论文按会话从文件系统打开、对话在会话内存活、知识
 以 Markdown 文件写入 Obsidian Vault，当时没有需要数据库承担的数据。
 
 V3-G1 因用户明确要求跨重启论文/代码工作资料库而触发持久化门禁，当前采用：
 
-- `RESEARCHMIND_DATA_DIR/researchmind.sqlite3`：schema version 2，包含
-  `library_records`、`asset_references` 和 `zotero_links`；v1→v2 原子迁移保留
-  现有记录，旧 v1 备份恢复后也会迁移；
+- `RESEARCHMIND_DATA_DIR/researchmind.sqlite3`：schema version 3，包含
+  `library_records`、`asset_references`、`zotero_links`、`note_drafts` 和
+  `evidence_snapshots`；v1→v2→v3 原子迁移保留既有记录与 Zotero 来源，旧版本
+  备份恢复后也会迁移；
 - `zotero_links` 每个论文最多一个来源，并对
   `server_id/library_type/library_id/item_key` 唯一；保存版本和有界元数据快照，
   不保存 Zotero 凭据、整库缓存或 PDF blob；
@@ -144,10 +155,12 @@ V3-G1 因用户明确要求跨重启论文/代码工作资料库而触发持久�
 - 备份保存 SQLite 一致快照、托管 assets 和 checksummed manifest；恢复只到
   不存在且不与当前数据目录/Vault 重叠的新目录。
 
-当前持久化只覆盖工作资料库、托管资产和用户明确建立的 Zotero 来源链接。
-Conversation、ReadingSelection、
-CodeSelection、EvidenceLink、KnowledgeNote 预览和 NoteDraft 仍不跨重启；后续
-草稿 schema 必须在其自身门禁中设计，不能把 G1 的库表当作通用状态数据库。
+当前持久化覆盖工作资料库、托管资产、用户明确建立的 Zotero 来源链接，以及
+G4 的显式 NoteDraft/EvidenceSnapshot。证据来源内容与可编辑 Markdown 分表，
+包含/排序和正文编辑使用乐观 revision；备份/恢复包含二者。Conversation、
+ReadingSelection、CodeSelection、EvidenceLink 和 KnowledgeNote 预览仍不跨重启，
+也不会自动成为证据。G4 只持久化用户点击加入的证据；本地草稿编辑、预览和
+Vault 输出是三个不同动作，最终 writer 写入的字节必须与仍然有效的预览一致。
 
 ### 3.4 界面选型：Streamlit 与重评估条件
 
@@ -1105,9 +1118,9 @@ PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、�
 
 ### 21.1 扩展点与已采用 V3 增量
 
-本节以 V2 冻结边界为起点。V3-G1 已实现本地资料库，V3-G2 已实现可选 Zotero
-Local API 只读来源；页面划词、公式识别、多语言代码、持久草稿等仍由仓库根目录
-V2 to V3过渡要求.md 管理。在对应阶段完成前，下表的 Pending 事实仍成立。
+本节以 V2 冻结边界为起点。V3-G1–G5 已分别实现本地资料库、可选 Zotero
+Local API 只读来源、页面划词、持久草稿/证据和单公式识别。多语言代码与最终
+加固仍由仓库根目录 V2 to V3过渡要求.md 管理。
 
 原则：每个未来能力 = 新增一个基础设施模块 + 新增若干用例函数，**分层骨架不变**。
 
@@ -1117,9 +1130,9 @@ V2 to V3过渡要求.md 管理。在对应阶段完成前，下表的 Pending �
 | VS Code / 更多代码语言 | 当前 T3 本地 Python CodeContext 是证据基线；IDE、Notebook、Julia/R 等需另行评估 | 不实现 |
 | 网页等其他内容源 | 同上 | 不实现 |
 | 页面级划词/高亮/标注 | G3 采用 CCv2/pdf.js 文字层和 PyMuPDF 对账；当前实现同页划词与确认选择，不含持久高亮/标注 | 划词已实现；持久高亮/标注不实现 |
-| OCR / 语义表格 / 图片公式 / 图表内容识别 | 在 `pdf/` 内新增能力，不影响其他模块 | 不实现；V1.3.2 仅对用户选择的文字层做 LaTeX 转换 |
+| OCR / 语义表格 / 图片公式 / 图表内容识别 | `pdf/formulas.py` 检测并裁剪一个 bounded region，`llm/formula_recognizer.py` 只识别一张确认 crop | G5 已实现单公式候选；扫描整页 OCR、整篇转换、表格/图表理解仍不实现 |
 | 论文/代码工作资料库 | `database/` + managed assets + library view | V3-G1 已实现 |
-| 跨会话对话、证据篮与 NoteDraft | 后续单独 schema/门禁；不得复用会话对象做隐式保存 | 不实现 |
+| 跨会话对话、证据篮与 NoteDraft | G4 已提供显式草稿/证据持久化、可编辑正文、同版预览与明确 Vault 输出；对话仍不持久 | 草稿/证据完成；对话保持会话内 |
 | 跨论文搜索/复杂 RAG | 需要时新增模块；V1 上下文模型不依赖向量库 | 不实现 |
 | 换 LLM / 翻译服务商 | LlmProvider / TranslationProvider 接口 + factory，新 provider 一个文件 | 接口已实现 |
 | React + FastAPI | 用例函数与 UI 解耦，可映射为 REST 端点（第 15 节）；触发条件见第 3.4 节 | 不实现 |
@@ -1140,7 +1153,7 @@ V2 to V3过渡要求.md 管理。在对应阶段完成前，下表的 Pending �
 ## 22. 文档一致性状态
 
 PRODUCT_SPEC.md、ARCHITECTURE.md 与 V2→V3 过渡要求的当前实现口径为
-已验收 2.0.0rc1 加 V3-G1/G2 source increment。V1→V2 与 DEVELOPMENT_PLAN 保留
+已验收 2.0.0rc1 加 V3-G1–G5 source increment。V1→V2 与 DEVELOPMENT_PLAN 保留
 历史状态；后续 V3 门禁由 V2 to V3过渡要求.md 管理：
 
 - 当前内部实现为 V1.3.2 + T1/T3/T4/T5-A/T5-B1/T6-A/T6-B/T6-C 增量，仍不对外发布；
@@ -1183,6 +1196,18 @@ ReadingSelection。旧页面图像/文字块保留为回退；仅论文全宽、
 输入安全 Ctrl+Shift+A 已接入正式工作台。Edge 152 正式验收 8/8 通过，0 page
 errors、0 external requests；1,041,404-byte wheel 含恰好一个 JS/CSS、组件清单与
 Apache-2.0 许可证，不含 node_modules/source maps。最终联合回归为 486 passed /
-1 个既有 Windows symlink 环境 skip。当前仍无自动公式识别、图片 OCR、持久
-NoteDraft 或非 Python 解析器；G4 尚未启动。完整证据见
-[G3 验收记录](V3_G3_PDF_WORKSPACE_SPIKE.md)。
+1 个既有 Windows symlink 环境 skip。G4 已完成 schema v3 草稿/证据、翻译卡、显式证据篮、可编辑
+正文、同版预览和明确 Vault 输出；最终为 42 focused、425 passed / 1 skip，含
+G3 实验联合 524 passed / 1 skip，Edge 152 为 8/8 且用户已确认人工验收。
+完整 G3 证据见 [G3 验收记录](V3_G3_PDF_WORKSPACE_SPIKE.md)，G4 合同与验证见
+[G4 架构与验证](V3_G4_NOTE_COMPOSER_DECISION.md)。
+
+G5 已完成单公式生产链路：当前页本地 detector → 用户选一个 revision-bound
+region → PyMuPDF 生成一张受大小限制的内存 PNG → 精确外发预览/逐 crop 同意 →
+OpenAI-compatible FormulaRecognizer → 不可信可编辑 LaTeX → 严格校验/明确接受 →
+可选 G4 EvidenceSnapshot。20 条合成集达到 100% coverage、95% normalized exact、
+99.41% mean token similarity 和 100% structural exact；18 条授权真实 crop 为
+18/18 strict-valid、95.09% token similarity、100% structural exact，但 exact 仅
+11.11%，因此绝不称作原源码复原。生产回归为 474 passed / 1 skip，含 G3 实验为
+573 passed / 1 skip；G6/G7 尚未启动。完整证据见
+[G5 公式识别门禁](V3_G5_FORMULA_RECOGNITION_DECISION.md)。

@@ -36,6 +36,17 @@ from researchmind.core.read_only_assistant import (
     tool_request_stop_reason,
 )
 from researchmind.core.selection import locate_selection, select_text_block
+from researchmind.core.note_drafts import (
+    MAX_DRAFT_MARKDOWN_CHARS,
+    MAX_DRAFT_TITLE_CHARS,
+    MAX_EVIDENCE_CONTENT_CHARS,
+    MAX_EVIDENCE_ITEMS_PER_DRAFT,
+    MAX_EVIDENCE_LOCATOR_BYTES,
+    MAX_EVIDENCE_SOURCE_LABEL_CHARS,
+    serialize_evidence_locator,
+    validate_evidence_snapshot,
+    validate_note_draft,
+)
 
 __all__ = [
     "MAX_CHANGED_LINES",
@@ -55,6 +66,15 @@ __all__ = [
     "summarize_code_project",
     "select_text_block",
     "trim_conversation_history",
+    "MAX_DRAFT_MARKDOWN_CHARS",
+    "MAX_DRAFT_TITLE_CHARS",
+    "MAX_EVIDENCE_CONTENT_CHARS",
+    "MAX_EVIDENCE_ITEMS_PER_DRAFT",
+    "MAX_EVIDENCE_LOCATOR_BYTES",
+    "MAX_EVIDENCE_SOURCE_LABEL_CHARS",
+    "serialize_evidence_locator",
+    "validate_evidence_snapshot",
+    "validate_note_draft",
     "MAX_ASSISTANT_LLM_CALLS",
     "MAX_ASSISTANT_QUESTION_CHARS",
     "MAX_ASSISTANT_TOOL_CALLS",

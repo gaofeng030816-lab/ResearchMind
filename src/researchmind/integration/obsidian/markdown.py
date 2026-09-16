@@ -2,8 +2,34 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
+import json
+from collections.abc import Mapping, Sequence
+
 from researchmind.integration.obsidian.errors import MarkdownRenderError
-from researchmind.models import KnowledgeNote
+from researchmind.models import (
+    EvidenceSnapshot,
+    EvidenceSourceState,
+    KnowledgeNote,
+    NoteDraft,
+)
+
+
+MAX_DRAFT_EXPORT_CHARACTERS = 2_000_000
+
+_EVIDENCE_KIND_LABELS = {
+    "source_text": "原文",
+    "translation": "译文",
+    "latex": "已接受 LaTeX",
+    "question": "问题",
+    "answer": "回答",
+    "code": "代码",
+}
+_SOURCE_STATE_LABELS = {
+    "current": "current（仍匹配当前资料库修订）",
+    "stale": "stale（来源已有新修订或已移除）",
+    "detached": "detached（未绑定可复查的资料库修订）",
+}
 
 
 def render_markdown(note: KnowledgeNote) -> str:
@@ -42,6 +68,124 @@ def render_markdown(note: KnowledgeNote) -> str:
         lines.extend(f"- {tag}" for tag in tags)
 
     return "\n".join(lines).rstrip() + "\n"
+
+
+def render_note_draft_markdown(
+    draft: NoteDraft,
+    evidence: Sequence[EvidenceSnapshot],
+    source_states: Mapping[str, EvidenceSourceState],
+) -> str:
+    """Compose editable draft text with an immutable provenance appendix."""
+
+    title = _single_line(draft.title)
+    if not title:
+        raise MarkdownRenderError("Note draft title must not be blank.")
+
+    included = sorted(
+        (item for item in evidence if item.included),
+        key=lambda item: (item.sort_order, item.id),
+    )
+    if any(item.draft_id != draft.id for item in included):
+        raise MarkdownRenderError(
+            "Note evidence belongs to a different draft."
+        )
+    if set(source_states) != {item.id for item in included}:
+        raise MarkdownRenderError(
+            "Every included evidence item requires one source state."
+        )
+
+    lines = [f"# {title}"]
+    body = _optional_text(draft.body_markdown)
+    if body is not None:
+        lines.extend(["", body])
+
+    lines.extend(
+        [
+            "",
+            "## 证据与来源",
+            "",
+            (
+                "以下内容由 ResearchMind 根据证据篮确定性生成。"
+                "编辑上方正文不会改写这些来源快照。"
+            ),
+        ]
+    )
+    if not included:
+        lines.extend(["", "_本次预览未纳入证据。_"])
+    for index, snapshot in enumerate(included, start=1):
+        _append_draft_evidence(
+            lines,
+            index=index,
+            snapshot=snapshot,
+            source_state=source_states[snapshot.id],
+        )
+
+    markdown = "\n".join(lines).rstrip() + "\n"
+    if len(markdown) > MAX_DRAFT_EXPORT_CHARACTERS:
+        raise MarkdownRenderError(
+            "Composed note exceeds the Markdown export size limit."
+        )
+    return markdown
+
+
+def _append_draft_evidence(
+    lines: list[str],
+    *,
+    index: int,
+    snapshot: EvidenceSnapshot,
+    source_state: EvidenceSourceState,
+) -> None:
+    kind = _EVIDENCE_KIND_LABELS.get(snapshot.kind)
+    state = _SOURCE_STATE_LABELS.get(source_state)
+    if kind is None or state is None:
+        raise MarkdownRenderError("Note evidence metadata is unsupported.")
+
+    lines.extend(
+        [
+            "",
+            f"### {index}. {kind}",
+            "",
+            _draft_evidence_content(snapshot),
+            "",
+            "#### 来源记录",
+            "",
+            f"- 来源：{_single_line(snapshot.source_label)}",
+            f"- 来源状态：{state}",
+            f"- 捕获方式：{snapshot.origin}",
+            f"- 捕获时间：{snapshot.created_at.isoformat()}",
+            "- 证据内容 SHA-256："
+            f"{sha256(snapshot.content.encode('utf-8')).hexdigest()}",
+        ]
+    )
+    if snapshot.selection_id is not None:
+        lines.append(f"- 选择标识：{_single_line(snapshot.selection_id)}")
+    if snapshot.source_record_id is not None:
+        lines.append(
+            f"- ResearchMind 记录：{_single_line(snapshot.source_record_id)}"
+        )
+    if snapshot.source_asset_id is not None:
+        lines.append(
+            f"- ResearchMind 资产：{_single_line(snapshot.source_asset_id)}"
+        )
+    if snapshot.source_revision is not None:
+        lines.append(f"- 来源修订：{snapshot.source_revision}")
+    if snapshot.source_sha256 is not None:
+        lines.append(f"- 来源文件 SHA-256：{snapshot.source_sha256}")
+    if snapshot.locator:
+        locator = json.dumps(
+            snapshot.locator,
+            ensure_ascii=False,
+            allow_nan=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        lines.extend(["- 定位信息：", _indented_code_block(locator)])
+
+
+def _draft_evidence_content(snapshot: EvidenceSnapshot) -> str:
+    if snapshot.kind in {"code", "latex"}:
+        return _indented_code_block(snapshot.content.strip())
+    return _quote_block(snapshot.content.strip())
 
 
 def _paper_note_lines(

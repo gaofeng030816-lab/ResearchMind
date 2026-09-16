@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from hashlib import sha256
+import json
+from math import isfinite
 import os
 from pathlib import Path
 from typing import Literal
@@ -31,6 +33,7 @@ from researchmind.database import (
     LibraryNotFoundError,
     LibraryRepository,
     ManagedStorage,
+    NoteDraftRepository,
     create_library_backup,
     initialize_database,
     prepare_library_paths,
@@ -55,6 +58,8 @@ from researchmind.core import (
     select_text_block,
     summarize_code_project,
     stop_read_only_assistant_session,
+    validate_evidence_snapshot,
+    validate_note_draft,
     tool_output_stop_reason,
     tool_request_stop_reason,
     validate_code_change_snapshot,
@@ -62,6 +67,7 @@ from researchmind.core import (
 from researchmind.core.conversation import APPROXIMATE_CHARS_PER_TOKEN
 from researchmind.llm import (
     ChatMessage,
+    FormulaRecognizer,
     LlmError,
     LlmProvider,
     build_algorithm_prompt,
@@ -74,6 +80,7 @@ from researchmind.llm import (
     build_math_prompt,
     build_read_only_assistant_prompt,
     create_llm_provider,
+    create_formula_recognizer,
     parse_assistant_action,
     parse_code_replacement,
     parse_latex_response,
@@ -85,6 +92,8 @@ from researchmind.integration.obsidian import (
     ObsidianError,
     VaultConfigurationError,
     render_markdown,
+    render_note_draft_markdown,
+    write_markdown_to_vault,
     write_note_to_vault,
 )
 from researchmind.integration.zotero import (
@@ -109,7 +118,15 @@ from researchmind.models import (
     Conversation,
     ConfigurationReport,
     EvidenceLink,
+    EvidenceKind,
+    EvidenceOrigin,
+    EvidenceSnapshot,
+    EvidenceSourceState,
     EvidenceRelation,
+    FormulaCrop,
+    FormulaRecognitionCandidate,
+    FormulaRegion,
+    FormulaTransferPreview,
     KnowledgeNote,
     LibraryEntry,
     LibraryBackupResult,
@@ -118,6 +135,9 @@ from researchmind.models import (
     LibraryRecord,
     LibraryRestoreResult,
     Message,
+    NoteDraft,
+    NoteDraftPreview,
+    NoteDraftStatus,
     Page,
     ReadingSelection,
     ResearchContext,
@@ -132,22 +152,27 @@ from researchmind.models import (
 )
 from researchmind.pdf import (
     DEFAULT_PDF_VIEWER_MAX_SIZE_BYTES,
+    MAX_FORMULA_CROP_BYTES,
+    MAX_FORMULA_CROP_PIXELS,
     OpenedDocument,
     PdfError,
     PdfViewerError,
     PdfViewerSource,
     TextMatch,
     extract_page,
+    detect_formula_regions as pdf_detect_formula_regions,
     load_pdf_viewer_source as pdf_load_pdf_viewer_source,
     open_pdf as pdf_open_pdf,
     render_figure_images,
     render_page_image,
+    render_formula_crop as pdf_render_formula_crop,
     search_text as pdf_search_text,
 )
 from researchmind.translation import (
     LlmTranslationProvider,
     TranslationError,
     TranslationProvider,
+    prepare_translation_request,
     translate_text,
 )
 
@@ -257,6 +282,15 @@ class CodeChangeRollbackApplication:
 
     project: CodeProject
     receipt: CodeChangeRollbackReceipt
+
+
+@dataclass(frozen=True)
+class TranslationTransferPreview:
+    """Exact, local-only fields that one explicit translation will send."""
+
+    source_text: str
+    target_language: str
+    selection_id: str
 
 
 _EXPLANATION_BUILDERS = {
@@ -917,6 +951,1019 @@ def restore_local_library_backup(
     return restore_library_backup(archive_path, target)
 
 
+def create_note_draft(
+    title: str,
+    *,
+    body_markdown: str = "",
+    record_id: str | None = None,
+    asset_id: str | None = None,
+    settings: Settings | None = None,
+) -> NoteDraft:
+    """Create one explicit local draft without writing the Obsidian Vault."""
+
+    now = datetime.now(UTC)
+    draft = NoteDraft(
+        id=f"draft-{uuid4().hex}",
+        record_id=record_id,
+        asset_id=asset_id,
+        title=title.strip(),
+        body_markdown=body_markdown,
+        status="active",
+        revision=1,
+        created_at=now,
+        updated_at=now,
+    )
+    validate_note_draft(draft)
+    return _note_draft_repository(settings).create_draft(draft)
+
+
+def get_note_draft(
+    draft_id: str,
+    *,
+    settings: Settings | None = None,
+) -> NoteDraft:
+    """Load one durable draft by its stable ResearchMind identity."""
+
+    return _note_draft_repository(settings).get_draft(draft_id)
+
+
+def list_note_drafts(
+    *,
+    record_id: str | None = None,
+    status: NoteDraftStatus | None = None,
+    settings: Settings | None = None,
+) -> list[NoteDraft]:
+    """List durable drafts without loading conversation history."""
+
+    return _note_draft_repository(settings).list_drafts(
+        record_id=record_id,
+        status=status,
+    )
+
+
+def list_paper_note_drafts(
+    document: OpenedDocument,
+    *,
+    library_entry: LibraryEntry | None = None,
+    settings: Settings | None = None,
+) -> list[NoteDraft]:
+    """List active drafts that belong to the current paper workspace."""
+
+    drafts = list_note_drafts(status="active", settings=settings)
+    if library_entry is None:
+        return [draft for draft in drafts if draft.record_id is None]
+    _validate_opened_paper_entry(document, library_entry)
+    return [
+        draft
+        for draft in drafts
+        if draft.record_id == library_entry.record.id
+    ]
+
+
+def update_note_draft(
+    draft_id: str,
+    *,
+    title: str,
+    body_markdown: str,
+    status: NoteDraftStatus,
+    expected_revision: int,
+    settings: Settings | None = None,
+) -> NoteDraft:
+    """Persist an explicit edit with optimistic revision protection."""
+
+    repository = _note_draft_repository(settings)
+    current = repository.get_draft(draft_id)
+    updated = replace(
+        current,
+        title=title.strip(),
+        body_markdown=body_markdown,
+        status=status,
+        revision=expected_revision + 1,
+        updated_at=datetime.now(UTC),
+    )
+    validate_note_draft(updated)
+    return repository.update_draft(
+        updated,
+        expected_revision=expected_revision,
+    )
+
+
+def delete_note_draft(
+    draft_id: str,
+    *,
+    expected_revision: int,
+    confirmed: bool,
+    settings: Settings | None = None,
+) -> None:
+    """Delete only a ResearchMind draft after explicit confirmation."""
+
+    if not confirmed:
+        raise LibraryConfirmationError(
+            "Deleting a note draft requires explicit confirmation."
+        )
+    _note_draft_repository(settings).delete_draft(
+        draft_id,
+        expected_revision=expected_revision,
+    )
+
+
+def add_note_evidence(
+    draft_id: str,
+    *,
+    kind: EvidenceKind,
+    content: str,
+    source_label: str,
+    origin: EvidenceOrigin,
+    expected_draft_revision: int,
+    locator: dict[str, object] | None = None,
+    source_record_id: str | None = None,
+    source_asset_id: str | None = None,
+    source_revision: int | None = None,
+    source_sha256: str | None = None,
+    selection_id: str | None = None,
+    included: bool = True,
+    settings: Settings | None = None,
+) -> tuple[NoteDraft, EvidenceSnapshot]:
+    """Persist one user-selected evidence snapshot, never an entire chat."""
+
+    now = datetime.now(UTC)
+    snapshot = EvidenceSnapshot(
+        id=f"evidence-{uuid4().hex}",
+        draft_id=draft_id,
+        kind=kind,
+        content=content,
+        source_label=source_label.strip(),
+        locator=dict(locator or {}),
+        origin=origin,
+        source_record_id=source_record_id,
+        source_asset_id=source_asset_id,
+        source_revision=source_revision,
+        source_sha256=source_sha256,
+        selection_id=selection_id,
+        included=included,
+        sort_order=0,
+        created_at=now,
+    )
+    validate_evidence_snapshot(snapshot)
+    return _note_draft_repository(settings).add_evidence(
+        snapshot,
+        expected_draft_revision=expected_draft_revision,
+        updated_at=now,
+    )
+
+
+def list_note_evidence(
+    draft_id: str,
+    *,
+    included_only: bool = False,
+    settings: Settings | None = None,
+) -> list[EvidenceSnapshot]:
+    """Return only explicit evidence stored for one draft."""
+
+    return _note_draft_repository(settings).list_evidence(
+        draft_id,
+        included_only=included_only,
+    )
+
+
+def set_note_evidence_included(
+    draft_id: str,
+    evidence_id: str,
+    *,
+    included: bool,
+    expected_draft_revision: int,
+    settings: Settings | None = None,
+) -> tuple[NoteDraft, EvidenceSnapshot]:
+    """Include or exclude one snapshot without rewriting its source content."""
+
+    if not isinstance(included, bool):
+        raise ValueError("Evidence included state must be a boolean.")
+    return _note_draft_repository(settings).set_evidence_included(
+        draft_id,
+        evidence_id,
+        included=included,
+        expected_draft_revision=expected_draft_revision,
+        updated_at=datetime.now(UTC),
+    )
+
+
+def reorder_note_evidence(
+    draft_id: str,
+    evidence_ids: list[str],
+    *,
+    expected_draft_revision: int,
+    settings: Settings | None = None,
+) -> tuple[NoteDraft, list[EvidenceSnapshot]]:
+    """Persist an exact order containing every current evidence item once."""
+
+    return _note_draft_repository(settings).reorder_evidence(
+        draft_id,
+        list(evidence_ids),
+        expected_draft_revision=expected_draft_revision,
+        updated_at=datetime.now(UTC),
+    )
+
+
+def note_evidence_source_state(
+    snapshot: EvidenceSnapshot,
+    *,
+    settings: Settings | None = None,
+) -> EvidenceSourceState:
+    """Report whether saved provenance still matches the current asset."""
+
+    validate_evidence_snapshot(snapshot)
+    return _note_draft_repository(settings).evidence_source_state(snapshot)
+
+
+def remove_note_evidence(
+    draft_id: str,
+    evidence_id: str,
+    *,
+    expected_draft_revision: int,
+    settings: Settings | None = None,
+) -> NoteDraft:
+    """Remove one explicitly chosen snapshot without deleting its source asset."""
+
+    return _note_draft_repository(settings).remove_evidence(
+        draft_id,
+        evidence_id,
+        expected_draft_revision=expected_draft_revision,
+        updated_at=datetime.now(UTC),
+    )
+
+
+def preview_note_draft_markdown(
+    draft_id: str,
+    *,
+    expected_revision: int,
+    settings: Settings | None = None,
+) -> NoteDraftPreview:
+    """Build one exact preview from the persisted draft and evidence basket."""
+
+    draft = get_note_draft(draft_id, settings=settings)
+    if draft.revision != expected_revision:
+        raise LibraryConflictError(
+            "The note draft changed before preview. Reload it and try again."
+        )
+    validate_note_draft(draft)
+    evidence = list_note_evidence(
+        draft.id,
+        included_only=True,
+        settings=settings,
+    )
+    source_states: dict[str, EvidenceSourceState] = {}
+    for snapshot in evidence:
+        validate_evidence_snapshot(snapshot)
+        source_states[snapshot.id] = note_evidence_source_state(
+            snapshot,
+            settings=settings,
+        )
+    markdown = render_note_draft_markdown(
+        draft,
+        evidence,
+        source_states,
+    )
+    return NoteDraftPreview(
+        draft_id=draft.id,
+        draft_revision=draft.revision,
+        title=draft.title,
+        markdown=markdown,
+        sha256=sha256(markdown.encode("utf-8")).hexdigest(),
+        included_evidence_count=len(evidence),
+    )
+
+
+def save_note_draft_to_vault(
+    preview: NoteDraftPreview,
+    *,
+    settings: Settings | None = None,
+) -> Path:
+    """Write only a still-current, byte-identical draft preview to the Vault."""
+
+    if sha256(preview.markdown.encode("utf-8")).hexdigest() != preview.sha256:
+        raise LibraryConflictError(
+            "The Markdown preview content changed before saving."
+        )
+    current = preview_note_draft_markdown(
+        preview.draft_id,
+        expected_revision=preview.draft_revision,
+        settings=settings,
+    )
+    if current != preview:
+        raise LibraryConflictError(
+            "The draft, evidence, or source state changed after preview. "
+            "Create a new preview before saving."
+        )
+
+    resolved_settings = settings or load_settings()
+    if resolved_settings.obsidian_vault_path is None:
+        raise VaultConfigurationError(
+            "OBSIDIAN_VAULT_PATH is not configured. Add it before saving notes."
+        )
+    draft = get_note_draft(preview.draft_id, settings=resolved_settings)
+    return write_markdown_to_vault(
+        title=preview.title,
+        markdown=preview.markdown,
+        created_at=draft.created_at,
+        vault_path=resolved_settings.obsidian_vault_path,
+        subdirectory=resolved_settings.obsidian_subdirectory,
+    )
+
+
+def create_paper_note_draft(
+    document: OpenedDocument,
+    *,
+    library_entry: LibraryEntry | None = None,
+    settings: Settings | None = None,
+) -> NoteDraft:
+    """Create a draft linked to the exact managed paper revision when available."""
+
+    if library_entry is None:
+        return create_note_draft(document.document.title, settings=settings)
+    _validate_opened_paper_entry(document, library_entry)
+    return create_note_draft(
+        document.document.title,
+        record_id=library_entry.record.id,
+        asset_id=library_entry.asset.id,
+        settings=settings,
+    )
+
+
+def capture_reading_selection_evidence(
+    draft: NoteDraft,
+    selection: ReadingSelection,
+    document: OpenedDocument,
+    *,
+    library_entry: LibraryEntry | None = None,
+    settings: Settings | None = None,
+) -> tuple[NoteDraft, EvidenceSnapshot]:
+    """Capture only the current paper selection after an explicit user action."""
+
+    selection_id = reading_selection_identity(selection)
+    _require_new_note_evidence(
+        draft.id,
+        kind="source_text",
+        selection_id=selection_id,
+        settings=settings,
+    )
+    locator = _reading_selection_evidence_locator(selection)
+    source = _paper_evidence_source(
+        draft,
+        document,
+        library_entry=library_entry,
+    )
+    origin: EvidenceOrigin = (
+        "browser_selection"
+        if str(locator.get("origin", "")).startswith("pdfjs_")
+        else "user_entry"
+    )
+    return add_note_evidence(
+        draft.id,
+        kind="source_text",
+        content=selection.text.strip(),
+        source_label=_paper_evidence_label(document, locator),
+        origin=origin,
+        expected_draft_revision=draft.revision,
+        locator=locator,
+        source_record_id=source[0],
+        source_asset_id=source[1],
+        source_revision=source[2],
+        source_sha256=source[3],
+        selection_id=selection_id,
+        settings=settings,
+    )
+
+
+def capture_translation_evidence(
+    draft: NoteDraft,
+    selection: ReadingSelection,
+    translation: Message,
+    document: OpenedDocument,
+    *,
+    library_entry: LibraryEntry | None = None,
+    settings: Settings | None = None,
+) -> tuple[NoteDraft, EvidenceSnapshot]:
+    """Capture one translation already returned for the exact current selection."""
+
+    bound = bind_translation_to_selection(translation, selection)
+    assert bound.selection_id is not None
+    _require_new_note_evidence(
+        draft.id,
+        kind="translation",
+        selection_id=bound.selection_id,
+        settings=settings,
+    )
+    locator = _reading_selection_evidence_locator(selection)
+    source = _paper_evidence_source(
+        draft,
+        document,
+        library_entry=library_entry,
+    )
+    return add_note_evidence(
+        draft.id,
+        kind="translation",
+        content=bound.content.strip(),
+        source_label=f"{_paper_evidence_label(document, locator)} · translation",
+        origin="translation_provider",
+        expected_draft_revision=draft.revision,
+        locator=locator,
+        source_record_id=source[0],
+        source_asset_id=source[1],
+        source_revision=source[2],
+        source_sha256=source[3],
+        selection_id=bound.selection_id,
+        settings=settings,
+    )
+
+
+def detect_formula_regions(
+    document: OpenedDocument,
+    page_number: int,
+) -> tuple[FormulaRegion, ...]:
+    """Detect formula regions locally for one exact page revision."""
+
+    return pdf_detect_formula_regions(document, page_number)
+
+
+def prepare_formula_crop(
+    document: OpenedDocument,
+    region: FormulaRegion,
+) -> FormulaCrop:
+    """Render one locally detected formula without contacting a provider."""
+
+    return pdf_render_formula_crop(document, region)
+
+
+def preview_formula_recognition(
+    crop: FormulaCrop,
+    *,
+    recognizer: FormulaRecognizer | None = None,
+    settings: Settings | None = None,
+) -> FormulaTransferPreview:
+    """Disclose exactly what one recognition action would transfer."""
+
+    _validate_formula_crop(crop)
+    resolved_recognizer = recognizer or create_formula_recognizer(
+        settings or load_settings()
+    )
+    recognizer_name, model_revision, execution = _formula_recognizer_metadata(
+        resolved_recognizer
+    )
+    return FormulaTransferPreview(
+        region_id=crop.region.id,
+        crop_sha256=crop.sha256,
+        byte_count=len(crop.png_bytes),
+        width_px=crop.width_px,
+        height_px=crop.height_px,
+        recognizer=recognizer_name,
+        model_revision=model_revision,
+        execution=execution,
+        will_leave_device=execution == "remote",
+    )
+
+
+def recognize_formula_crop(
+    crop: FormulaCrop,
+    *,
+    confirm_external_transfer: bool,
+    recognizer: FormulaRecognizer | None = None,
+    settings: Settings | None = None,
+) -> FormulaRecognitionCandidate:
+    """Recognize one crop only after explicit consent for remote execution."""
+
+    _validate_formula_crop(crop)
+    resolved_recognizer = recognizer or create_formula_recognizer(
+        settings or load_settings()
+    )
+    recognizer_name, model_revision, execution = _formula_recognizer_metadata(
+        resolved_recognizer
+    )
+    if execution == "remote" and confirm_external_transfer is not True:
+        raise ValueError(
+            "Formula recognition requires confirmation for this exact crop."
+        )
+    started = datetime.now(UTC)
+    raw_latex_candidate = resolved_recognizer.recognize(crop)
+    latex_candidate = (
+        None
+        if raw_latex_candidate is None
+        else parse_latex_response(f"<latex>{raw_latex_candidate}</latex>")
+    )
+    elapsed_ms = max(
+        0,
+        int((datetime.now(UTC) - started).total_seconds() * 1_000),
+    )
+    status = "unreadable" if latex_candidate is None else "recognized"
+    payload = json.dumps(
+        {
+            "region_id": crop.region.id,
+            "crop_sha256": crop.sha256,
+            "recognizer": recognizer_name,
+            "model_revision": model_revision,
+            "execution": execution,
+            "status": status,
+            "latex_candidate": latex_candidate,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return FormulaRecognitionCandidate(
+        id=f"formula-candidate-{sha256(payload).hexdigest()[:32]}",
+        region=crop.region,
+        crop_sha256=crop.sha256,
+        recognizer=recognizer_name,
+        model_revision=model_revision,
+        execution=execution,
+        status=status,
+        latex_candidate=latex_candidate,
+        elapsed_ms=elapsed_ms,
+        created_at=datetime.now(UTC),
+    )
+
+
+def accept_formula_candidate(
+    candidate: FormulaRecognitionCandidate,
+    edited_latex: str,
+    document: OpenedDocument,
+) -> FormulaRecognitionCandidate:
+    """Validate and explicitly accept one editable formula candidate."""
+
+    _validate_formula_candidate(candidate)
+    if candidate.status != "recognized" or candidate.latex_candidate is None:
+        raise ValueError("An unreadable formula candidate cannot be accepted.")
+    if candidate.accepted_latex is not None or candidate.accepted_at is not None:
+        raise ValueError("This formula candidate has already been accepted.")
+    current_crop = prepare_formula_crop(document, candidate.region)
+    if current_crop.sha256 != candidate.crop_sha256:
+        raise ValueError("Formula crop changed. Detect and recognize it again.")
+    normalized_latex = parse_latex_response(
+        f"<latex>{edited_latex.strip()}</latex>"
+    )
+    return replace(
+        candidate,
+        accepted_latex=normalized_latex,
+        accepted_at=datetime.now(UTC),
+    )
+
+
+def capture_formula_evidence(
+    draft: NoteDraft,
+    candidate: FormulaRecognitionCandidate,
+    document: OpenedDocument,
+    *,
+    library_entry: LibraryEntry | None = None,
+    settings: Settings | None = None,
+) -> tuple[NoteDraft, EvidenceSnapshot]:
+    """Persist only user-accepted LaTeX plus path-free recognition provenance."""
+
+    _validate_formula_candidate(candidate)
+    if candidate.accepted_latex is None or candidate.accepted_at is None:
+        raise ValueError("Accept the edited LaTeX before adding formula evidence.")
+    current_crop = prepare_formula_crop(document, candidate.region)
+    if current_crop.sha256 != candidate.crop_sha256:
+        raise ValueError("Formula crop changed. Detect and recognize it again.")
+    selection_payload = json.dumps(
+        {
+            "candidate_id": candidate.id,
+            "accepted_latex": candidate.accepted_latex,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    selection_id = f"formula-{sha256(selection_payload).hexdigest()[:32]}"
+    _require_new_note_evidence(
+        draft.id,
+        kind="latex",
+        selection_id=selection_id,
+        settings=settings,
+    )
+    source = _paper_evidence_source(
+        draft,
+        document,
+        library_entry=library_entry,
+    )
+    region = candidate.region
+    locator: dict[str, object] = {
+        "source_type": "pdf",
+        "page_number": region.page_number,
+        "bbox": [float(value) for value in region.bbox],
+        "document_revision": region.document_revision,
+        "region_id": region.id,
+        "region_kind": region.kind,
+        "source_kind": region.source_kind,
+        "detector_origin": region.detector_origin,
+        "detector_confidence": region.detector_confidence,
+        "detector_signals": list(region.signals),
+        "crop_sha256": candidate.crop_sha256,
+        "recognizer": candidate.recognizer,
+        "model_revision": candidate.model_revision,
+        "execution": candidate.execution,
+    }
+    return add_note_evidence(
+        draft.id,
+        kind="latex",
+        content=candidate.accepted_latex,
+        source_label=(
+            f"{document.document.title} · page {region.page_number} · formula"
+        ),
+        origin="latex_conversion",
+        expected_draft_revision=draft.revision,
+        locator=locator,
+        source_record_id=source[0],
+        source_asset_id=source[1],
+        source_revision=source[2],
+        source_sha256=source[3],
+        selection_id=selection_id,
+        settings=settings,
+    )
+
+
+def _validate_formula_crop(crop: FormulaCrop) -> None:
+    _validate_formula_region(crop.region)
+    if not crop.png_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        raise ValueError("Formula crop is not a PNG image.")
+    if len(crop.png_bytes) > MAX_FORMULA_CROP_BYTES:
+        raise ValueError("Formula crop exceeds the byte limit.")
+    if (
+        not isinstance(crop.sha256, str)
+        or len(crop.sha256) != 64
+        or any(character not in "0123456789abcdef" for character in crop.sha256)
+    ):
+        raise ValueError("Formula crop hash is invalid.")
+    if sha256(crop.png_bytes).hexdigest() != crop.sha256:
+        raise ValueError("Formula crop hash does not match its bytes.")
+    if (
+        isinstance(crop.width_px, bool)
+        or not isinstance(crop.width_px, int)
+        or crop.width_px < 1
+        or isinstance(crop.height_px, bool)
+        or not isinstance(crop.height_px, int)
+        or crop.height_px < 1
+    ):
+        raise ValueError("Formula crop dimensions are invalid.")
+    if crop.width_px * crop.height_px > MAX_FORMULA_CROP_PIXELS:
+        raise ValueError("Formula crop exceeds the pixel limit.")
+
+
+def _validate_formula_region(region: FormulaRegion) -> None:
+    if (
+        not isinstance(region.id, str)
+        or not region.id.startswith("formula-region-")
+        or len(region.id) > 128
+        or "\x00" in region.id
+    ):
+        raise ValueError("Formula region identity is invalid.")
+    if (
+        not isinstance(region.document_id, str)
+        or not region.document_id
+        or len(region.document_id) > 128
+        or "\x00" in region.document_id
+    ):
+        raise ValueError("Formula document identity is invalid.")
+    revision = region.document_revision
+    if (
+        not isinstance(revision, str)
+        or not revision.startswith("sha256:")
+        or len(revision) != 71
+        or any(character not in "0123456789abcdef" for character in revision[7:])
+    ):
+        raise ValueError("Formula document revision is invalid.")
+    if (
+        isinstance(region.page_number, bool)
+        or not isinstance(region.page_number, int)
+        or region.page_number < 1
+    ):
+        raise ValueError("Formula page number is invalid.")
+    if (
+        not isinstance(region.bbox, tuple)
+        or len(region.bbox) != 4
+        or any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not isfinite(float(value))
+            for value in region.bbox
+        )
+        or region.bbox[0] < 0
+        or region.bbox[1] < 0
+        or region.bbox[2] <= region.bbox[0]
+        or region.bbox[3] <= region.bbox[1]
+    ):
+        raise ValueError("Formula region geometry is invalid.")
+    if region.kind not in {"display", "inline"}:
+        raise ValueError("Formula region kind is invalid.")
+    if region.source_kind not in {"digital_text", "embedded_image"}:
+        raise ValueError("Formula source kind is invalid.")
+    if (
+        not isinstance(region.detector_origin, str)
+        or not region.detector_origin
+        or len(region.detector_origin) > 128
+        or "\x00" in region.detector_origin
+    ):
+        raise ValueError("Formula detector identity is invalid.")
+    if (
+        isinstance(region.detector_confidence, bool)
+        or not isinstance(region.detector_confidence, (int, float))
+        or not isfinite(float(region.detector_confidence))
+        or not 0 <= float(region.detector_confidence) <= 1
+    ):
+        raise ValueError("Formula detector confidence is invalid.")
+    if (
+        not isinstance(region.signals, tuple)
+        or len(region.signals) > 32
+        or any(
+            not isinstance(signal, str)
+            or not signal
+            or len(signal) > 64
+            or "\x00" in signal
+            for signal in region.signals
+        )
+    ):
+        raise ValueError("Formula detector signals are invalid.")
+    if region.source_text is not None and (
+        not isinstance(region.source_text, str)
+        or len(region.source_text) > 500
+        or "\x00" in region.source_text
+    ):
+        raise ValueError("Formula source text is invalid.")
+
+
+def _formula_recognizer_metadata(
+    recognizer: FormulaRecognizer,
+) -> tuple[str, str, Literal["local", "remote"]]:
+    name = recognizer.name
+    model_revision = recognizer.model_revision
+    execution = recognizer.execution
+    for value, label in (
+        (name, "Formula recognizer identity"),
+        (model_revision, "Formula model revision"),
+    ):
+        if (
+            not isinstance(value, str)
+            or not value.strip()
+            or len(value) > 200
+            or "\x00" in value
+        ):
+            raise ValueError(f"{label} is invalid.")
+    if execution not in {"local", "remote"}:
+        raise ValueError("Formula recognizer execution mode is invalid.")
+    return name.strip(), model_revision.strip(), execution
+
+
+def _validate_formula_candidate(candidate: FormulaRecognitionCandidate) -> None:
+    _validate_formula_region(candidate.region)
+    if (
+        not isinstance(candidate.id, str)
+        or not candidate.id.startswith("formula-candidate-")
+        or len(candidate.id) > 128
+        or "\x00" in candidate.id
+    ):
+        raise ValueError("Formula candidate identity is invalid.")
+    if (
+        not isinstance(candidate.crop_sha256, str)
+        or len(candidate.crop_sha256) != 64
+        or any(
+            character not in "0123456789abcdef"
+            for character in candidate.crop_sha256
+        )
+    ):
+        raise ValueError("Formula candidate crop hash is invalid.")
+    _formula_recognizer_metadata(_CandidateMetadata(candidate))
+    if candidate.status not in {"recognized", "unreadable"}:
+        raise ValueError("Formula recognition status is invalid.")
+    if candidate.status == "recognized":
+        if candidate.latex_candidate is None:
+            raise ValueError("Recognized formula candidate is missing LaTeX.")
+        parse_latex_response(f"<latex>{candidate.latex_candidate}</latex>")
+    elif candidate.latex_candidate is not None:
+        raise ValueError("Unreadable formula candidate must not contain LaTeX.")
+    if (
+        isinstance(candidate.elapsed_ms, bool)
+        or not isinstance(candidate.elapsed_ms, int)
+        or candidate.elapsed_ms < 0
+    ):
+        raise ValueError("Formula recognition elapsed time is invalid.")
+    created_offset = getattr(candidate.created_at, "utcoffset", lambda: None)()
+    if created_offset is None:
+        raise ValueError("Formula candidate time must include a timezone.")
+    if (candidate.accepted_latex is None) != (candidate.accepted_at is None):
+        raise ValueError("Formula acceptance fields are inconsistent.")
+    if candidate.accepted_latex is not None:
+        parse_latex_response(f"<latex>{candidate.accepted_latex}</latex>")
+        assert candidate.accepted_at is not None
+        accepted_offset = getattr(
+            candidate.accepted_at,
+            "utcoffset",
+            lambda: None,
+        )()
+        if accepted_offset is None:
+            raise ValueError("Formula acceptance time must include a timezone.")
+
+
+@dataclass(frozen=True)
+class _CandidateMetadata:
+    candidate: FormulaRecognitionCandidate
+
+    @property
+    def name(self) -> str:
+        return self.candidate.recognizer
+
+    @property
+    def model_revision(self) -> str:
+        return self.candidate.model_revision
+
+    @property
+    def execution(self) -> Literal["local", "remote"]:
+        return self.candidate.execution
+
+
+def _require_new_note_evidence(
+    draft_id: str,
+    *,
+    kind: EvidenceKind,
+    selection_id: str,
+    settings: Settings | None,
+) -> None:
+    if any(
+        item.kind == kind and item.selection_id == selection_id
+        for item in list_note_evidence(draft_id, settings=settings)
+    ):
+        raise LibraryConflictError(
+            "This selection and evidence type are already in the note basket."
+        )
+
+
+def _reading_selection_evidence_locator(
+    selection: ReadingSelection,
+) -> dict[str, object]:
+    raw = selection.locator or {}
+    locator: dict[str, object] = {"source_type": selection.source_type}
+    for key in ("page_number", "block_index"):
+        value = raw.get(key)
+        if value is None:
+            continue
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(f"Selection locator {key} must be an integer.")
+        if (key == "page_number" and value < 1) or (
+            key == "block_index" and value < 0
+        ):
+            raise ValueError(f"Selection locator {key} is out of range.")
+        locator[key] = value
+    bbox = raw.get("bbox")
+    if bbox is not None:
+        if (
+            not isinstance(bbox, (list, tuple))
+            or len(bbox) != 4
+            or any(
+                isinstance(value, bool) or not isinstance(value, (int, float))
+                for value in bbox
+            )
+            or any(not isfinite(float(value)) for value in bbox)
+        ):
+            raise ValueError("Selection locator bbox must contain four numbers.")
+        locator["bbox"] = [float(value) for value in bbox]
+    for key in (
+        "document_revision",
+        "origin",
+        "viewer_engine",
+        "locator_status",
+    ):
+        value = raw.get(key)
+        if value is None:
+            continue
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"Selection locator {key} must be non-blank text.")
+        locator[key] = value.strip()
+    for key in ("geometry_coverage", "geometry_precision"):
+        value = raw.get(key)
+        if value is None:
+            continue
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not isfinite(float(value))
+            or not 0.0 <= float(value) <= 1.0
+        ):
+            raise ValueError(f"Selection locator {key} must be between 0 and 1.")
+        locator[key] = float(value)
+    bboxes = raw.get("bboxes")
+    if bboxes is not None:
+        locator["bboxes"] = _normalize_locator_rows(
+            bboxes,
+            width=4,
+            numeric_type=float,
+            label="bboxes",
+        )
+    client_ranges = raw.get("client_ranges")
+    if client_ranges is not None:
+        locator["client_ranges"] = _normalize_locator_rows(
+            client_ranges,
+            width=3,
+            numeric_type=int,
+            label="client_ranges",
+        )
+    return locator
+
+
+def _normalize_locator_rows(
+    value: object,
+    *,
+    width: int,
+    numeric_type: type[float] | type[int],
+    label: str,
+) -> list[list[float | int]]:
+    if not isinstance(value, (list, tuple)) or len(value) > 256:
+        raise ValueError(f"Selection locator {label} must be a bounded sequence.")
+    normalized: list[list[float | int]] = []
+    for row in value:
+        if (
+            not isinstance(row, (list, tuple))
+            or len(row) != width
+        ):
+            raise ValueError(
+                f"Selection locator {label} contains an invalid row."
+            )
+        if numeric_type is int:
+            if any(type(item) is not int for item in row):
+                raise ValueError(
+                    f"Selection locator {label} contains an invalid row."
+                )
+            normalized.append([int(item) for item in row])
+            continue
+        if any(
+            isinstance(item, bool)
+            or not isinstance(item, (int, float))
+            or not isfinite(float(item))
+            for item in row
+        ):
+            raise ValueError(
+                f"Selection locator {label} contains an invalid row."
+            )
+        normalized.append([float(item) for item in row])
+    return normalized
+
+
+def _validate_opened_paper_entry(
+    document: OpenedDocument,
+    entry: LibraryEntry,
+) -> None:
+    if (
+        entry.record.kind != "paper"
+        or entry.asset.kind != "pdf"
+        or entry.record.removed_at is not None
+        or entry.asset.deleted_at is not None
+    ):
+        raise LibraryConflictError(
+            "The opened library source is no longer an active paper revision."
+        )
+    if (
+        not document.content_sha256
+        or entry.asset.sha256 != document.content_sha256
+    ):
+        raise LibraryConflictError(
+            "The opened PDF no longer matches the selected library revision."
+        )
+
+
+def _paper_evidence_source(
+    draft: NoteDraft,
+    document: OpenedDocument,
+    *,
+    library_entry: LibraryEntry | None,
+) -> tuple[str | None, str | None, int | None, str | None]:
+    if library_entry is None:
+        if draft.record_id is not None or draft.asset_id is not None:
+            raise LibraryConflictError(
+                "The linked draft has lost its managed paper source."
+            )
+        return None, None, None, None
+    _validate_opened_paper_entry(document, library_entry)
+    if (
+        draft.record_id != library_entry.record.id
+        or draft.asset_id != library_entry.asset.id
+    ):
+        raise LibraryConflictError(
+            "The draft belongs to a different managed paper revision."
+        )
+    return (
+        library_entry.record.id,
+        library_entry.asset.id,
+        library_entry.asset.revision,
+        library_entry.asset.sha256,
+    )
+
+
+def _paper_evidence_label(
+    document: OpenedDocument,
+    locator: dict[str, object],
+) -> str:
+    title = " ".join(document.document.title.split()) or "Untitled paper"
+    page = locator.get("page_number")
+    suffix = f" · page {page}" if isinstance(page, int) else ""
+    return f"{title[:460]}{suffix}"
+
+
 def _library_infrastructure(
     settings: Settings | None,
 ) -> tuple[LibraryRepository, ManagedStorage]:
@@ -931,6 +1978,13 @@ def _library_infrastructure(
     )
     database_path = initialize_database(paths.database_path)
     return LibraryRepository(database_path), ManagedStorage(paths)
+
+
+def _note_draft_repository(
+    settings: Settings | None,
+) -> NoteDraftRepository:
+    repository, _storage = _library_infrastructure(settings)
+    return NoteDraftRepository(repository.database_path)
 
 
 def _require_zotero_enabled(
@@ -1479,6 +2533,59 @@ def create_block_selection(
     return select_text_block(page, block_index=block_index)
 
 
+def reading_selection_identity(selection: ReadingSelection) -> str:
+    """Return a stable, path-free identity for one exact paper selection."""
+
+    source_text = selection.text.strip()
+    if not source_text:
+        raise ValueError("Selection text must not be blank.")
+    locator = _reading_selection_evidence_locator(selection)
+    payload = json.dumps(
+        {
+            "source_type": selection.source_type,
+            "text": source_text,
+            "locator": locator,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return f"reading-{sha256(payload).hexdigest()[:32]}"
+
+
+def preview_selection_translation(
+    selection: ReadingSelection,
+    *,
+    settings: Settings | None = None,
+) -> TranslationTransferPreview:
+    """Build the local-only preview for one possible translation request."""
+
+    resolved_settings = settings or load_settings()
+    request = prepare_translation_request(
+        selection.text,
+        resolved_settings.target_language,
+    )
+    return TranslationTransferPreview(
+        source_text=request.source_text,
+        target_language=request.target_language,
+        selection_id=reading_selection_identity(selection),
+    )
+
+
+def bind_translation_to_selection(
+    message: Message,
+    selection: ReadingSelection,
+) -> Message:
+    """Bind a successful translation to the selection it actually represents."""
+
+    if message.role != "assistant" or message.task != "translate":
+        raise ValueError("Only an assistant translation can be bound to a selection.")
+    selection_id = reading_selection_identity(selection)
+    if message.selection_id not in (None, selection_id):
+        raise ValueError("Translation belongs to a different reading selection.")
+    return replace(message, selection_id=selection_id)
+
+
 def translate_selection(
     selection: ReadingSelection,
     *,
@@ -1496,7 +2603,12 @@ def translate_selection(
         resolved_settings.target_language,
         provider,
     )
-    return Message(role="assistant", task="translate", content=translated)
+    return Message(
+        role="assistant",
+        task="translate",
+        content=translated,
+        selection_id=reading_selection_identity(selection),
+    )
 
 
 def explain_selection(

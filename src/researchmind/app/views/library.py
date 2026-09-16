@@ -180,7 +180,8 @@ def _render_active_entry_actions(entry: LibraryEntry) -> None:
             try:
                 if entry.record.kind == "paper":
                     state.set_opened_document(
-                        use_cases.open_library_paper(entry.record.id)
+                        use_cases.open_library_paper(entry.record.id),
+                        library_entry=entry,
                     )
                     state.request_workspace("paper")
                 else:

@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-09-13",
+  "reviewer_kind": "agent_visual_review_not_user_acceptance",
+  "source_paths_stored": false,
+  "source_text_stored": false,
+  "cases": [
+    {
+      "id": "1707.06347v2-002",
+      "crop_hash_matched": true,
+      "formula_complete": true,
+      "crop_issue": "one neighboring prose line is partially visible below the formula",
+      "candidate_assessment": "mathematical formula preserved; neighboring prose was not transcribed"
+    },
+    {
+      "id": "2205.07246v3-004",
+      "crop_hash_matched": true,
+      "formula_complete": true,
+      "crop_issue": null,
+      "candidate_assessment": "cases structure, visible if/otherwise labels, summation limits and equation number preserved"
+    },
+    {
+      "id": "2507.04247v1-019",
+      "crop_hash_matched": true,
+      "formula_complete": true,
+      "crop_issue": null,
+      "candidate_assessment": "fraction, root, exponent, Phi term and visible trailing punctuation preserved"
+    },
+    {
+      "id": "2507.04247v1-024",
+      "crop_hash_matched": true,
+      "formula_complete": true,
+      "crop_issue": null,
+      "candidate_assessment": "tensor products, powers, transpose, vec expressions and visible trailing punctuation preserved"
+    },
+    {
+      "id": "2507.04247v1-048",
+      "crop_hash_matched": true,
+      "formula_complete": true,
+      "crop_issue": "small neighboring content is visible below the selected formula",
+      "candidate_assessment": "matrix products, inequality, fraction, transpose, equation number and visible period preserved"
+    }
+  ],
+  "conclusion": {
+    "reviewed_count": 5,
+    "structurally_acceptable_count": 5,
+    "detector_crop_issue_count": 2,
+    "user_editing_still_required": true,
+    "user_manual_acceptance_recorded": false
+  }
+}

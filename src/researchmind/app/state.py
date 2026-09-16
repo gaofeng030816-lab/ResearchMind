@@ -16,9 +16,15 @@ from researchmind.models import (
     CodeSelection,
     Conversation,
     EvidenceLink,
+    FormulaCrop,
+    FormulaRecognitionCandidate,
+    FormulaRegion,
     KnowledgeNote,
+    LibraryEntry,
     Message,
     MessageTask,
+    NoteDraft,
+    NoteDraftPreview,
     ReadOnlyAssistantSession,
     ReadingSelection,
     ZoteroBrowseResult,
@@ -28,11 +34,15 @@ from researchmind.pdf import OpenedDocument, TextMatch
 
 
 OPENED_DOCUMENT_KEY = "opened_document"
+OPENED_PAPER_LIBRARY_ENTRY_KEY = "opened_paper_library_entry"
 CURRENT_PAGE_NUMBER_KEY = "current_page_number"
 CURRENT_SELECTION_KEY = "current_selection"
 CURRENT_CONVERSATION_KEY = "current_conversation"
 SEARCH_RESULTS_KEY = "search_results"
 CURRENT_NOTE_KEY = "current_knowledge_note"
+CURRENT_NOTE_DRAFT_KEY = "current_note_draft"
+CURRENT_NOTE_DRAFT_PREVIEW_KEY = "current_note_draft_preview"
+LAST_NOTE_DRAFT_SAVED_PATH_KEY = "last_note_draft_saved_path"
 KNOWLEDGE_PANEL_OPEN_KEY = "knowledge_panel_open"
 LAST_SAVED_PATH_KEY = "last_saved_path"
 OPENED_CODE_PROJECT_KEY = "opened_code_project"
@@ -53,6 +63,10 @@ ZOTERO_ITEM_DETAILS_KEY = "zotero_item_details"
 ZOTERO_ACTION_GENERATION_KEY = "zotero_action_generation"
 PDF_VIEWER_PENDING_EVENTS_KEY = "pdf_viewer_pending_events"
 PDF_VIEWER_EVENT_SEQUENCES_KEY = "pdf_viewer_event_sequences"
+FORMULA_REGIONS_KEY = "formula_regions"
+CURRENT_FORMULA_REGION_KEY = "current_formula_region"
+CURRENT_FORMULA_CROP_KEY = "current_formula_crop"
+CURRENT_FORMULA_CANDIDATE_KEY = "current_formula_candidate"
 AI_PANEL_OPEN_KEY = "ai_panel_open"
 AI_SHORTCUT_INSTANCE = "researchmind_ai_panel_shortcut"
 AI_SHORTCUT_COMPONENT_KEY = "researchmind_workspace_shortcut"
@@ -69,11 +83,15 @@ def initialize_state() -> None:
 
     defaults: dict[str, object] = {
         OPENED_DOCUMENT_KEY: None,
+        OPENED_PAPER_LIBRARY_ENTRY_KEY: None,
         CURRENT_PAGE_NUMBER_KEY: 1,
         CURRENT_SELECTION_KEY: None,
         CURRENT_CONVERSATION_KEY: None,
         SEARCH_RESULTS_KEY: [],
         CURRENT_NOTE_KEY: None,
+        CURRENT_NOTE_DRAFT_KEY: None,
+        CURRENT_NOTE_DRAFT_PREVIEW_KEY: None,
+        LAST_NOTE_DRAFT_SAVED_PATH_KEY: None,
         KNOWLEDGE_PANEL_OPEN_KEY: False,
         LAST_SAVED_PATH_KEY: None,
         OPENED_CODE_PROJECT_KEY: None,
@@ -94,6 +112,10 @@ def initialize_state() -> None:
         ZOTERO_ACTION_GENERATION_KEY: 0,
         PDF_VIEWER_PENDING_EVENTS_KEY: {},
         PDF_VIEWER_EVENT_SEQUENCES_KEY: {},
+        FORMULA_REGIONS_KEY: (),
+        CURRENT_FORMULA_REGION_KEY: None,
+        CURRENT_FORMULA_CROP_KEY: None,
+        CURRENT_FORMULA_CANDIDATE_KEY: None,
         AI_PANEL_OPEN_KEY: True,
     }
     for key, value in defaults.items():
@@ -105,10 +127,15 @@ def get_opened_document() -> OpenedDocument | None:
     return cast(OpenedDocument | None, st.session_state[OPENED_DOCUMENT_KEY])
 
 
-def set_opened_document(document: OpenedDocument) -> None:
+def set_opened_document(
+    document: OpenedDocument,
+    *,
+    library_entry: LibraryEntry | None = None,
+) -> None:
     """Replace the active document and reset all document-scoped state."""
 
     st.session_state[OPENED_DOCUMENT_KEY] = document
+    st.session_state[OPENED_PAPER_LIBRARY_ENTRY_KEY] = library_entry
     st.session_state[CURRENT_PAGE_NUMBER_KEY] = 1
     st.session_state[CURRENT_SELECTION_KEY] = None
     st.session_state[CURRENT_CONVERSATION_KEY] = Conversation(
@@ -116,15 +143,69 @@ def set_opened_document(document: OpenedDocument) -> None:
     )
     st.session_state[SEARCH_RESULTS_KEY] = []
     st.session_state[CURRENT_NOTE_KEY] = None
+    st.session_state[CURRENT_NOTE_DRAFT_KEY] = None
+    st.session_state[CURRENT_NOTE_DRAFT_PREVIEW_KEY] = None
+    st.session_state[LAST_NOTE_DRAFT_SAVED_PATH_KEY] = None
     st.session_state[KNOWLEDGE_PANEL_OPEN_KEY] = False
     st.session_state[LAST_SAVED_PATH_KEY] = None
     st.session_state[EVIDENCE_LINKS_KEY] = []
     st.session_state[PDF_VIEWER_PENDING_EVENTS_KEY] = {}
     st.session_state[PDF_VIEWER_EVENT_SEQUENCES_KEY] = {}
+    _clear_formula_workflow()
     _clear_read_only_assistant_session()
     page_widget_key = page_number_widget_key(document.document.id)
     if page_widget_key in st.session_state:
         st.session_state[page_widget_key] = 1
+
+
+def get_opened_paper_library_entry() -> LibraryEntry | None:
+    """Return the managed revision that produced the current PDF, if any."""
+
+    return cast(
+        LibraryEntry | None,
+        st.session_state[OPENED_PAPER_LIBRARY_ENTRY_KEY],
+    )
+
+
+def get_current_note_draft() -> NoteDraft | None:
+    """Return the durable draft currently selected in this UI session."""
+
+    return cast(NoteDraft | None, st.session_state[CURRENT_NOTE_DRAFT_KEY])
+
+
+def set_current_note_draft(draft: NoteDraft) -> None:
+    """Refresh the session pointer after one successful durable draft mutation."""
+
+    st.session_state[CURRENT_NOTE_DRAFT_KEY] = draft
+    st.session_state[CURRENT_NOTE_DRAFT_PREVIEW_KEY] = None
+    st.session_state[LAST_NOTE_DRAFT_SAVED_PATH_KEY] = None
+
+
+def get_current_note_draft_preview() -> NoteDraftPreview | None:
+    """Return the last exact preview for the currently selected draft."""
+
+    return cast(
+        NoteDraftPreview | None,
+        st.session_state[CURRENT_NOTE_DRAFT_PREVIEW_KEY],
+    )
+
+
+def set_current_note_draft_preview(preview: NoteDraftPreview) -> None:
+    """Store a revision-bound preview without changing the durable draft."""
+
+    st.session_state[CURRENT_NOTE_DRAFT_PREVIEW_KEY] = preview
+    st.session_state[LAST_NOTE_DRAFT_SAVED_PATH_KEY] = None
+
+
+def get_last_note_draft_saved_path() -> Path | None:
+    return cast(
+        Path | None,
+        st.session_state[LAST_NOTE_DRAFT_SAVED_PATH_KEY],
+    )
+
+
+def set_last_note_draft_saved_path(path: Path) -> None:
+    st.session_state[LAST_NOTE_DRAFT_SAVED_PATH_KEY] = path
 
 
 def get_current_page_number() -> int:
@@ -139,6 +220,8 @@ def set_current_page_number(page_number: int) -> None:
         raise ValueError(
             f"Page number must be between 1 and {document.document.num_pages}."
         )
+    if get_current_page_number() != page_number:
+        _clear_formula_workflow()
     st.session_state[CURRENT_PAGE_NUMBER_KEY] = page_number
     page_widget_key = page_number_widget_key(document.document.id)
     if page_widget_key in st.session_state:
@@ -156,7 +239,81 @@ def set_current_page_number_from_widget(widget_key: str) -> None:
         raise ValueError(
             f"Page number must be between 1 and {document.document.num_pages}."
         )
+    if get_current_page_number() != page_number:
+        _clear_formula_workflow()
     st.session_state[CURRENT_PAGE_NUMBER_KEY] = page_number
+
+
+def get_formula_regions() -> tuple[FormulaRegion, ...]:
+    return cast(tuple[FormulaRegion, ...], st.session_state[FORMULA_REGIONS_KEY])
+
+
+def set_formula_regions(regions: tuple[FormulaRegion, ...]) -> None:
+    """Replace local detection results and clear every downstream artifact."""
+
+    st.session_state[FORMULA_REGIONS_KEY] = tuple(regions)
+    st.session_state[CURRENT_FORMULA_REGION_KEY] = None
+    st.session_state[CURRENT_FORMULA_CROP_KEY] = None
+    st.session_state[CURRENT_FORMULA_CANDIDATE_KEY] = None
+
+
+def get_current_formula_region() -> FormulaRegion | None:
+    return cast(
+        FormulaRegion | None,
+        st.session_state[CURRENT_FORMULA_REGION_KEY],
+    )
+
+
+def set_current_formula_region(region: FormulaRegion) -> None:
+    if all(item.id != region.id for item in get_formula_regions()):
+        raise ValueError("Select a formula region from the current page.")
+    current = get_current_formula_region()
+    if current is not None and current.id == region.id:
+        return
+    st.session_state[CURRENT_FORMULA_REGION_KEY] = region
+    st.session_state[CURRENT_FORMULA_CROP_KEY] = None
+    st.session_state[CURRENT_FORMULA_CANDIDATE_KEY] = None
+
+
+def get_current_formula_crop() -> FormulaCrop | None:
+    return cast(FormulaCrop | None, st.session_state[CURRENT_FORMULA_CROP_KEY])
+
+
+def set_current_formula_crop(crop: FormulaCrop) -> None:
+    region = get_current_formula_region()
+    if region is None or crop.region.id != region.id:
+        raise ValueError("Formula crop must match the selected region.")
+    st.session_state[CURRENT_FORMULA_CROP_KEY] = crop
+    st.session_state[CURRENT_FORMULA_CANDIDATE_KEY] = None
+
+
+def get_current_formula_candidate() -> FormulaRecognitionCandidate | None:
+    return cast(
+        FormulaRecognitionCandidate | None,
+        st.session_state[CURRENT_FORMULA_CANDIDATE_KEY],
+    )
+
+
+def set_current_formula_candidate(
+    candidate: FormulaRecognitionCandidate,
+) -> None:
+    crop = get_current_formula_crop()
+    if crop is None or candidate.crop_sha256 != crop.sha256:
+        raise ValueError("Formula candidate must match the current crop.")
+    st.session_state[CURRENT_FORMULA_CANDIDATE_KEY] = candidate
+
+
+def clear_formula_workflow() -> None:
+    """Clear transient formula bytes and unaccepted recognizer output."""
+
+    _clear_formula_workflow()
+
+
+def _clear_formula_workflow() -> None:
+    st.session_state[FORMULA_REGIONS_KEY] = ()
+    st.session_state[CURRENT_FORMULA_REGION_KEY] = None
+    st.session_state[CURRENT_FORMULA_CROP_KEY] = None
+    st.session_state[CURRENT_FORMULA_CANDIDATE_KEY] = None
 
 
 def page_number_widget_key(document_id: str) -> str:

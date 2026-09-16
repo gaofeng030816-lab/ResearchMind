@@ -11,6 +11,7 @@ from researchmind.integration.obsidian import (
     VaultWriteError,
     sanitize_filename,
     validate_vault_destination,
+    write_markdown_to_vault,
     write_note_to_vault,
 )
 from researchmind.models import KnowledgeNote
@@ -159,6 +160,33 @@ def test_write_failure_is_exposed_as_project_error(
         )
 
     assert error.value.__cause__ is None
+
+
+def test_pre_rendered_markdown_is_written_byte_for_byte_without_overwrite(
+    temporary_vault: Path,
+) -> None:
+    created_at = datetime(2026, 9, 8, 10, 0, tzinfo=UTC)
+    markdown = "# 精确预览\n\n正文。\n"
+
+    first = write_markdown_to_vault(
+        title="精确预览",
+        markdown=markdown,
+        created_at=created_at,
+        vault_path=temporary_vault,
+        subdirectory="ResearchMind",
+    )
+    second = write_markdown_to_vault(
+        title="精确预览",
+        markdown=markdown,
+        created_at=created_at,
+        vault_path=temporary_vault,
+        subdirectory="ResearchMind",
+    )
+
+    assert first.name == "2026-09-08-精确预览.md"
+    assert second.name == "2026-09-08-精确预览-2.md"
+    assert first.read_bytes() == markdown.encode("utf-8")
+    assert second.read_bytes() == markdown.encode("utf-8")
 
 
 def _note(

@@ -16,7 +16,7 @@ from researchmind.database.errors import (
 )
 
 
-LATEST_SCHEMA_VERSION = 2
+LATEST_SCHEMA_VERSION = 3
 
 _MIGRATIONS: dict[int, tuple[str, ...]] = {
     1: (
@@ -109,6 +109,110 @@ _MIGRATIONS: dict[int, tuple[str, ...]] = {
         ON zotero_links(server_id, library_type, library_id, item_key)
         """,
     ),
+    3: (
+        """
+        CREATE UNIQUE INDEX asset_references_identity
+        ON asset_references(id, record_id)
+        """,
+        """
+        CREATE TABLE note_drafts (
+            id TEXT PRIMARY KEY
+                CHECK (length(id) BETWEEN 1 AND 128),
+            record_id TEXT REFERENCES library_records(id)
+                ON DELETE RESTRICT,
+            asset_id TEXT,
+            title TEXT NOT NULL
+                CHECK (
+                    length(trim(title)) BETWEEN 1 AND 200
+                    AND instr(title, char(0)) = 0
+                ),
+            body_markdown TEXT NOT NULL
+                CHECK (
+                    length(body_markdown) <= 250000
+                    AND instr(body_markdown, char(0)) = 0
+                ),
+            status TEXT NOT NULL
+                CHECK (status IN ('active', 'archived')),
+            revision INTEGER NOT NULL CHECK (revision >= 1),
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            CHECK (asset_id IS NULL OR record_id IS NOT NULL),
+            FOREIGN KEY (asset_id, record_id)
+                REFERENCES asset_references(id, record_id)
+                ON DELETE RESTRICT
+        )
+        """,
+        """
+        CREATE INDEX note_drafts_record_updated
+        ON note_drafts(record_id, updated_at DESC)
+        """,
+        """
+        CREATE TABLE evidence_snapshots (
+            id TEXT PRIMARY KEY
+                CHECK (length(id) BETWEEN 1 AND 128),
+            draft_id TEXT NOT NULL REFERENCES note_drafts(id)
+                ON DELETE CASCADE,
+            kind TEXT NOT NULL CHECK (
+                kind IN (
+                    'source_text', 'translation', 'latex',
+                    'question', 'answer', 'code'
+                )
+            ),
+            content TEXT NOT NULL CHECK (
+                length(trim(content)) > 0
+                AND length(content) <= 100000
+                AND instr(content, char(0)) = 0
+            ),
+            source_label TEXT NOT NULL CHECK (
+                length(trim(source_label)) BETWEEN 1 AND 500
+                AND instr(source_label, char(0)) = 0
+            ),
+            locator_json TEXT NOT NULL CHECK (
+                length(CAST(locator_json AS BLOB)) <= 8192
+                AND instr(locator_json, char(0)) = 0
+            ),
+            origin TEXT NOT NULL CHECK (
+                origin IN (
+                    'browser_selection', 'translation_provider',
+                    'latex_conversion', 'user_question',
+                    'assistant_response', 'code_selection', 'user_entry'
+                )
+            ),
+            source_record_id TEXT REFERENCES library_records(id)
+                ON DELETE RESTRICT,
+            source_asset_id TEXT,
+            source_revision INTEGER CHECK (
+                source_revision IS NULL OR source_revision >= 1
+            ),
+            source_sha256 TEXT CHECK (
+                source_sha256 IS NULL OR length(source_sha256) = 64
+            ),
+            selection_id TEXT CHECK (
+                selection_id IS NULL
+                OR length(selection_id) BETWEEN 1 AND 128
+            ),
+            included INTEGER NOT NULL CHECK (included IN (0, 1)),
+            sort_order INTEGER NOT NULL CHECK (sort_order >= 0),
+            created_at TEXT NOT NULL,
+            CHECK (
+                source_asset_id IS NULL
+                OR (
+                    source_record_id IS NOT NULL
+                    AND source_revision IS NOT NULL
+                    AND source_sha256 IS NOT NULL
+                )
+            ),
+            FOREIGN KEY (source_asset_id, source_record_id)
+                REFERENCES asset_references(id, record_id)
+                ON DELETE RESTRICT,
+            UNIQUE (draft_id, sort_order)
+        )
+        """,
+        """
+        CREATE INDEX evidence_snapshots_draft_order
+        ON evidence_snapshots(draft_id, sort_order)
+        """,
+    ),
 }
 
 _EXPECTED_COLUMNS = {
@@ -153,6 +257,34 @@ _EXPECTED_COLUMNS = {
         "attachment_filename",
         "linked_at",
         "observed_at",
+    },
+    "note_drafts": {
+        "id",
+        "record_id",
+        "asset_id",
+        "title",
+        "body_markdown",
+        "status",
+        "revision",
+        "created_at",
+        "updated_at",
+    },
+    "evidence_snapshots": {
+        "id",
+        "draft_id",
+        "kind",
+        "content",
+        "source_label",
+        "locator_json",
+        "origin",
+        "source_record_id",
+        "source_asset_id",
+        "source_revision",
+        "source_sha256",
+        "selection_id",
+        "included",
+        "sort_order",
+        "created_at",
     },
 }
 

@@ -15,6 +15,7 @@ build/
 dist/
 node_modules/
 .release-tmp/
+experiments/g5_formula_recognition/.build/
 .researchmind-recovery/
 
 # Test and coverage artifacts

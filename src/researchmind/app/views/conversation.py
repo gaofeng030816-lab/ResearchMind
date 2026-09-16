@@ -20,7 +20,7 @@ _TASK_LABELS = {
 def render_conversation() -> None:
     """Render in-memory messages, follow-up input, and capture entry point."""
 
-    st.subheader("3. 研究对话")
+    st.subheader("4. 研究对话")
     document = state.get_opened_document()
     conversation = state.get_current_conversation()
     if document is None or conversation is None:

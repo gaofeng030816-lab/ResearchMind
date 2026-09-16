@@ -2,7 +2,7 @@
 
 日期：2026-08-31
 
-状态：V3 candidate Spike evidence ready；明确排除于 V2 验收；尚未接入 `src/researchmind/`
+状态：历史 V3 candidate Spike evidence；明确排除于 V2 验收。V3-G5 已采用独立的 production detector/single-crop recognizer 边界，本文件中的 Spike 代码仍未直接接入 `src/researchmind/`。最终决定见 [V3_G5_FORMULA_RECOGNITION_DECISION.md](./V3_G5_FORMULA_RECOGNITION_DECISION.md)
 
 分支：`codex/spike-pdf-formula-latex`
 

@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "purpose": "authorized_local_real_paper_formula_validation",
+  "annotation_status": "agent_visual_first_pass_requires_human_spot_check",
+  "external_transfer_authorized": false,
+  "source_paths_stored": false,
+  "source_text_stored": false,
+  "papers": [
+    {
+      "source_id": "1707.06347v2",
+      "source_sha256": "968715716a8e8e3e4c6ec0613c6128370d6dec376da8b803d9867933ff66b9fc"
+    },
+    {
+      "source_id": "2205.07246v3",
+      "source_sha256": "90920ee699a2b7acb5c7ba73f49d4f6df962992aad7131e8c508943ed04f00fa"
+    },
+    {
+      "source_id": "2507.04247v1",
+      "source_sha256": "584bf5ce91d6485966ea73636796a07639f76c36ab534f2a8e3efbaa848dbd39"
+    }
+  ],
+  "recognition_cases": [
+    {
+      "id": "1707.06347v2-002",
+      "source_id": "1707.06347v2",
+      "page_number": 2,
+      "bbox": [234.497, 189.354, 360.779, 228.973],
+      "crop_sha256": "5ce5b8f3b6968b99059289d683a969936d1d34c5b03c4cb50ebe2480a81f6a7a",
+      "reference_latex": "\\hat{g}=\\hat{\\mathbb{E}}_t\\left[\\nabla_\\theta\\log\\pi_\\theta(a_t\\mid s_t)\\hat{A}_t\\right]",
+      "categories": ["gradient", "greek", "subscript", "accent"]
+    },
+    {
+      "id": "1707.06347v2-004",
+      "source_id": "1707.06347v2",
+      "page_number": 3,
+      "bbox": [170.133, 273.783, 425.142, 313.402],
+      "crop_sha256": "2d24259d9bbd18305f3544fb8d87ec9ddda5513e3b5e3332413749aafeaf3fda",
+      "reference_latex": "L^{CLIP}(\\theta)=\\hat{\\mathbb{E}}_t\\left[\\min\\left(r_t(\\theta)\\hat{A}_t,\\operatorname{clip}(r_t(\\theta),1-\\epsilon,1+\\epsilon)\\hat{A}_t\\right)\\right]",
+      "categories": ["function", "greek", "superscript", "accent"]
+    },
+    {
+      "id": "1707.06347v2-007",
+      "source_id": "1707.06347v2",
+      "page_number": 2,
+      "bbox": [226.314, 295.537, 525.354, 335.155],
+      "crop_sha256": "629788a5238f078f3a50fb4a87337bbb58da2740d3b11eb134b2ef448e18f8df",
+      "reference_latex": "L^{PG}(\\theta)=\\hat{\\mathbb{E}}_t\\left[\\log\\pi_\\theta(a_t\\mid s_t)\\hat{A}_t\\right]\\tag{2}",
+      "categories": ["equation_number", "greek", "subscript", "superscript"]
+    },
+    {
+      "id": "1707.06347v2-008",
+      "source_id": "1707.06347v2",
+      "page_number": 5,
+      "bbox": [160.768, 297.791, 525.351, 318.628],
+      "crop_sha256": "0ab2fbd3a316f24c48691b2fbe00ee3385cd4e456a035f998fa23b02d74ebecf",
+      "reference_latex": "\\hat{A}_t=-V(s_t)+r_t+\\gamma r_{t+1}+\\cdots+\\gamma^{T-t+1}r_{T-1}+\\gamma^{T-t}V(s_T)\\tag{10}",
+      "categories": ["equation_number", "greek", "subscript", "superscript", "ellipsis"]
+    },
+    {
+      "id": "1707.06347v2-009",
+      "source_id": "1707.06347v2",
+      "page_number": 5,
+      "bbox": [69.926, 190.827, 525.354, 246.332],
+      "crop_sha256": "936d99c34431deb099fd750f1ff43278724522aed6d2d2d4e1032ef5f58b0cef",
+      "reference_latex": "L_t^{CLIP+VF+S}(\\theta)=\\hat{\\mathbb{E}}_t\\left[L_t^{CLIP}(\\theta)-c_1L_t^{VF}(\\theta)+c_2S[\\pi_\\theta](s_t)\\right]\\tag{9}",
+      "categories": ["equation_number", "greek", "subscript", "superscript"]
+    },
+    {
+      "id": "2205.07246v3-004",
+      "source_id": "2205.07246v3",
+      "page_number": 5,
+      "bbox": [188.839, 361.091, 504.0, 390.492],
+      "crop_sha256": "8ae60a825d9c6bf33277ca1adea8c2643b0ddf100d9bd772f9fe7a7c75410d79",
+      "reference_latex": "\\tau_t=\\begin{cases}\\frac{1}{C},&t=0,\\\\\\lambda\\tau_{t-1}+(1-\\lambda)\\frac{1}{\\mu B}\\sum_{b=1}^{\\mu B}\\max(q_b),&\\text{otherwise}\\end{cases}\\tag{5}",
+      "categories": ["cases", "sum", "fraction", "equation_number", "greek"]
+    },
+    {
+      "id": "2205.07246v3-008",
+      "source_id": "2205.07246v3",
+      "page_number": 6,
+      "bbox": [252.42, 344.212, 504.0, 355.797],
+      "crop_sha256": "5114b8942591232e7b511fee31cf60d14590c98dbd94d5bffd8b6207cb4be750",
+      "reference_latex": "\\mathcal{L}=\\mathcal{L}_s+w_u\\mathcal{L}_u+w_f\\mathcal{L}_f\\tag{12}",
+      "categories": ["equation_number", "subscript", "calligraphic"]
+    },
+    {
+      "id": "2205.07246v3-009",
+      "source_id": "2205.07246v3",
+      "page_number": 4,
+      "bbox": [218.503, 317.931, 504.0, 349.812],
+      "crop_sha256": "0273a2e2c25800c8ab3a7fce4709ec854ef017a0546fae5ce92537d579dc2b9d",
+      "reference_latex": "\\mathcal{L}_u=\\frac{1}{\\mu B}\\sum_{b=1}^{\\mu B}\\mathbb{1}(\\max(q_b)>\\tau)\\cdot\\mathcal{H}(\\hat{q}_b,Q_b)\\tag{4}",
+      "categories": ["sum", "fraction", "equation_number", "greek", "accent"]
+    },
+    {
+      "id": "2205.07246v3-010",
+      "source_id": "2205.07246v3",
+      "page_number": 5,
+      "bbox": [183.236, 472.711, 504.0, 502.112],
+      "crop_sha256": "9170e8929d807b4c213d6576bb006208e42dd8cdacd59bb995250efa4d8fd118",
+      "reference_latex": "\\tilde{p}_t(c)=\\begin{cases}\\frac{1}{C},&t=0,\\\\\\lambda\\tilde{p}_{t-1}(c)+(1-\\lambda)\\frac{1}{\\mu B}\\sum_{b=1}^{\\mu B}q_b(c),&\\text{otherwise}\\end{cases}\\tag{6}",
+      "categories": ["cases", "sum", "fraction", "equation_number", "accent"]
+    },
+    {
+      "id": "2205.07246v3-012",
+      "source_id": "2205.07246v3",
+      "page_number": 4,
+      "bbox": [237.373, 210.628, 504.0, 242.038],
+      "crop_sha256": "f4e6b971d5da23a3c7b186f13cacbc45b1a7e99f42689290c9d55c6cf82d6d6c",
+      "reference_latex": "\\mathcal{L}_s=\\frac{1}{B}\\sum_{b=1}^{B}\\mathcal{H}(y_b,p_m(y\\mid\\omega(x_b)))\\tag{3}",
+      "categories": ["sum", "fraction", "equation_number", "greek"]
+    },
+    {
+      "id": "2507.04247v1-019",
+      "source_id": "2507.04247v1",
+      "page_number": 17,
+      "bbox": [159.833, 255.525, 452.176, 284.173],
+      "crop_sha256": "eb64e0a771d1b4423aa1d132ab946d19b2c6fa312494d0f40da2b958579d381e",
+      "reference_latex": "\\ell_{h,\\tau}(u)=\\frac{h}{\\sqrt{2\\pi}}\\exp\\left(-\\frac{u^2}{2h^2}\\right)+\\frac{u}{2}\\left\\{1-2\\Phi\\left(-\\frac{u}{h}\\right)\\right\\}+\\left(\\tau-\\frac{1}{2}\\right)u",
+      "categories": ["fraction", "root", "greek", "superscript", "subscript"]
+    },
+    {
+      "id": "2507.04247v1-022",
+      "source_id": "2507.04247v1",
+      "page_number": 19,
+      "bbox": [220.009, 306.479, 391.991, 337.491],
+      "crop_sha256": "01415bd6a290bbd1e3c3864307f0aa42894ab2a1683280a96642bdd0ec719727",
+      "reference_latex": "p_{ij}(X)=\\frac{e^{\\eta_{ij}}}{\\sum_{k=1}^{q}e^{\\eta_{ik}}},\\qquad 1\\le j\\le q",
+      "categories": ["sum", "fraction", "greek", "subscript", "superscript"]
+    },
+    {
+      "id": "2507.04247v1-024",
+      "source_id": "2507.04247v1",
+      "page_number": 20,
+      "bbox": [140.811, 504.912, 451.266, 519.709],
+      "crop_sha256": "d231a71305f5dfeddf668922659a30345b2bf3ec28296b4252afa5b7f88cba22",
+      "reference_latex": "(E\\otimes GK^2G^\\top+\\lambda I_{q-1}\\otimes GKG^\\top+\\lambda\\delta I_{(q-1)\\times m})\\operatorname{vec}(\\Delta)=\\operatorname{vec}(C^k)",
+      "categories": ["tensor_product", "greek", "subscript", "superscript"]
+    },
+    {
+      "id": "2507.04247v1-039",
+      "source_id": "2507.04247v1",
+      "page_number": 11,
+      "bbox": [136.336, 115.666, 475.667, 128.886],
+      "crop_sha256": "4f03c2da073b653a738ec015c4d2084829887f7dfb2cb020a5e090bd8e906ec3",
+      "reference_latex": "[\\nabla f(y)-\\nabla f(x)]^\\top H^{-1}[\\nabla f(y)-\\nabla f(x)]\\le[\\nabla f(y)-\\nabla f(x)]^\\top(y-x)",
+      "categories": ["gradient", "inequality", "superscript"]
+    },
+    {
+      "id": "2507.04247v1-047",
+      "source_id": "2507.04247v1",
+      "page_number": 18,
+      "bbox": [136.737, 692.026, 403.216, 705.245],
+      "crop_sha256": "9397ab364346220d9c411ec8ed615fac08c80950b1e1871a375deae8b36cf186",
+      "reference_latex": "\\nabla f(\\operatorname{vec}(X))=-\\operatorname{vec}(GK(B-P))+\\lambda\\operatorname{vec}(GKG^\\top X)",
+      "categories": ["gradient", "greek", "superscript"]
+    },
+    {
+      "id": "2507.04247v1-048",
+      "source_id": "2507.04247v1",
+      "page_number": 18,
+      "bbox": [157.39, 242.768, 522.002, 268.541],
+      "crop_sha256": "529d9a635a5373eec17409d1be8c6759046c94deb0060202171d0b749d83455d",
+      "reference_latex": "GKWKG^\\top+\\lambda GKG^\\top\\preceq H=\\frac{1}{4}GK^2G^\\top+\\lambda GKG^\\top+\\delta I\\tag{23}",
+      "categories": ["fraction", "inequality", "equation_number", "greek"]
+    },
+    {
+      "id": "2507.04247v1-052",
+      "source_id": "2507.04247v1",
+      "page_number": 21,
+      "bbox": [119.722, 545.675, 492.28, 571.448],
+      "crop_sha256": "df4dbdb8751f661efa67de15e20ecf84f30ceb11416d7b15483679d5e18ae292",
+      "reference_latex": "\\eta_i=-4+\\sin(a_{i1})+a_{i2}a_{i3}+a_{i4}^3-|a_{i5}|+\\frac{1}{10}\\lVert(a_{i6},\\ldots,a_{id})\\rVert^2,\\qquad b_i=\\eta_i+\\epsilon_i",
+      "categories": ["fraction", "greek", "subscript", "superscript", "norm"]
+    },
+    {
+      "id": "2507.04247v1-055",
+      "source_id": "2507.04247v1",
+      "page_number": 12,
+      "bbox": [243.936, 689.69, 377.564, 706.38],
+      "crop_sha256": "95a413f0ec6b0cb477713b5a7f7189e336299d577215f487665cc21176c2c56d",
+      "reference_latex": "y^k=x^k+\\beta_k(x^k-x^{k-1})",
+      "categories": ["greek", "subscript", "superscript"]
+    }
+  ],
+  "detector_audit_cases": [
+    {"id": "1707.06347v2-002", "source_id": "1707.06347v2", "page_number": 2, "bbox": [234.497, 189.354, 360.779, 228.973], "crop_sha256": "5ce5b8f3b6968b99059289d683a969936d1d34c5b03c4cb50ebe2480a81f6a7a", "label": "formula_complete", "expected_detected": true, "notes": "single display formula; small surrounding-text intrusion"},
+    {"id": "1707.06347v2-003", "source_id": "1707.06347v2", "page_number": 2, "bbox": [194.55, 448.75, 525.354, 506.478], "crop_sha256": "ed17011c4e7b9d3f2a711b3af8d5b4b295d536d53bac38ccf35cc84a2d37ec51", "label": "multiple_formulas_merged", "expected_detected": false, "notes": "objective and constraint merged into one region"},
+    {"id": "1707.06347v2-016", "source_id": "1707.06347v2", "page_number": 8, "bbox": [70.183, 105.65, 143.051, 154.229], "crop_sha256": "df2c9e980dbbdcc8d0356ac0186627399f328293b75b14eeab464e411f696c4e", "label": "false_positive_figure", "expected_detected": false, "notes": "embedded game frame is not a formula"},
+    {"id": "2205.07246v3-006", "source_id": "2205.07246v3", "page_number": 6, "bbox": [202.931, 252.495, 244.419, 264.081], "crop_sha256": "99f66dd90eafc28a5a445749934d1c4e016f5b60deca9c704d8e7581d4a274a0", "label": "formula_incomplete", "expected_detected": false, "notes": "left fragment of a larger display formula"},
+    {"id": "2205.07246v3-018", "source_id": "2205.07246v3", "page_number": 9, "bbox": [385.199, 124.445, 490.606, 173.313], "crop_sha256": "2aafa4dcea9f6dd268bd0b26c5cb7e1b9c30b12b35811b5da52587e9d239262b", "label": "false_positive_table", "expected_detected": false, "notes": "numeric result table is not a display formula"},
+    {"id": "2205.07246v3-019", "source_id": "2205.07246v3", "page_number": 2, "bbox": [115.41, 90.623, 214.413, 152.5], "crop_sha256": "a3a1dbfe14976c4b84d8167289c6bfaa14aaac44baf990de872c394e7b50c6b0", "label": "false_positive_figure", "expected_detected": false, "notes": "decision-boundary plot is not a formula"},
+    {"id": "2205.07246v3-032", "source_id": "2205.07246v3", "page_number": 14, "bbox": [108.0, 151.084, 504.001, 174.413], "crop_sha256": "880d124917b316f8f2730ea2d0c930e40e82a752bf785a90ffca32758a120fbb", "label": "inline_math_in_prose", "expected_detected": false, "notes": "paragraph and inline expression should not be a display formula crop"},
+    {"id": "2507.04247v1-003", "source_id": "2507.04247v1", "page_number": 6, "bbox": [90.0, 140.475, 445.228, 250.144], "crop_sha256": "310b65cae63157bfa9d152c4afa61bba80735b3ba0b55b5946f05f40ee1809d4", "label": "false_positive_algorithm", "expected_detected": false, "notes": "algorithm block merged as one formula region"},
+    {"id": "2507.04247v1-006", "source_id": "2507.04247v1", "page_number": 7, "bbox": [90.0, 306.623, 522.003, 686.026], "crop_sha256": "dcfec61aacbfde118d4ba92bbf895abbcf1212e79aa05b8dda797bc00fe88b02", "label": "multiple_formulas_merged", "expected_detected": false, "notes": "large theorem/proof block includes several formulas"},
+    {"id": "2507.04247v1-039", "source_id": "2507.04247v1", "page_number": 11, "bbox": [136.336, 115.666, 475.667, 128.886], "crop_sha256": "4f03c2da073b653a738ec015c4d2084829887f7dfb2cb020a5e090bd8e906ec3", "label": "formula_complete", "expected_detected": true, "notes": "single compact inequality"}
+  ]
+}

@@ -39,7 +39,7 @@ Acceptance closed on 2026-09-01 with 269 passing tests and one Windows symlink
 environment skip plus recorded package, launcher, recovery, security, performance,
 and user-confirmed journeys. It is not a public release.
 
-V3-G0, V3-G1, V3-G2 and V3-G3 are Completed. V3-G2: the user confirmed its read-only
+V3-G0, V3-G1, V3-G2, V3-G3, V3-G4 and V3-G5 are Completed. V3-G2: the user confirmed its read-only
 Local API architecture on 2026-09-02. Schema version 2, optional GET-only loopback
 metadata browsing, durable source snapshots, link/unlink UI, and graceful failure
 handling are implemented. The user approved selected, approved-directory, read-only
@@ -52,7 +52,7 @@ rechecked; G1 validates and stores the managed copy. See docs/V3_G2_ZOTERO_VALID
 The user confirmed "G2通过验收" on 2026-09-04, closing G2 manual acceptance.
 Record this as user-reported acceptance, not a newly agent-observed live test.
 The accepted G2 automated baseline is 374 passed / 1 environment skip. V3-G3 is also
-Completed, with a current combined regression of 486 passed / 1 environment skip.
+Completed, with its accepted combined regression of 486 passed / 1 environment skip.
 Its evidence began with an isolated selection contract, synthetic inline CCv2 harness,
 and official-template PDF.js 6.3.289 packaged experiment. Edge 152 passed synthetic
 mouse selection, bounded event fields, bitmap stability, page invalidation, two-column
@@ -74,12 +74,47 @@ Paper-only is full width, paper+code uses responsive columns, and input-safe
 Ctrl+Shift+A controls the AI panel. A 1,041,404-byte production wheel contains exactly
 one JS and one CSS asset, the Streamlit manifest, notices and Apache-2.0 license; it has
 no node_modules or source maps. Edge 152 production acceptance passed 8/8 checks with
-no page errors or external requests. See docs/V3_G3_PDF_WORKSPACE_SPIKE.md. V3-G4 is
-the next planned stage and has not started.
+no page errors or external requests. See docs/V3_G3_PDF_WORKSPACE_SPIKE.md.
+
+The user confirmed G4-A on 2026-09-08 and confirmed "G4通过验收" on 2026-09-09.
+G4 implements schema
+version 3 with separate note_drafts/evidence_snapshots tables, bounded project models
+and validation, optimistic draft revisions, explicit evidence inclusion/order,
+current/stale/detached asset provenance, application use cases, and backup/restore.
+G4-C adds exact selection/target transfer preview, click-only translation, managed
+revision binding, explicit source/translation capture, duplicate protection and a
+persistent include/order/remove evidence basket. The compatibility message picker now
+defaults empty. G4-D adds explicit local draft editing, deterministic provenance-aware
+Markdown preview, revision/SHA-256 preview invalidation, stale-source revalidation,
+and explicit byte-identical non-overwriting Vault output through integration/obsidian.
+G4-E passed 42 focused checks, 425 production tests / 1 environment skip and 524 tests /
+1 skip with the G3 experiments. Edge 152 passed 8/8 isolated browser checks with no page
+errors or external requests; the user then confirmed manual acceptance. See
+docs/V3_G4_NOTE_COMPOSER_DECISION.md.
 No routine test contacts
 localhost; no Zotero write, direct Zotero SQLite read, Web API credential, background
 sync, group-library workflow, or whole-library cache is implemented.
 
+V3-G5 is Completed. It adopts a narrow FormulaRecognizer boundary and the configured
+OpenAI-compatible vision provider for one hash-bound PNG crop at a time. Local
+detection/cropping, exact transfer preview, per-crop consent, strict LaTeX validation,
+editable candidates, explicit acceptance and optional G4 evidence capture are in
+production. No whole PDF, path, surrounding text, history or note is sent. The
+LaTeX_OCR_PRO runtime remains rejected; pix2tex 0.1.4 remains deferred because pinned
+offline weights, Python 3.12/Windows packaging, CPU/GPU performance and fixed-corpus
+quality are not proven. No local OCR dependency or model weight is adopted.
+
+G5 evidence: 20/20 synthetic coverage, 95% normalized exact, 99.41% mean token
+similarity and 100% structural exact; 18/18 authorized real crops returned strict
+LaTeX with 95.09% mean token similarity and 100% structural exact. Real normalized
+exact is only 11.11%, so output is an editable candidate, never claimed as source-TeX
+recovery. Detector recall is 18/18 on the labeled set while three known false/
+over-merged candidates remain. Edge 152 passed the 10-step fake-provider journey.
+Current evidence is 48 G5 focused checks, 21 Streamlit AppTests, 474 production tests /
+1 existing Windows symlink environment skip, and 573 tests / 1 skip with the adopted
+G3 experiments. See docs/V3_G5_FORMULA_RECOGNITION_DECISION.md.
+
+V3-G6 and G7 remain Pending and are not started.
 Only one primary V3 stage may be Active. Preserve 2.0.0rc1 independently so every V3
 slice can be abandoned or rolled back without rewriting the accepted baseline.
 
@@ -104,13 +139,13 @@ V2 already implements:
 
 Automatic formula recognition, image-formula OCR, whole-PDF-to-LaTeX, browser text
 layer selection, persistence, Zotero integration, and non-Python parsing are not V2
-features. Existing formula and wheel/CCv2 work remains isolated evidence until a V3
-gate adopts it.
+features. V3 has now adopted the G1–G5 slices described above; this does not rewrite
+the accepted V2 baseline.
 
-V3-G1 adds persistence only for the paper/code working library and managed asset
-metadata. Conversation history, evidence links, selections, explanations, T5-A
-sessions, and note drafts remain session-only unless a later gate explicitly adopts
-their persistence.
+V3-G1 adds persistence for the paper/code working library and managed asset metadata;
+G4 adds explicit NoteDraft/EvidenceSnapshot persistence. Conversation history,
+EvidenceLink, ReadingSelection, CodeSelection, explanations, T5-A sessions and legacy
+KnowledgeNote previews remain session-only and do not become evidence automatically.
 
 ## V3 Requirements and Stage Shape
 
@@ -136,9 +171,9 @@ Preserve Python 3.12, one local Streamlit process, PyMuPDF, the OpenAI-compatibl
 provider, python-dotenv, pytest, src-layout, dataclasses, type hints, and beginner-
 readable modules unless a specific decision changes them.
 
-Implemented V3-G1/G2/G3 choices:
+Implemented V3-G1/G2/G3/G4/G5 choices:
 
-- standard-library sqlite3 with schema version 2, no ORM or database server;
+- standard-library sqlite3 with schema version 3, no ORM or database server;
 - ResearchMind-managed PDF/Python files plus metadata/hashes/relative paths in SQLite,
   never PDF/source blobs;
 - native st.file_uploader for one PDF and Python directory upload, with server-side
@@ -156,12 +191,19 @@ Implemented V3-G1/G2/G3 choices:
   adopted browser text layer; PyMuPDF remains the trusted parser/reconciler and
   compatibility renderer. Viewer bytes are hash-bound and capped at 10 MiB; no local
   PDF path or unverified client bbox becomes selection provenance.
+- note_drafts and evidence_snapshots persist only explicit drafts/evidence; editable
+  Markdown is separate from immutable source content, every basket mutation uses an
+  optimistic draft revision, and no local draft operation writes the Vault;
+- a preview is deterministically composed from one persisted draft revision plus its
+  included ordered evidence and current/stale/detached provenance. Unsaved edits,
+  changed evidence/source state, or a SHA-256 mismatch invalidate export. Only an
+  explicit confirmation writes those exact preview bytes through the non-overwriting
+  Obsidian boundary.
 
 Candidates not implemented until later gates close:
 
 - Zotero Web API, group-library product workflow, writes, and sync; never direct
   Zotero SQLite;
-- a dedicated formula detector/recognizer boundary operating on selected page regions;
 - Tree-sitter plus language grammar packages only after Python/C/Java/Julia/R parity,
   Windows packaging, performance, license, and maintenance evidence.
 
@@ -181,7 +223,8 @@ Current ownership:
 - pdf, code, llm, translation, integration/obsidian, and config.py own their V2
   external boundaries.
 - database owns sqlite3 connections, schema versioning, migrations, transactions,
-  repositories, managed-file staging/finalization, and library backup/restore.
+  library/note-draft repositories, managed-file staging/finalization, and library
+  backup/restore.
 - integration/obsidian is the only Vault writer.
 - config.py is the only environment/secrets reader.
 
@@ -192,11 +235,14 @@ Current adopted infrastructure ownership:
 - pdf/viewer_component owns the adopted CCv2/pdf.js UI, event validation and PyMuPDF
   reconciliation; app/state.py alone stores transient component events/sequences and
   app/use_cases.py maps verified results into application flow;
+- pdf/formulas.py owns local revision-bound region detection and bounded crop
+  rendering; llm/formula_recognizer.py owns the provider-neutral recognizer protocol
+  and OpenAI-compatible single-crop adapter. app/state.py keeps raw crops and
+  unaccepted candidates session-only, while app/use_cases.py revalidates exact crop
+  consent, acceptance and optional G4 evidence capture;
 
 After the corresponding later V3 gate is approved:
 
-- pdf may add a formula detector/recognizer adapter, but it still does not own LLM,
-  translation, database, or Vault orchestration;
 - code may add language parser adapters that map to existing project models, but
   remains non-executing and default read-only.
 
@@ -221,13 +267,15 @@ V3-G1 persistence exists because the cross-session paper/code library requiremen
 real. Its implemented contract is:
 
 - stable item/asset/source-link identity;
-- schema version 2 with deterministic migration, validation, rollback, and newer/
+- schema version 3 with deterministic migration, validation, rollback, and newer/
   corrupt-version rejection;
 - an explicit data root containing researchmind.sqlite3, assets/, and private staging;
 - exact content-hash duplicate detection and immutable AssetReference revisions;
 - validated staging, database transaction, atomic finalization, and compensation;
 - soft remove/restore separate from confirmed managed-copy deletion;
 - checksummed bounded backup and restore only into an absent separate data directory.
+- explicit NoteDraft/EvidenceSnapshot persistence with bounded locators, optimistic
+  revisions, selected-only content, and current/stale/detached source evaluation.
 
 Use parameterized SQL, explicit transactions, foreign keys, and project exceptions.
 Do not store keys in SQLite. Do not store whole PDFs or code repositories as database
@@ -307,7 +355,8 @@ and visible failures.
 - Treat PDF/code text, uploaded names, component events, Zotero metadata, database
   text, Markdown, history, and model output as untrusted.
 - Delimit prompt evidence, send only selected/bounded context, and show external
-  transfer scope. Formula services receive one crop, not a whole paper by default.
+  transfer scope. Formula services receive exactly one confirmed crop, never a whole
+  paper in the adopted G5 flow.
 - Local processing has no telemetry. Routine tests never use a live API or user data.
 - Treat LLM LaTeX and code replacements as untrusted and preserve all existing strict
   parsing, confirmation, recovery, and non-execution rules.

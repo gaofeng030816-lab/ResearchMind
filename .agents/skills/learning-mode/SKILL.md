@@ -22,11 +22,17 @@ Always label behavior as one of:
 - approved design not yet implemented;
 - proposed future work.
 
-The 2.0.0rc1 V2 baseline is implemented and accepted. V3-G0–G3 are Completed: G1 adds
+The 2.0.0rc1 V2 baseline is implemented and accepted. V3-G0–G4 are Completed: G1 adds
 the local working library, G2 adds optional GET-only Zotero links and approved local
 PDF copying, and G3 adds the adopted CCv2/pdf.js text layer with PyMuPDF reconciliation
-and workspace interaction. G4–G7, including persistent drafts, formula OCR/recognition
-and extra code languages, have not started.
+and workspace interaction. G4 adds schema-v3 NoteDraft/EvidenceSnapshot persistence,
+click-only translation, the explicit evidence basket, editable Markdown, explicit
+local save, a revision-bound preview and confirmed non-overwriting Vault output. The
+user accepted G4 on 2026-09-09. G5 is Completed: it adds local bounded region
+detection/cropping, exact per-crop remote consent, an OpenAI-compatible
+FormulaRecognizer, editable/validated/accepted LaTeX and optional formula evidence.
+Its real-paper exact score is low enough that it must be taught as assistance, not
+source recovery. G6/G7 and extra code languages have not started.
 
 ## Teaching Priorities
 
@@ -95,16 +101,20 @@ Current G3 paper interaction path:
     CCv2/pdf.js text-layer event → validated ReadingSelection
     → existing translate/LaTeX/explain/KnowledgeNote actions
 
-Planned G4 continuation, only after its gate:
+Implemented and accepted G4 path:
 
-    user adds chosen result to evidence basket
-    → editable NoteDraft → preview → explicit Obsidian save
+    exact local transfer preview → explicit translation click
+    → user adds chosen source/result to evidence basket
+    → validated NoteDraft/EvidenceSnapshot → schema-v3 repository
+    included ordered evidence → editable Markdown
+    → explicit local save → revision-bound rendered preview
+    → confirmation → exact-byte non-overwriting Obsidian save
 
-Recommended formula path, only after its gate:
+Implemented G5 formula path:
 
     page region → detector evidence → validated crop
     → formula recognizer candidate → strict LaTeX validation
-    → user edit/accept → context/note
+    → user edit/accept → optional G4 evidence/note
 
 Recommended multilingual code path, only after its gate:
 

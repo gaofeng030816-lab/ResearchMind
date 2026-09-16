@@ -10,6 +10,7 @@ from researchmind.app.views import (
     render_code_workspace,
     render_configuration_diagnostics,
     render_conversation,
+    render_evidence_basket,
     render_knowledge,
     render_library,
     render_read_only_assistant,
@@ -72,6 +73,8 @@ def main() -> None:
                 "Ctrl+Shift+A 可打开或关闭；在输入框、编辑器和按钮中操作时不会触发。"
             )
             render_actions()
+            st.divider()
+            render_evidence_basket()
             st.divider()
             render_conversation()
             st.divider()

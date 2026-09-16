@@ -8,6 +8,12 @@ from researchmind.llm.errors import (
     LlmError,
 )
 from researchmind.llm.factory import create_llm_provider
+from researchmind.llm.formula_recognizer import (
+    canonicalize_formula_latex,
+    FormulaRecognizer,
+    OpenAiCompatibleFormulaRecognizer,
+    create_formula_recognizer,
+)
 from researchmind.llm.code_change import parse_code_replacement
 from researchmind.llm.latex import parse_latex_response
 from researchmind.llm.read_only_assistant import parse_assistant_action
@@ -34,6 +40,8 @@ __all__ = [
     "LlmConfigurationError",
     "LlmError",
     "LlmProvider",
+    "FormulaRecognizer",
+    "OpenAiCompatibleFormulaRecognizer",
     "PromptBuilder",
     "build_algorithm_prompt",
     "build_code_change_prompt",
@@ -45,6 +53,7 @@ __all__ = [
     "build_math_prompt",
     "build_read_only_assistant_prompt",
     "create_llm_provider",
+    "create_formula_recognizer",
     "parse_assistant_action",
     "parse_code_replacement",
     "parse_latex_response",

@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "purpose": "license-free synthetic formula-recognizer quality gate",
+  "source_tex_sha256": "D665588F0C000FD4125125F9E07EB441899E7DB71E1553F6897F9ECCCD15AD11",
+  "source_pdf_sha256": "E73C59331DCB0562936187C073221CE172DAFE76CF248C076FF05F255FBE792F",
+  "render": {
+    "engine": "Tectonic LaTeX to PDF, PyMuPDF to grayscale PNG",
+    "zoom": 3.0,
+    "ink_threshold": 245,
+    "padding_px": 24
+  },
+  "cases": [
+    {
+      "id": "basic_superscript",
+      "categories": [
+        "superscript",
+        "baseline"
+      ],
+      "reference_latex": "E=mc^{2}",
+      "page_number": 1,
+      "crop_file": "crops/01_basic_superscript.png",
+      "crop_sha256": "AB5A71FD51245CB6BE1D9B5872172135738EA409B5E5C8B3D16552E75AD9C396",
+      "crop_width_px": 180,
+      "crop_height_px": 80
+    },
+    {
+      "id": "subscript_real_space",
+      "categories": [
+        "subscript",
+        "superscript",
+        "blackboard"
+      ],
+      "reference_latex": "x_i\\in\\mathbb{R}^{n}",
+      "page_number": 2,
+      "crop_file": "crops/02_subscript_real_space.png",
+      "crop_sha256": "D888C448E23B41FCBF80F6338D7D83396F50A68E95EBE41F6E88E76DD7D7A81C",
+      "crop_width_px": 162,
+      "crop_height_px": 80
+    },
+    {
+      "id": "bounded_integral",
+      "categories": [
+        "integral",
+        "limits"
+      ],
+      "reference_latex": "\\int_{a}^{b}f(x)\\,dx",
+      "page_number": 3,
+      "crop_file": "crops/03_bounded_integral.png",
+      "crop_sha256": "2389755B7EB573112ED8D0F40495263FE816662E1C2B72100660E38A80BFC63B",
+      "crop_width_px": 212,
+      "crop_height_px": 138
+    },
+    {
+      "id": "gaussian_integral",
+      "categories": [
+        "integral",
+        "limits",
+        "fraction",
+        "root",
+        "superscript"
+      ],
+      "reference_latex": "\\int_{-\\infty}^{\\infty}e^{-x^{2}}\\,dx=\\sqrt{\\pi}",
+      "page_number": 4,
+      "crop_file": "crops/04_gaussian_integral.png",
+      "crop_sha256": "FFDB237DCC66B73AE5ABB8ABC63AD9B9A07AAF5A654F7AB91BB6D07B0FF0CFAF",
+      "crop_width_px": 326,
+      "crop_height_px": 132
+    },
+    {
+      "id": "finite_sum",
+      "categories": [
+        "sum",
+        "limits",
+        "fraction"
+      ],
+      "reference_latex": "\\sum_{i=1}^{n}i=\\frac{n(n+1)}{2}",
+      "page_number": 5,
+      "crop_file": "crops/05_finite_sum.png",
+      "crop_sha256": "F8CECC637388A16E7105FEC37DDF067AF117D1B6B70A65B302B4D1737FD42E40",
+      "crop_width_px": 297,
+      "crop_height_px": 146
+    },
+    {
+      "id": "sine_limit",
+      "categories": [
+        "limit",
+        "fraction"
+      ],
+      "reference_latex": "\\lim_{x\\to0}\\frac{\\sin x}{x}=1",
+      "page_number": 6,
+      "crop_file": "crops/06_sine_limit.png",
+      "crop_sha256": "9392F781F38141A442A59129118F9B3B004552F8B6C56966423936D93227495B",
+      "crop_width_px": 245,
+      "crop_height_px": 121
+    },
+    {
+      "id": "stacked_fraction",
+      "categories": [
+        "fraction"
+      ],
+      "reference_latex": "\\frac{a+b}{c+d}",
+      "page_number": 7,
+      "crop_file": "crops/07_stacked_fraction.png",
+      "crop_sha256": "C0BB2B64CE210123E2814D44762A0BC243D0778768C8E8D2890BFEA06ED6CBA7",
+      "crop_width_px": 125,
+      "crop_height_px": 125
+    },
+    {
+      "id": "square_root",
+      "categories": [
+        "root",
+        "superscript"
+      ],
+      "reference_latex": "\\sqrt{x^{2}+y^{2}}",
+      "page_number": 8,
+      "crop_file": "crops/08_square_root.png",
+      "crop_sha256": "3ACCB6A90A57ABD4E033C24E7F9FE11716C6EA1F6D008A3BE97D98644E16B847",
+      "crop_width_px": 191,
+      "crop_height_px": 92
+    },
+    {
+      "id": "greek_symbols",
+      "categories": [
+        "greek"
+      ],
+      "reference_latex": "\\alpha+\\beta=\\gamma",
+      "page_number": 9,
+      "crop_file": "crops/09_greek_symbols.png",
+      "crop_sha256": "06F6142E6A687FC4C0273CD30867C1FD27FA9253A494BAA7DEFA8D6BEC4E472E",
+      "crop_width_px": 201,
+      "crop_height_px": 82
+    },
+    {
+      "id": "indexed_sum",
+      "categories": [
+        "sum",
+        "limits",
+        "subscript"
+      ],
+      "reference_latex": "A_{ij}=\\sum_{k=1}^{m}B_{ik}C_{kj}",
+      "page_number": 10,
+      "crop_file": "crops/10_indexed_sum.png",
+      "crop_sha256": "56A7C7693E29E75633D2B260424789225F20245C8D63DC716DEFA58ADC1832FA",
+      "crop_width_px": 300,
+      "crop_height_px": 147
+    },
+    {
+      "id": "bracket_matrix",
+      "categories": [
+        "matrix",
+        "alignment"
+      ],
+      "reference_latex": "\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}",
+      "page_number": 11,
+      "crop_file": "crops/11_bracket_matrix.png",
+      "crop_sha256": "6D99181BDE2547605AF2C4DB765EA2074F9799C6ABE9F741E9CB212DDED985B9",
+      "crop_width_px": 135,
+      "crop_height_px": 135
+    },
+    {
+      "id": "determinant_matrix",
+      "categories": [
+        "matrix",
+        "alignment"
+      ],
+      "reference_latex": "\\det\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}=ad-bc",
+      "page_number": 12,
+      "crop_file": "crops/12_determinant_matrix.png",
+      "crop_sha256": "F7FA08ABE2E01B05F18969AF1BAFBA1FCB53A0B0CD5CCAA93386703B018187A2",
+      "crop_width_px": 379,
+      "crop_height_px": 135
+    },
+    {
+      "id": "piecewise_cases",
+      "categories": [
+        "cases",
+        "alignment"
+      ],
+      "reference_latex": "\\begin{cases}x+y=1\\\\x-y=0\\end{cases}",
+      "page_number": 13,
+      "crop_file": "crops/13_piecewise_cases.png",
+      "crop_sha256": "BB73CFE012855055AAEB14A090F9CE0398AF0FEDFE4F1CE08CCB9C38017E8AEC",
+      "crop_width_px": 219,
+      "crop_height_px": 157
+    },
+    {
+      "id": "aligned_system",
+      "categories": [
+        "aligned",
+        "alignment",
+        "superscript"
+      ],
+      "reference_latex": "\\begin{aligned}y&=mx+b\\\\z&=ax^{2}+bx+c\\end{aligned}",
+      "page_number": 14,
+      "crop_file": "crops/14_aligned_system.png",
+      "crop_sha256": "3D3D4D9FB2201BEEF54E0F7A0B6127538549F8AB4E85BBD6207A79564BE8D0CA",
+      "crop_width_px": 302,
+      "crop_height_px": 128
+    },
+    {
+      "id": "partial_derivative",
+      "categories": [
+        "fraction",
+        "greek"
+      ],
+      "reference_latex": "\\frac{\\partial L}{\\partial\\theta}=0",
+      "page_number": 15,
+      "crop_file": "crops/15_partial_derivative.png",
+      "crop_sha256": "38A6B0E832D9F69664B413B377EC8D18B21E53991FB657788585DC9B17F1B2A8",
+      "crop_width_px": 161,
+      "crop_height_px": 124
+    },
+    {
+      "id": "divergence",
+      "categories": [
+        "fraction",
+        "greek",
+        "subscript"
+      ],
+      "reference_latex": "\\nabla\\cdot\\mathbf{E}=\\frac{\\rho}{\\varepsilon_0}",
+      "page_number": 16,
+      "crop_file": "crops/16_divergence.png",
+      "crop_sha256": "4602615060BD2B62370228C1A70DAA3ADA9E7160AA0875E1BA0C959E721C3550",
+      "crop_width_px": 211,
+      "crop_height_px": 119
+    },
+    {
+      "id": "bayes_rule",
+      "categories": [
+        "fraction",
+        "conditional"
+      ],
+      "reference_latex": "P(Y\\mid X)=\\frac{P(X\\mid Y)P(Y)}{P(X)}",
+      "page_number": 17,
+      "crop_file": "crops/17_bayes_rule.png",
+      "crop_sha256": "83780CDFC3E971258AF8D5EAFD92B7B20C2453FFEAA28C092B7A64C6FE8D47FC",
+      "crop_width_px": 471,
+      "crop_height_px": 133
+    },
+    {
+      "id": "finite_product",
+      "categories": [
+        "product",
+        "limits",
+        "subscript"
+      ],
+      "reference_latex": "\\prod_{j=1}^{p}(1-\\lambda_jt)",
+      "page_number": 18,
+      "crop_file": "crops/18_finite_product.png",
+      "crop_sha256": "46469AE24AD55C72BA1A19D0098B1FD6DD59CB24CE02F44A26AAFB26A280EE2A",
+      "crop_width_px": 226,
+      "crop_height_px": 152
+    },
+    {
+      "id": "contour_integral",
+      "categories": [
+        "integral",
+        "subscript",
+        "vector"
+      ],
+      "reference_latex": "\\oint_{\\partial\\Omega}\\mathbf{F}\\cdot d\\mathbf{r}",
+      "page_number": 19,
+      "crop_file": "crops/19_contour_integral.png",
+      "crop_sha256": "125EFDDFB1869408E19DE99F89DD910CB59E4B41EA3921A680C83310269A86C6",
+      "crop_width_px": 192,
+      "crop_height_px": 131
+    },
+    {
+      "id": "equation_number",
+      "categories": [
+        "equation_number",
+        "set",
+        "conditional"
+      ],
+      "reference_latex": "\\Pr(A\\cup B)=\\Pr(A)+\\Pr(B)-\\Pr(A\\cap B)\\tag{20}",
+      "page_number": 20,
+      "crop_file": "crops/20_equation_number.png",
+      "crop_sha256": "537BC2514C9A33DA23E4BFBC36E50FFE150055CBEC855D233E5CAE9EABBB9EA5",
+      "crop_width_px": 945,
+      "crop_height_px": 84
+    }
+  ]
+}

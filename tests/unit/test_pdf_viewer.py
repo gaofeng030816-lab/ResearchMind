@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from researchmind.app import use_cases
+from researchmind.config import Settings
 from researchmind.pdf import PdfViewerError, load_pdf_viewer_source, open_pdf
 from researchmind.pdf.viewer_component import boundary
 from researchmind.pdf.viewer_component.provenance import build_page_snapshot
@@ -104,6 +105,7 @@ def test_viewer_source_rejects_content_changed_after_open(
 
 def test_selection_maps_only_server_reconciled_text_and_geometry(
     single_page_pdf: Path,
+    tmp_path: Path,
 ) -> None:
     opened = open_pdf(single_page_pdf)
     source = load_pdf_viewer_source(
@@ -132,6 +134,24 @@ def test_selection_maps_only_server_reconciled_text_and_geometry(
     assert selection.locator["viewer_engine"] == "pdf.js/6.3.289"
     assert selection.locator["locator_status"] == "verified_text_geometry"
     assert selection.locator["bbox"] != tuple(client_box)
+
+    settings = Settings(researchmind_data_dir=tmp_path / "library")
+    draft = use_cases.create_paper_note_draft(opened, settings=settings)
+    _draft, evidence = use_cases.capture_reading_selection_evidence(
+        draft,
+        selection,
+        opened,
+        settings=settings,
+    )
+    assert evidence.origin == "browser_selection"
+    assert evidence.locator["document_revision"] == source.revision
+    assert evidence.locator["viewer_engine"] == "pdf.js/6.3.289"
+    assert evidence.locator["bboxes"]
+    assert evidence.locator["client_ranges"] == [[0, 0, len("ResearchMind")]]
+    assert use_cases.note_evidence_source_state(
+        evidence,
+        settings=settings,
+    ) == "detached"
 
 
 @pytest.mark.parametrize(

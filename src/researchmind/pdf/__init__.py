@@ -3,10 +3,19 @@
 from researchmind.pdf.errors import (
     PdfError,
     PdfExtractionError,
+    PdfFormulaError,
     PdfPageError,
     PdfRenderError,
     PdfValidationError,
     PdfViewerError,
+)
+from researchmind.pdf.formulas import (
+    FORMULA_CROP_PADDING_POINTS,
+    FORMULA_CROP_ZOOM,
+    MAX_FORMULA_CROP_BYTES,
+    MAX_FORMULA_CROP_PIXELS,
+    detect_formula_regions,
+    render_formula_crop,
 )
 from researchmind.pdf.reader import (
     DEFAULT_PDF_MAX_SIZE_BYTES,
@@ -30,6 +39,7 @@ __all__ = [
     "PdfViewerSource",
     "PdfError",
     "PdfExtractionError",
+    "PdfFormulaError",
     "PdfPageError",
     "PdfRenderError",
     "PdfValidationError",
@@ -41,4 +51,10 @@ __all__ = [
     "render_figure_images",
     "render_page_image",
     "search_text",
+    "FORMULA_CROP_PADDING_POINTS",
+    "FORMULA_CROP_ZOOM",
+    "MAX_FORMULA_CROP_BYTES",
+    "MAX_FORMULA_CROP_PIXELS",
+    "detect_formula_regions",
+    "render_formula_crop",
 ]

@@ -9,10 +9,12 @@ from streamlit.testing.v1 import AppTest
 from researchmind.app import use_cases
 from researchmind.config import Settings
 from researchmind.integration.zotero import ZoteroUnavailableError
+from researchmind.integration.obsidian import VaultWriteError
 from researchmind.models import (
     ConfigurationCheck,
     ConfigurationReport,
     Message,
+    FormulaCrop,
     UploadedFileData,
     ZoteroAttachment,
     ZoteroBrowseResult,
@@ -23,6 +25,94 @@ from researchmind.models import (
 
 
 APP_PATH = Path(__file__).parents[2] / "src" / "researchmind" / "app" / "app.py"
+
+
+class _FakeFormulaRecognizer:
+    name = "fake-formula-vision"
+    model_revision = "fake-formula-v1"
+    execution = "remote"
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def recognize(self, crop: FormulaCrop) -> str:
+        self.calls.append(crop.sha256)
+        return r"E=mc^2"
+
+
+def test_formula_ui_calls_provider_only_after_crop_consent_and_acceptance(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    corpus_pdf = (
+        Path(__file__).parents[2]
+        / "experiments"
+        / "g5_formula_recognition"
+        / "corpus.pdf"
+    )
+    settings = Settings(
+        researchmind_data_dir=tmp_path / "library",
+        llm_api_key="unit-test-placeholder",
+        llm_model="fake-formula-v1",
+    )
+    recognizer = _FakeFormulaRecognizer()
+    monkeypatch.setattr(use_cases, "load_settings", lambda: settings)
+    monkeypatch.setattr(
+        use_cases,
+        "create_formula_recognizer",
+        lambda _settings: recognizer,
+    )
+
+    app = AppTest.from_file(APP_PATH, default_timeout=15).run()
+    app.text_input(key="pdf_path_input").set_value(str(corpus_pdf))
+    app.button(key="open_pdf_button").click().run()
+    document_id = app.session_state["opened_document"].document.id
+    detect_key = f"detect_formula_regions_{document_id}_1"
+
+    assert recognizer.calls == []
+    app.button(key=detect_key).click().run()
+    assert recognizer.calls == []
+    region = app.session_state["current_formula_region"]
+    assert region is not None
+
+    app.button(key=f"prepare_formula_crop_{region.id}").click().run()
+    crop = app.session_state["current_formula_crop"]
+    assert crop is not None
+    recognize_key = f"recognize_formula_{crop.sha256}"
+    consent_key = f"formula_transfer_consent_{crop.sha256}"
+    assert recognizer.calls == []
+    assert app.button(key=recognize_key).disabled is True
+
+    app.checkbox(key=consent_key).check().run()
+    assert app.button(key=recognize_key).disabled is False
+    assert recognizer.calls == []
+    app.button(key=recognize_key).click().run()
+
+    candidate = app.session_state["current_formula_candidate"]
+    assert recognizer.calls == [crop.sha256]
+    assert candidate.accepted_latex is None
+    editor_key = f"formula_latex_editor_{candidate.id}"
+    app.text_area(key=editor_key).set_value(r"E = mc^{2}").run()
+    assert app.session_state["current_formula_candidate"].accepted_latex is None
+
+    app.button(key=f"accept_formula_latex_{candidate.id}").click().run()
+    accepted = app.session_state["current_formula_candidate"]
+    assert accepted.accepted_latex == r"E = mc^{2}"
+    assert recognizer.calls == [crop.sha256]
+
+    app.button(key=f"add_formula_evidence_{candidate.id}").click().run()
+    draft = app.session_state["current_note_draft"]
+    evidence = use_cases.list_note_evidence(draft.id, settings=settings)
+    assert len(evidence) == 1
+    assert evidence[0].kind == "latex"
+    assert evidence[0].content == r"E = mc^{2}"
+    assert recognizer.calls == [crop.sha256]
+
+    app.button(key="next_page_button").click().run()
+    assert app.session_state["formula_regions"] == ()
+    assert app.session_state["current_formula_region"] is None
+    assert app.session_state["current_formula_crop"] is None
+    assert app.session_state["current_formula_candidate"] is None
 
 
 def test_zotero_ui_reads_only_after_explicit_buttons(
@@ -193,6 +283,166 @@ def test_library_workspace_reopens_managed_paper_after_restart(
     assert app.radio(key="workspace_navigation").value == "paper"
     assert app.session_state["opened_document"].document.title == (
         "Fixture Research Paper"
+    )
+
+
+def test_g4_selection_translation_and_evidence_basket_are_explicit(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    single_page_pdf: Path,
+) -> None:
+    vault = tmp_path / "vault"
+    vault.mkdir()
+    settings = Settings(
+        researchmind_data_dir=tmp_path / "library",
+        obsidian_vault_path=vault,
+        target_language="zh-CN",
+    )
+    imported = use_cases.import_pdf_to_library(
+        UploadedFileData(
+            name="paper.pdf",
+            content=single_page_pdf.read_bytes(),
+        ),
+        settings=settings,
+    )
+    translation_calls: list[str] = []
+
+    def fake_translate(selection: object) -> Message:
+        translation_calls.append(getattr(selection, "text"))
+        return Message(
+            role="assistant",
+            task="translate",
+            content="ResearchMind 简介",
+        )
+
+    monkeypatch.setattr(use_cases, "load_settings", lambda: settings)
+    monkeypatch.setattr(use_cases, "translate_selection", fake_translate)
+
+    app = AppTest.from_file(APP_PATH, default_timeout=10).run()
+    app.radio(key="workspace_navigation").set_value("library").run()
+    app.button(key=f"library_open_{imported.entry.record.id}").click().run()
+    document_id = app.session_state["opened_document"].document.id
+    app.text_area(key=f"selection_text_{document_id}").set_value(
+        "ResearchMind introduction"
+    )
+    app.button(key="create_selection_button").click().run()
+
+    assert not app.exception
+    assert translation_calls == []
+    assert app.text_area(
+        key=(
+            "translation_transfer_text_"
+            + use_cases.reading_selection_identity(
+                app.session_state["current_selection"]
+            )
+        )
+    ).value == "ResearchMind introduction"
+
+    app.button(key="add_selection_evidence_button").click().run()
+    assert not app.exception
+    assert translation_calls == []
+    draft = app.session_state["current_note_draft"]
+    assert draft.record_id == imported.entry.record.id
+    assert [item.kind for item in use_cases.list_note_evidence(
+        draft.id,
+        settings=settings,
+    )] == ["source_text"]
+    assert list(vault.rglob("*.md")) == []
+
+    app.button(key="translate_selection_button").click().run()
+    assert not app.exception
+    assert translation_calls == ["ResearchMind introduction"]
+    app.button(key="add_translation_evidence_button").click().run()
+    assert not app.exception
+    draft = app.session_state["current_note_draft"]
+    evidence = use_cases.list_note_evidence(draft.id, settings=settings)
+    assert [item.kind for item in evidence] == ["source_text", "translation"]
+    assert all(item.source_sha256 == imported.entry.asset.sha256 for item in evidence)
+    assert list(vault.rglob("*.md")) == []
+
+    source, translated = evidence
+    app.button(key=f"note_evidence_down_{source.id}").click().run()
+    draft = app.session_state["current_note_draft"]
+    reordered = use_cases.list_note_evidence(draft.id, settings=settings)
+    assert [item.id for item in reordered] == [translated.id, source.id]
+
+    app.checkbox(
+        key=(
+            f"note_evidence_included_{translated.id}_"
+            f"revision_{draft.revision}"
+        )
+    ).uncheck().run()
+    draft = app.session_state["current_note_draft"]
+    excluded = use_cases.list_note_evidence(draft.id, settings=settings)[0]
+    assert excluded.id == translated.id
+    assert excluded.included is False
+
+    app.button(key=f"note_evidence_remove_{translated.id}").click().run()
+    draft = app.session_state["current_note_draft"]
+    remaining = use_cases.list_note_evidence(draft.id, settings=settings)
+    assert [item.id for item in remaining] == [source.id]
+    assert list(vault.rglob("*.md")) == []
+
+    app.text_input(key=f"note_draft_title_{draft.id}").set_value(
+        "Editable G4 note"
+    )
+    app.text_area(key=f"note_draft_body_{draft.id}").set_value(
+        "## 我的理解\n\n这是经过明确保存的正文。"
+    )
+    app.button(key="save_note_draft_locally_button").click().run()
+
+    assert not app.exception
+    draft = app.session_state["current_note_draft"]
+    assert draft.title == "Editable G4 note"
+    assert "明确保存" in draft.body_markdown
+    assert list(vault.rglob("*.md")) == []
+
+    app.button(key="preview_note_draft_button").click().run()
+    assert not app.exception
+    preview = app.session_state["current_note_draft_preview"]
+    assert preview.draft_revision == draft.revision
+    assert preview.included_evidence_count == 1
+    assert "这是经过明确保存的正文" in preview.markdown
+    assert "ResearchMind introduction" in preview.markdown
+    assert "ResearchMind 简介" not in preview.markdown
+    assert list(vault.rglob("*.md")) == []
+
+    app.checkbox(
+        key=f"confirm_note_draft_vault_{preview.sha256}"
+    ).check().run()
+    app.button(key="save_note_draft_to_vault_button").click().run()
+
+    assert not app.exception
+    saved_files = list((vault / "ResearchMind").glob("*.md"))
+    assert len(saved_files) == 1
+    assert saved_files[0].read_bytes() == preview.markdown.encode("utf-8")
+
+    def fail_vault_save(*_args: object, **_kwargs: object) -> Path:
+        raise VaultWriteError("Synthetic visible Vault failure")
+
+    monkeypatch.setattr(
+        use_cases,
+        "save_note_draft_to_vault",
+        fail_vault_save,
+    )
+    app.button(key="save_note_draft_to_vault_button").click().run()
+    assert not app.exception
+    assert any("Synthetic visible Vault failure" in item.value for item in app.error)
+    assert len(list((vault / "ResearchMind").glob("*.md"))) == 1
+
+    restarted = AppTest.from_file(APP_PATH, default_timeout=10).run()
+    restarted.radio(key="workspace_navigation").set_value("library").run()
+    restarted.button(key=f"library_open_{imported.entry.record.id}").click().run()
+    assert not restarted.exception
+    assert restarted.session_state["current_note_draft"] is None
+    assert restarted.selectbox(
+        key=f"note_draft_select_{restarted.session_state['opened_document'].document.id}"
+    ).value == draft.id
+    restarted.button(key="open_selected_note_draft_button").click().run()
+    assert not restarted.exception
+    assert restarted.session_state["current_note_draft"].id == draft.id
+    assert restarted.text_area(key=f"note_draft_body_{draft.id}").value == (
+        "## 我的理解\n\n这是经过明确保存的正文。"
     )
 
 
@@ -1049,6 +1299,13 @@ def test_reader_to_obsidian_flow_without_network(
     app.button(key="open_knowledge_panel_button").click().run()
     assert not app.exception
     assert app.session_state["knowledge_panel_open"] is True
+
+    message_indices = list(
+        range(len(app.session_state["current_conversation"].messages))
+    )
+    app.multiselect(
+        key=f"knowledge_message_indices_{document_id}"
+    ).set_value(message_indices).run()
 
     app.text_input(key=f"knowledge_title_{document_id}").set_value(
         "Page two evidence"

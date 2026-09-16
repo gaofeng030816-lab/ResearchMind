@@ -1,0 +1,461 @@
+{
+  "schema_version": 1,
+  "purpose": "real_paper_remote_formula_recognition_quality",
+  "annotation_status": "agent_visual_first_pass_requires_human_spot_check",
+  "human_spot_check_required": true,
+  "comparison_thresholds_met": false,
+  "g5_quality_gate_closed": false,
+  "metrics": {
+    "total": 18,
+    "successful": 18,
+    "coverage": 1.0,
+    "strict_valid_rate": 1.0,
+    "normalized_exact_rate": 0.0,
+    "mean_token_similarity": 0.83261,
+    "structural_exact_rate": 1.0,
+    "mean_elapsed_ms": 16358.317,
+    "median_elapsed_ms": 12624.496,
+    "p95_elapsed_ms": 77631.477,
+    "max_elapsed_ms": 77631.477
+  },
+  "thresholds": {
+    "coverage": 0.85,
+    "strict_valid_rate": 1.0,
+    "normalized_exact_rate": 0.75,
+    "mean_token_similarity": 0.95,
+    "structural_exact_rate": 0.9
+  },
+  "threshold_checks": {
+    "coverage": true,
+    "strict_valid_rate": true,
+    "normalized_exact_rate": false,
+    "mean_token_similarity": false,
+    "structural_exact_rate": true
+  },
+  "categories": {
+    "accent": {
+      "total": 4,
+      "successful": 4,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.846919,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 12377.497
+    },
+    "calligraphic": {
+      "total": 1,
+      "successful": 1,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.76087,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 11320.806
+    },
+    "cases": {
+      "total": 2,
+      "successful": 2,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.900667,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 46043.285
+    },
+    "ellipsis": {
+      "total": 1,
+      "successful": 1,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.888889,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 11136.83
+    },
+    "equation_number": {
+      "total": 9,
+      "successful": 9,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.814494,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 20867.382
+    },
+    "fraction": {
+      "total": 8,
+      "successful": 8,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.851504,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 21857.267
+    },
+    "function": {
+      "total": 1,
+      "successful": 1,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.847222,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 12680.721
+    },
+    "gradient": {
+      "total": 3,
+      "successful": 3,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.842222,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 9607.4
+    },
+    "greek": {
+      "total": 15,
+      "successful": 15,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.826815,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 17345.499
+    },
+    "inequality": {
+      "total": 2,
+      "successful": 2,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.744048,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 8751.719
+    },
+    "norm": {
+      "total": 1,
+      "successful": 1,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.831683,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 15717.353
+    },
+    "root": {
+      "total": 1,
+      "successful": 1,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.9375,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 18458.682
+    },
+    "subscript": {
+      "total": 10,
+      "successful": 10,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.829102,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 13047.913
+    },
+    "sum": {
+      "total": 5,
+      "successful": 5,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.894285,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 26333.998
+    },
+    "superscript": {
+      "total": 11,
+      "successful": 11,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.853094,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 12822.676
+    },
+    "tensor_product": {
+      "total": 1,
+      "successful": 1,
+      "coverage": 1.0,
+      "strict_valid_rate": 1.0,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.825397,
+      "structural_exact_rate": 1.0,
+      "mean_elapsed_ms": 13634.117
+    }
+  },
+  "papers": {
+    "1707.06347v2": {
+      "total": 5,
+      "successful": 5,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.818947,
+      "structural_exact_rate": 1.0
+    },
+    "2205.07246v3": {
+      "total": 5,
+      "successful": 5,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.854302,
+      "structural_exact_rate": 1.0
+    },
+    "2507.04247v1": {
+      "total": 8,
+      "successful": 8,
+      "normalized_exact_rate": 0.0,
+      "mean_token_similarity": 0.827592,
+      "structural_exact_rate": 1.0
+    }
+  },
+  "cases": [
+    {
+      "id": "1707.06347v2-002",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.76,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 9805.905
+    },
+    {
+      "id": "1707.06347v2-004",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.847222,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 12680.721
+    },
+    {
+      "id": "1707.06347v2-007",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.796296,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 16640.206
+    },
+    {
+      "id": "1707.06347v2-008",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.888889,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 11136.83
+    },
+    {
+      "id": "1707.06347v2-009",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.802326,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 16435.035
+    },
+    {
+      "id": "2205.07246v3-004",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.894118,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 77631.477
+    },
+    {
+      "id": "2205.07246v3-008",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.76087,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 11320.806
+    },
+    {
+      "id": "2205.07246v3-009",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.873239,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 12568.271
+    },
+    {
+      "id": "2205.07246v3-010",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.907216,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 14455.092
+    },
+    {
+      "id": "2205.07246v3-012",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.836066,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 18606.61
+    },
+    {
+      "id": "2507.04247v1-019",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.9375,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 18458.682
+    },
+    {
+      "id": "2507.04247v1-022",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.960784,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 8408.54
+    },
+    {
+      "id": "2507.04247v1-024",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.825397,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 13634.117
+    },
+    {
+      "id": "2507.04247v1-039",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.916667,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 8491.33
+    },
+    {
+      "id": "2507.04247v1-047",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.85,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 10524.965
+    },
+    {
+      "id": "2507.04247v1-048",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.571429,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 9012.108
+    },
+    {
+      "id": "2507.04247v1-052",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.831683,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 15717.353
+    },
+    {
+      "id": "2507.04247v1-055",
+      "status": "ok",
+      "strict_valid": true,
+      "normalized_exact": false,
+      "token_similarity": 0.727273,
+      "structural_exact": true,
+      "invalid_reason": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 8921.659
+    }
+  ],
+  "limitations": [
+    "Reference LaTeX is an agent visual first pass until human spot-checking.",
+    "The selected 18 crops are a bounded evaluation set, not training data.",
+    "A remote comparison does not adopt a local model or close G5 by itself."
+  ]
+}

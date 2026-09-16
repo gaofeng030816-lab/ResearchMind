@@ -1,0 +1,185 @@
+{
+  "schema_version": 1,
+  "predictions": [
+    {
+      "case_id": "aligned_system",
+      "status": "ok",
+      "latex": "\\begin{aligned} y &= mx + b \\\\ z &= ax^2 + bx + c \\end{aligned}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 8724.923
+    },
+    {
+      "case_id": "basic_superscript",
+      "status": "ok",
+      "latex": "E = mc^2",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 3890.281
+    },
+    {
+      "case_id": "bayes_rule",
+      "status": "ok",
+      "latex": "P(Y \\mid X) = \\frac{P(X \\mid Y) P(Y)}{P(X)}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 8348.819
+    },
+    {
+      "case_id": "bounded_integral",
+      "status": "ok",
+      "latex": "\\int_{a}^{b} f(x) dx",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 4758.671
+    },
+    {
+      "case_id": "bracket_matrix",
+      "status": "ok",
+      "latex": "\\begin{bmatrix} a & b \\\\ c & d \\end{bmatrix}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 5923.891
+    },
+    {
+      "case_id": "contour_integral",
+      "status": "ok",
+      "latex": "\\oint_{\\partial\\Omega} \\mathbf{F} \\cdot d\\mathbf{r}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 5660.581
+    },
+    {
+      "case_id": "determinant_matrix",
+      "status": "ok",
+      "latex": "\\det \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix} = ad - bc",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 5362.614
+    },
+    {
+      "case_id": "divergence",
+      "status": "ok",
+      "latex": "\\nabla \\cdot \\mathbf{E} = \\frac{\\rho}{\\varepsilon_0}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 70062.051
+    },
+    {
+      "case_id": "equation_number",
+      "status": "ok",
+      "latex": "\\Pr(A \\cup B) = \\Pr(A) + \\Pr(B) - \\Pr(A \\cap B) \\tag{20}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 8213.305
+    },
+    {
+      "case_id": "finite_product",
+      "status": "ok",
+      "latex": "\\prod_{j=1}^{p} (1 - \\lambda_j t)",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 5516.943
+    },
+    {
+      "case_id": "finite_sum",
+      "status": "ok",
+      "latex": "\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 5063.995
+    },
+    {
+      "case_id": "gaussian_integral",
+      "status": "ok",
+      "latex": "\\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 4613.044
+    },
+    {
+      "case_id": "greek_symbols",
+      "status": "ok",
+      "latex": "\\alpha + \\beta = \\gamma",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 3256.152
+    },
+    {
+      "case_id": "indexed_sum",
+      "status": "ok",
+      "latex": "A_{ij} = \\sum_{k=1}^{m} B_{ik} C_{kj}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 4421.147
+    },
+    {
+      "case_id": "partial_derivative",
+      "status": "ok",
+      "latex": "\\frac{\\partial L}{\\partial \\theta} = 0",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 3824.401
+    },
+    {
+      "case_id": "piecewise_cases",
+      "status": "ok",
+      "latex": "\\begin{cases} x + y = 1 \\\\ x - y = 0 \\end{cases}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 4701.399
+    },
+    {
+      "case_id": "sine_limit",
+      "status": "ok",
+      "latex": "\\lim_{x \\to 0} \\frac{\\sin x}{x} = 1",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 3964.478
+    },
+    {
+      "case_id": "square_root",
+      "status": "ok",
+      "latex": "\\sqrt{x^2 + y^2}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 3534.146
+    },
+    {
+      "case_id": "stacked_fraction",
+      "status": "ok",
+      "latex": "\\frac{a+b}{c+d}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 7212.86
+    },
+    {
+      "case_id": "subscript_real_space",
+      "status": "ok",
+      "latex": "x_i \\in \\mathbb{R}^n",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 4379.426
+    }
+  ]
+}

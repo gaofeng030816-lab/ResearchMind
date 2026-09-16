@@ -33,7 +33,26 @@ from researchmind.models.evidence_link import (
     PaperEvidenceReference,
 )
 from researchmind.models.figure_region import FigureRegion
+from researchmind.models.formula import (
+    FormulaCrop,
+    FormulaExecution,
+    FormulaRecognitionCandidate,
+    FormulaRecognitionStatus,
+    FormulaRegion,
+    FormulaRegionKind,
+    FormulaSourceKind,
+    FormulaTransferPreview,
+)
 from researchmind.models.knowledge_note import KnowledgeNote
+from researchmind.models.note_draft import (
+    EvidenceKind,
+    EvidenceOrigin,
+    EvidenceSourceState,
+    EvidenceSnapshot,
+    NoteDraft,
+    NoteDraftPreview,
+    NoteDraftStatus,
+)
 from researchmind.models.library import (
     AssetKind,
     AssetReference,
@@ -105,7 +124,22 @@ __all__ = [
     "EvidenceLink",
     "EvidenceRelation",
     "FigureRegion",
+    "FormulaCrop",
+    "FormulaExecution",
+    "FormulaRecognitionCandidate",
+    "FormulaRecognitionStatus",
+    "FormulaRegion",
+    "FormulaRegionKind",
+    "FormulaSourceKind",
+    "FormulaTransferPreview",
     "KnowledgeNote",
+    "EvidenceKind",
+    "EvidenceOrigin",
+    "EvidenceSourceState",
+    "EvidenceSnapshot",
+    "NoteDraft",
+    "NoteDraftPreview",
+    "NoteDraftStatus",
     "AssetKind",
     "AssetReference",
     "LibraryEntry",

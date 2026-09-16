@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {"id": "basic_superscript", "categories": ["superscript", "baseline"], "reference_latex": "E=mc^{2}"},
+    {"id": "subscript_real_space", "categories": ["subscript", "superscript", "blackboard"], "reference_latex": "x_i\\in\\mathbb{R}^{n}"},
+    {"id": "bounded_integral", "categories": ["integral", "limits"], "reference_latex": "\\int_{a}^{b}f(x)\\,dx"},
+    {"id": "gaussian_integral", "categories": ["integral", "limits", "fraction", "root", "superscript"], "reference_latex": "\\int_{-\\infty}^{\\infty}e^{-x^{2}}\\,dx=\\sqrt{\\pi}"},
+    {"id": "finite_sum", "categories": ["sum", "limits", "fraction"], "reference_latex": "\\sum_{i=1}^{n}i=\\frac{n(n+1)}{2}"},
+    {"id": "sine_limit", "categories": ["limit", "fraction"], "reference_latex": "\\lim_{x\\to0}\\frac{\\sin x}{x}=1"},
+    {"id": "stacked_fraction", "categories": ["fraction"], "reference_latex": "\\frac{a+b}{c+d}"},
+    {"id": "square_root", "categories": ["root", "superscript"], "reference_latex": "\\sqrt{x^{2}+y^{2}}"},
+    {"id": "greek_symbols", "categories": ["greek"], "reference_latex": "\\alpha+\\beta=\\gamma"},
+    {"id": "indexed_sum", "categories": ["sum", "limits", "subscript"], "reference_latex": "A_{ij}=\\sum_{k=1}^{m}B_{ik}C_{kj}"},
+    {"id": "bracket_matrix", "categories": ["matrix", "alignment"], "reference_latex": "\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}"},
+    {"id": "determinant_matrix", "categories": ["matrix", "alignment"], "reference_latex": "\\det\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}=ad-bc"},
+    {"id": "piecewise_cases", "categories": ["cases", "alignment"], "reference_latex": "\\begin{cases}x+y=1\\\\x-y=0\\end{cases}"},
+    {"id": "aligned_system", "categories": ["aligned", "alignment", "superscript"], "reference_latex": "\\begin{aligned}y&=mx+b\\\\z&=ax^{2}+bx+c\\end{aligned}"},
+    {"id": "partial_derivative", "categories": ["fraction", "greek"], "reference_latex": "\\frac{\\partial L}{\\partial\\theta}=0"},
+    {"id": "divergence", "categories": ["fraction", "greek", "subscript"], "reference_latex": "\\nabla\\cdot\\mathbf{E}=\\frac{\\rho}{\\varepsilon_0}"},
+    {"id": "bayes_rule", "categories": ["fraction", "conditional"], "reference_latex": "P(Y\\mid X)=\\frac{P(X\\mid Y)P(Y)}{P(X)}"},
+    {"id": "finite_product", "categories": ["product", "limits", "subscript"], "reference_latex": "\\prod_{j=1}^{p}(1-\\lambda_jt)"},
+    {"id": "contour_integral", "categories": ["integral", "subscript", "vector"], "reference_latex": "\\oint_{\\partial\\Omega}\\mathbf{F}\\cdot d\\mathbf{r}"},
+    {"id": "equation_number", "categories": ["equation_number", "set", "conditional"], "reference_latex": "\\Pr(A\\cup B)=\\Pr(A)+\\Pr(B)-\\Pr(A\\cap B)\\tag{20}"}
+  ]
+}
+

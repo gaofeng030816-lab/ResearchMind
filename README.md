@@ -5,9 +5,10 @@
 > 保留在验证记录中。T5-B1 只开放当前 Python 选择的单范围受控替换，不开放执行。
 > T6-D 已完成本地内部候选封口；不会上传包、创建公开 Release 或对外发布。
 > 用户于 2026-09-01 确认 V2 验收通过，并已在独立对话给出 V3 要求。
-> V3-G0/G1 已完成；V3-G2 已实现可选 Zotero Local API 元数据/来源链接，
-> 批准范围内的 Windows PDF 只读复制已实现，真实 Zotero desktop 人工验收已由用户确认通过。页面划词、自动公式、持久笔记草稿和
-> 多语言解析尚未进入生产。
+> V3-G0–G5 已完成：本地资料库、Zotero Local API 只读来源、
+> CCv2/pdf.js 页面划词、自适应工作台、点击翻译、持久证据篮和可编辑笔记草稿
+> 已进入当前内部实现。G5 又加入本地单公式检测/crop、逐 crop 外发同意、可编辑
+> 严格 LaTeX 和可选证据；多语言解析尚未启动。
 
 ResearchMind 是一个本地运行的 AI 科研阅读与知识沉淀工作台。它负责打开
 PDF、提取和选择文本、翻译、结合论文上下文进行 AI 解释与追问，并把理解整理
@@ -15,10 +16,11 @@ PDF、提取和选择文本、翻译、结合论文上下文进行 AI 解释与�
 
 它连接的是 Zotero → ResearchMind → Obsidian 工作流：Zotero 继续管理文献，
 Obsidian 继续管理长期知识，ResearchMind 专注于“读懂论文并沉淀理解”。已验收
-2.0.0rc1 保持独立；V3-G1/G2 在其上增加工作资料库和可选 Zotero 来源，但仍不
-包含 OCR、PDF 编辑、Zotero 写入/同步或其余 V3 能力。
+2.0.0rc1 保持独立；V3-G1–G5 在其上增加工作资料库、可选 Zotero 来源、可信
+页面划词、显式笔记草稿和单公式识别，但仍不包含整页 OCR/PDF→LaTeX、PDF 编辑、
+Zotero 写入/同步或非 Python 解析。
 
-## 当前能力（V2 Accepted + V3-G1/G2）
+## 当前能力（V2 Accepted + V3-G1–G5）
 
 - 在“本地资料库”中点击/拖放上传 PDF 或 Python 目录，使用独立数据目录保存
   托管副本和 SQLite 元数据，应用重启后可列出并重新打开；
@@ -28,14 +30,26 @@ Obsidian 继续管理长期知识，ResearchMind 专注于“读懂论文并沉�
   为已上传论文建立来源链接，或在批准目录内只读复制一个 PDF；unlink 不删除任一侧文件；
 - 可生成带 manifest/SHA-256 的资料库备份，并验证后恢复到全新的数据目录；
 - 打开本地数字版 PDF，浏览、翻页、按页跳转、缩放和全文搜索；
+- 使用本地打包的 CCv2/pdf.js 文字层直接鼠标划词；候选必须由当前页 PyMuPDF
+  重新核对文字和几何后才成为 ReadingSelection；普通滚动、边缘防抖翻页和
+  输入安全 AI 快捷键已经过真实浏览器验证；
 - 按阅读顺序显示可复制文本块，并改善常见双栏论文的段落顺序；
 - 对高置信度章节标题、相邻图表说明和数字文字层公式候选做轻量识别，为 AI 解释补充局部结构线索；
 - 标记疑似数学公式文字块、保留可用换行并支持逐块复制；
 - 普通文本块和公式候选可一键成为当前选择，并保留 page/block/bbox 来源；
 - 把用户确认的数学文字层选择转换为受限 LaTeX，显示可复制源码和本地数学预览；
+- 在当前页本地扫描 bounded 公式区域，选择一个候选并预览 PNG crop；只有勾选
+  本次精确 crop 外发同意并点击后才识别，结果可编辑、严格校验、明确接受，并可选
+  加入证据篮；
 - 预览和下载 PDF 中可检测到的嵌入位图区域；
 - 定位复制或手动输入的文本；
 - 独立执行翻译，以及概念、数学、算法和上下文解释；
+- 划词翻译先展示准确发送文本和目标语言，只有点击后才调用翻译服务；原文和译文
+  分别由用户决定是否加入持久证据篮；
+- 显式证据篮支持包含/排除、排序和移除，并显示 current/stale/detached 来源；
+  NoteDraft 正文可跨重启编辑，本地保存、渲染预览和写入 Obsidian 是独立动作；
+- 最终 Vault 输出需再次确认；草稿修订、证据、来源状态或预览 SHA-256 变化会使
+  旧预览失效，写入保持 UTF-8 字节一致、路径安全和重名不覆盖；
 - 在 AI 解释或追问前预览将发送的来源类型、页码、文本块、bbox、章节、图表说明、邻近公式、周边文本和请求估算；
 - 围绕当前论文和选择进行会话内追问；
 - 预览并以非覆盖方式保存可追溯 Markdown 到 Obsidian Vault。
@@ -236,7 +250,7 @@ V2 的本地路径打开入口仍保留，便于只读临时阅读而不导入�
 T4 链接不会调用模型，也不会把整个仓库发给模型或自动关联当前论文。
 `ResearchContext` 与 `CodeContext` 仍是两条独立的 LLM 请求路径。
 
-只有点击“翻译”“转换为 LaTeX”“AI 解释”“发送追问”或“生成修改建议”时才会调用配置的网络端点。每次调用
+只有点击“翻译”“转换为 LaTeX”“识别这一个公式”“AI 解释”“发送追问”或“生成修改建议”时才会调用配置的网络端点。公式识别还要求先预览并确认该 crop。每次调用
 只发送当前选择、最小必要论文上下文（含受限的章节标题/相邻图表说明/邻近公式候选）、当前
 问题和预算内的最近历史；PDF 文件本身不会整体上传。需要完全本地处理时，可
 配置 Ollama 等 OpenAI 兼容本地端点。打开上下文预览不会发起网络请求；请求
@@ -339,15 +353,18 @@ Vault 恢复仍写入新子目录并由用户人工比较后合并。
 ## 已知局限
 
 - 文本顺序优化面向常见数字版双栏论文，复杂混排仍可能需要人工调整；
-- 公式候选与 LaTeX 转换依赖数字版 PDF 已有文字层；转换结果由 LLM 保守重建，
-  必须对照页面图像，不保证等价于原始二维公式；
-- 不做图片公式 OCR、自动整页公式重建或通用 TeX 文档编译；模型生成的 LaTeX
+- G5 可从数字文字层或合适的嵌入图像检测一个 bounded 公式候选，但 detector
+  仍可能合并公式、截断片段或误收正文；必须在 crop 预览中人工选择；
+- 识别结果是可编辑候选，不保证等价于原论文 TeX 源码；真实 18-case exact 仅
+  11.11%，即使关键结构指标通过也必须对照页面后接受；
+- 不做扫描整页 OCR、自动整页/整篇公式重建或通用 TeX 文档编译；模型生成的 LaTeX
   经过受限命令校验，只用于 Streamlit 预览和 Obsidian 显示数学；
-- 自动公式区域识别、图片公式 OCR 和整页 PDF→LaTeX 已明确移至 post-V2/V3
-  候选范围，不属于 `2.0.0rc1` 的验收缺口；
+- G5 属于 V3 增量，不属于 `2.0.0rc1` 的验收边界；整页 PDF→LaTeX 与本地 OCR
+  权重仍未采用；
 - 只识别嵌入位图区域，不识别纯矢量图、表格语义或图表含义；
 - 扫描版 PDF 没有 OCR，因此可能没有可复制文本；
-- 资料库记录/资产跨重启，但会话、对话、选择、证据链接和笔记草稿尚不持久化；
+- 资料库记录/资产与显式 NoteDraft/EvidenceSnapshot 可跨重启；会话、对话、
+  ReadingSelection、EvidenceLink 和兼容 KnowledgeNote 预览仍不持久化；
 - 代码目录点击导入在 G1 只接受符合边界的 UTF-8 Python 文件；托管修订只读；
 - Streamlit 自动测试不能真实操作浏览器文件选择器；服务端上传边界和 AppTest
   导航已覆盖，点击/拖放仍需真实浏览器人工验收；
@@ -366,12 +383,14 @@ Vault 恢复仍写入新子目录并由用户人工比较后合并。
 [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md)、
 [docs/POST_V1_DEVELOPMENT_PLAN.md](docs/POST_V1_DEVELOPMENT_PLAN.md)、
 [docs/V2_ACCEPTANCE_PREPARATION.md](docs/V2_ACCEPTANCE_PREPARATION.md)、
-[V2 to V3过渡要求.md](./V2%20to%20V3过渡要求.md) 和
-[V1 to V2过渡要求.md](./V1%20to%20V2过渡要求.md)。T3/T4 实现证据见
+[V2 to V3过渡要求.md](./V2%20to%20V3过渡要求.md)。历史文件
+`V1 to V2过渡要求.md` 当前不在此 checkout；T3/T4 实现证据见
 [docs/T3_CODECONTEXT_VALIDATION.md](docs/T3_CODECONTEXT_VALIDATION.md) 和
 [docs/T4_EVIDENCE_LINK_VALIDATION.md](docs/T4_EVIDENCE_LINK_VALIDATION.md)。
-V3-G1/G2、T5-B1/T6-C 证据见
+V3-G1/G2/G3/G4、T5-B1/T6-C 证据见
 [docs/V3_G1_LOCAL_LIBRARY_VALIDATION.md](docs/V3_G1_LOCAL_LIBRARY_VALIDATION.md)、
 [docs/V3_G2_ZOTERO_VALIDATION.md](docs/V3_G2_ZOTERO_VALIDATION.md)、
+[docs/V3_G3_PDF_WORKSPACE_SPIKE.md](docs/V3_G3_PDF_WORKSPACE_SPIKE.md)、
+[docs/V3_G4_NOTE_COMPOSER_DECISION.md](docs/V3_G4_NOTE_COMPOSER_DECISION.md)、
 [docs/T5_B1_CONTROLLED_CODE_WRITE_VALIDATION.md](docs/T5_B1_CONTROLLED_CODE_WRITE_VALIDATION.md) 和
 [docs/T6_C_PRIVACY_SECURITY_PERFORMANCE_VALIDATION.md](docs/T6_C_PRIVACY_SECURITY_PERFORMANCE_VALIDATION.md)。

@@ -34,8 +34,21 @@ reconciliation, stale/duplicate rejection, and the V2 image/text fallback. Forma
 Edge acceptance passed 8/8 with no page errors or external requests; the combined
 regression is 486 passed / 1 environment skip. Read
 docs/V3_G3_PDF_WORKSPACE_SPIKE.md before planning changes to that contract.
-G4 is the next planned stage and is not active. Zotero Web API/sync, formula-
-recognition providers and Tree-sitter packages still require their own named decisions.
+G4 is Completed following the user's 2026-09-09 manual acceptance. It implements
+schema-v3 NoteDraft/EvidenceSnapshot persistence, exact transfer preview, click-only
+translation, managed-source binding, an explicit persistent evidence basket, editable
+Markdown, explicit local save, revision/SHA-256-bound preview and confirmed exact-byte
+non-overwriting Vault output. Its final evidence is 42 focused checks, 425 production
+tests / 1 environment skip, 524 tests / 1 skip with G3 experiments, and Edge 152 8/8
+with no page errors or external requests. Read
+docs/V3_G4_NOTE_COMPOSER_DECISION.md before changing this contract. G5 is Completed.
+It adopted local revision-bound detection/crop, a provider-neutral FormulaRecognizer,
+the configured OpenAI-compatible single-crop adapter, exact remote-transfer consent,
+editable strict LaTeX and optional accepted-formula evidence. The legacy GPL runtime
+was rejected and pix2tex/local weights remain deferred. Its low real normalized-exact
+score forbids source-recovery claims. Read
+docs/V3_G5_FORMULA_RECOGNITION_DECISION.md before changing this contract. G6/G7,
+Zotero Web API/sync and Tree-sitter packages remain unapproved.
 
 ## Product Test
 

@@ -39,7 +39,20 @@ wheel. The user separately reported physical-trackpad acceptance and approved fo
 adoption on 2026-09-07. Production Edge acceptance then passed 8/8 with 0 page errors
 and 0 external requests; the 1,041,404-byte wheel has exactly one JS/CSS plus manifest
 and license, and the combined regression is 486 passed / 1 environment skip. See
-docs/V3_G3_PDF_WORKSPACE_SPIKE.md. G4 has not started.
+docs/V3_G3_PDF_WORKSPACE_SPIKE.md. G4 is Completed after the user's 2026-09-09
+acceptance. It adds schema-v3 draft/evidence persistence, exact translation preview,
+click-only provider calls, source binding, explicit include/order/remove UI, editable
+Markdown, local save, revision/SHA-256-bound preview and confirmed non-overwriting
+Vault output. Final evidence is 42 focused checks, 425 production tests / 1 skip,
+524 tests / 1 skip with G3 experiments, and Edge 152 8/8 with 0 page errors and
+0 external requests. Read docs/V3_G4_NOTE_COMPOSER_DECISION.md for exact scope and
+limitations. G5 is Completed with 48 focused checks, 21 Streamlit AppTests,
+474 production tests / 1 existing Windows symlink environment skip, and 573 tests /
+1 skip with G3 experiments. Its 20 synthetic crops pass all fixed thresholds; 18
+authorized real crops are 100% strict-valid, 95.09% token and 100% structural but only
+11.11% normalized exact. Preserve that limitation, the three known detector
+false/over-merged cases, the one-crop consent boundary and the Edge 152 fake-provider
+journey. Read docs/V3_G5_FORMULA_RECOGNITION_DECISION.md.
 
 Protect this loop in proportion to the change:
 
@@ -47,6 +60,12 @@ Protect this loop in proportion to the change:
     → translate or constrained LaTeX or explain/follow-up
     → explicit KnowledgeNote preview
     → non-overwriting Obsidian save
+
+Also protect the completed V3-G4 loop:
+
+    verified ReadingSelection → exact transfer preview → explicit translation
+    → explicit evidence basket → explicit local draft save
+    → deterministic current-revision preview → confirmed exact-byte Vault save
 
 Also preserve independent code reading, user-confirmed evidence links, T5-A read-only
 authority, T5-B1's narrow Python recovery contract, and Code-to-Obsidian capture.
@@ -121,7 +140,8 @@ and never call a paid/live network service.
 - detector misses/false positives and structural/symbol match, not only HTTP success;
 - strict LaTeX rejection, user edit/acceptance, provenance, crop-only transfer, fake
   provider errors, latency/memory, and no whole-paper upload;
-- keep experiment tests outside routine production imports until adoption.
+- keep corpus/evaluator code outside production imports; adopted production code must
+  continue to pass the same locked-crop and fake-provider boundaries.
 
 ### Multilingual code
 

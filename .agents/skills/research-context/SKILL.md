@@ -9,9 +9,13 @@ Give the configured model the smallest relevant, traceable evidence for the user
 current task. More stored data, a database ID, or a richer parser tree does not by
 itself improve context.
 
-Read docs/ARCHITECTURE.md for implemented V2 + V3-G1 behavior and
-V2 to V3过渡要求.md for the active V3 gate. A G1 library/asset ID is provenance, not
-permission to load a whole managed paper or code revision into a prompt.
+Read docs/ARCHITECTURE.md for implemented V2 + V3-G1–G5 behavior and
+V2 to V3过渡要求.md for stage gates. G4 is Completed: it persists explicit
+NoteDraft/EvidenceSnapshot data, exposes click-only translation and the evidence
+basket, and deterministically combines one saved revision with included ordered
+evidence and live source states for a revision/SHA-256-bound preview. A G1
+library/asset ID is provenance, not permission to load a whole
+managed paper or code revision into a prompt.
 
 ## Preserve the Concepts
 
@@ -64,7 +68,11 @@ ResearchMind prompt.
 - Preview and real calls must use the same context and prompt builder.
 - Translation remains selected-text-to-text; it does not need a full ResearchContext.
 - Selection-to-LaTeX and formula recognition are different paths. The former uses
-  bounded ResearchContext; the latter may use a validated crop and dedicated provider.
+  bounded ResearchContext; the adopted G5 path sends only one validated, hash-confirmed
+  crop to its dedicated recognizer and never adds surrounding text/history implicitly.
+- Only accepted formula LaTeX may become EvidenceSnapshot content. Keep detector,
+  recognizer/model, execution mode, crop hash, document revision, page and bbox in its
+  locator; raw crop and unaccepted candidates stay session-only.
 - Database retrieval is a source lookup, not permission to add all stored content to
   a prompt.
 
@@ -77,7 +85,9 @@ turn automatically.
 Each captured item keeps enough provenance to reopen or inspect it. Editing Markdown
 may change explanatory wording, but source locators and origin labels must not be
 silently rewritten. Mark stale evidence when the underlying paper/code revision no
-longer matches.
+longer matches. Unsaved text is not the persisted draft; a preview is not a Vault
+write; and a changed draft, evidence order/include state, source state, or preview hash
+must invalidate export.
 
 ## Security Boundary
 

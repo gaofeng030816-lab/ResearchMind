@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "authorization": {
+    "scope": "18_hash_locked_formula_crops",
+    "destination": "dots_studio",
+    "model_revision": "dots3-note-prev",
+    "confirmed_on": "2026-09-13",
+    "case_count": 18
+  },
+  "predictions": [
+    {
+      "case_id": "1707.06347v2-002",
+      "status": "ok",
+      "latex": "\\hat{g} = \\hat{\\mathbb{E}}_t \\left[ \\nabla_\\theta \\log \\pi_\\theta(a_t \\mid s_t) \\hat{A}_t \\right]",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 10547.873
+    },
+    {
+      "case_id": "1707.06347v2-004",
+      "status": "ok",
+      "latex": "L^{CLIP}(\\theta) = \\hat{\\mathbb{E}}_t \\left[ \\min(r_t(\\theta)\\hat{A}_t, \\text{clip}(r_t(\\theta), 1 - \\epsilon, 1 + \\epsilon)\\hat{A}_t) \\right]",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 12799.614
+    },
+    {
+      "case_id": "1707.06347v2-007",
+      "status": "ok",
+      "latex": "L^{PG}(\\theta) = \\hat{\\mathbb{E}}_t \\left[ \\log \\pi_\\theta(a_t \\mid s_t) \\hat{A}_t \\right]. \\tag{2}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 11471.867
+    },
+    {
+      "case_id": "1707.06347v2-008",
+      "status": "ok",
+      "latex": "\\hat{A}_t = -V(s_t) + r_t + \\gamma r_{t+1} + \\dots + \\gamma^{T-t+1} r_{T-1} + \\gamma^{T-t} V(s_T) \\tag{10}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 13816.932
+    },
+    {
+      "case_id": "1707.06347v2-009",
+      "status": "error",
+      "latex": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 12739.125
+    },
+    {
+      "case_id": "2205.07246v3-004",
+      "status": "error",
+      "latex": null,
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 12855.051
+    },
+    {
+      "case_id": "2205.07246v3-008",
+      "status": "ok",
+      "latex": "\\mathcal{L} = \\mathcal{L}_s + w_u \\mathcal{L}_u + w_f \\mathcal{L}_f, \\tag{12}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 8769.047
+    },
+    {
+      "case_id": "2205.07246v3-009",
+      "status": "ok",
+      "latex": "\\mathcal{L}_u = \\frac{1}{\\mu B} \\sum_{b=1}^{\\mu B} \\mathbb{1}(\\max(q_b) > \\tau) \\cdot \\mathcal{H}(\\hat{q}_b, Q_b). \\tag{4}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 14635.38
+    },
+    {
+      "case_id": "2205.07246v3-010",
+      "status": "ok",
+      "latex": "\\tilde{p}_t(c) = \\begin{cases} \\frac{1}{C}, & \\text{if } t = 0, \\\\ \\lambda \\tilde{p}_{t-1}(c) + (1 - \\lambda) \\frac{1}{\\mu B} \\sum_{b=1}^{\\mu B} q_b(c), & \\text{otherwise,} \\end{cases} \\tag{6}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 10740.59
+    },
+    {
+      "case_id": "2205.07246v3-012",
+      "status": "ok",
+      "latex": "\\mathcal{L}_s = \\frac{1}{B} \\sum_{b=1}^{B} \\mathcal{H}(y_b, p_m(y|\\omega(x_b))), \\tag{3}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 13546.659
+    },
+    {
+      "case_id": "2507.04247v1-019",
+      "status": "ok",
+      "latex": "\\ell_{h,\\tau}(u) = \\frac{h}{\\sqrt{2\\pi}} \\exp\\left(-\\frac{u^2}{2h^2}\\right) + \\frac{u}{2} \\left\\{ 1 - 2\\Phi\\left(-\\frac{u}{h}\\right) \\right\\} + \\left(\\tau - \\frac{1}{2}\\right)u,",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 13497.296
+    },
+    {
+      "case_id": "2507.04247v1-022",
+      "status": "ok",
+      "latex": "p_{ij}(X) = \\frac{e^{\\eta_{ij}}}{\\sum_{k=1}^{q} e^{\\eta_{ik}}}, \\quad 1 \\le j \\le q.",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 7386.312
+    },
+    {
+      "case_id": "2507.04247v1-024",
+      "status": "ok",
+      "latex": "(E \\otimes GK^2G^\\top + \\lambda I_{q-1} \\otimes GKG^\\top + \\lambda\\delta I_{(q-1)\\times m})\\mathrm{vec}(\\Delta) = \\mathrm{vec}(C^k),",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 11678.963
+    },
+    {
+      "case_id": "2507.04247v1-039",
+      "status": "ok",
+      "latex": "[\\nabla f(y) - \\nabla f(x)]^\\top H^{-1} [\\nabla f(y) - \\nabla f(x)] \\le [\\nabla f(y) - \\nabla f(x)]^\\top (y - x).",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 7533.625
+    },
+    {
+      "case_id": "2507.04247v1-047",
+      "status": "ok",
+      "latex": "\\nabla f(\\operatorname{vec}(X)) = -\\operatorname{vec}(GK(B-P)) + \\lambda \\operatorname{vec}(GKG^\\top X),",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 9493.67
+    },
+    {
+      "case_id": "2507.04247v1-048",
+      "status": "ok",
+      "latex": "G K W K G^{\\top} + \\lambda G K G^{\\top} \\preceq H = \\frac{1}{4} G K^2 G^{\\top} + \\lambda G K G^{\\top} + \\delta I. \\tag{23}",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 11349.051
+    },
+    {
+      "case_id": "2507.04247v1-052",
+      "status": "ok",
+      "latex": "\\eta_i = -4 + \\sin(a_{i1}) + a_{i2}a_{i3} + a_{i4}^3 - |a_{i5}| + \\frac{1}{10}\\|(a_{i6}, \\dots, a_{id})\\|^2, \\quad b_i = \\eta_i + \\epsilon_i,",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 9810.507
+    },
+    {
+      "case_id": "2507.04247v1-055",
+      "status": "ok",
+      "latex": "y^k = x^k + \\beta_k(x^k - x^{k-1}),",
+      "recognizer": "openai-compatible-vision",
+      "model_revision": "dots3-note-prev",
+      "execution": "remote",
+      "elapsed_ms": 4746.146
+    }
+  ]
+}

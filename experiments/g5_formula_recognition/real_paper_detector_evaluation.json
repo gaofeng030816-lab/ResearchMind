@@ -1,0 +1,230 @@
+{
+  "schema_version": 1,
+  "purpose": "real_paper_formula_detector_before_after_evaluation",
+  "iou_threshold": 0.9,
+  "paths_stored": false,
+  "source_text_stored": false,
+  "optimization_guardrails_met": true,
+  "metrics": {
+    "paper_count": 3,
+    "recognition_case_count": 18,
+    "recognition_case_recall": 1.0,
+    "audit_case_count": 10,
+    "audit_accuracy": 0.7,
+    "complete_formula_retention": 1.0,
+    "unwanted_candidate_rejection": 0.625,
+    "baseline_candidate_count": 128,
+    "candidate_candidate_count": 78,
+    "candidate_reduction_rate": 0.390625
+  },
+  "recognition_cases": [
+    {
+      "id": "1707.06347v2-002",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "1707.06347v2-004",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "1707.06347v2-007",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "1707.06347v2-008",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "1707.06347v2-009",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2205.07246v3-004",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2205.07246v3-008",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2205.07246v3-009",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2205.07246v3-010",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2205.07246v3-012",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2507.04247v1-019",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2507.04247v1-022",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2507.04247v1-024",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2507.04247v1-039",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2507.04247v1-047",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2507.04247v1-048",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2507.04247v1-052",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2507.04247v1-055",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    }
+  ],
+  "audit_cases": [
+    {
+      "id": "1707.06347v2-002",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    },
+    {
+      "id": "1707.06347v2-003",
+      "expected_detected": false,
+      "detected": true,
+      "correct": false,
+      "best_iou": 1.0
+    },
+    {
+      "id": "1707.06347v2-016",
+      "expected_detected": false,
+      "detected": false,
+      "correct": true,
+      "best_iou": 0.0
+    },
+    {
+      "id": "2205.07246v3-006",
+      "expected_detected": false,
+      "detected": true,
+      "correct": false,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2205.07246v3-018",
+      "expected_detected": false,
+      "detected": false,
+      "correct": true,
+      "best_iou": 0.0
+    },
+    {
+      "id": "2205.07246v3-019",
+      "expected_detected": false,
+      "detected": false,
+      "correct": true,
+      "best_iou": 0.0
+    },
+    {
+      "id": "2205.07246v3-032",
+      "expected_detected": false,
+      "detected": true,
+      "correct": false,
+      "best_iou": 1.0
+    },
+    {
+      "id": "2507.04247v1-003",
+      "expected_detected": false,
+      "detected": false,
+      "correct": true,
+      "best_iou": 0.0
+    },
+    {
+      "id": "2507.04247v1-006",
+      "expected_detected": false,
+      "detected": false,
+      "correct": true,
+      "best_iou": 0.0
+    },
+    {
+      "id": "2507.04247v1-039",
+      "expected_detected": true,
+      "detected": true,
+      "correct": true,
+      "best_iou": 1.0
+    }
+  ],
+  "remaining_audit_failures": [
+    "1707.06347v2-003",
+    "2205.07246v3-006",
+    "2205.07246v3-032"
+  ],
+  "limitations": [
+    "The audit set is deliberately small and is not a population precision estimate.",
+    "Detector retention does not prove recognizer LaTeX quality.",
+    "No PDF or crop was transmitted while producing this comparison."
+  ]
+}
