@@ -32,7 +32,10 @@ user accepted G4 on 2026-09-09. G5 is Completed: it adds local bounded region
 detection/cropping, exact per-crop remote consent, an OpenAI-compatible
 FormulaRecognizer, editable/validated/accepted LaTeX and optional formula evidence.
 Its real-paper exact score is low enough that it must be taught as assistance, not
-source recovery. G6/G7 and extra code languages have not started.
+source recovery. G6 is Completed: Python keeps AST; C/Java/Julia use separate
+Tree-sitter grammars; R uses a conservative lexical adapter; every path is static
+and non-executing, and T5-B1 remains Python-only. G7 has not started. Read
+docs/V3_G6_MULTILINGUAL_CODE_DECISION.md for the exact evidence and limitations.
 
 ## Teaching Priorities
 

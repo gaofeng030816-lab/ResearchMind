@@ -8,6 +8,7 @@ import os
 from pathlib import Path, PurePosixPath
 import shutil
 
+from researchmind.code.languages import language_for_relative_path
 from researchmind.database.errors import (
     LibraryConfigurationError,
     LibraryImportError,
@@ -43,16 +44,16 @@ _EXCLUDED_CODE_DIRECTORIES = frozenset(
 )
 _SENSITIVE_CODE_FILENAMES = frozenset(
     {
-        "secrets.py",
-        "credentials.py",
-        "local_settings.py",
+        "secrets",
+        "credentials",
+        "local_settings",
     }
 )
 _SENSITIVE_CODE_SUFFIXES = (
-    "_secrets.py",
-    "_credentials.py",
-    "_tokens.py",
-    "_apikeys.py",
+    "_secrets",
+    "_credentials",
+    "_tokens",
+    "_apikeys",
 )
 
 
@@ -87,7 +88,7 @@ class QuarantinedAsset:
 
 @dataclass(frozen=True)
 class StagedCodeAsset:
-    """A staged Python directory plus its safe display metadata."""
+    """A staged static-code directory plus its safe display metadata."""
 
     asset: StagedAsset
     project_name: str
@@ -212,11 +213,11 @@ class ManagedStorage:
         max_total_bytes: int = _MAX_CODE_UPLOAD_TOTAL_BYTES,
         max_file_bytes: int = _MAX_CODE_UPLOAD_FILE_BYTES,
     ) -> StagedCodeAsset:
-        """Validate and stage one browser-selected Python directory."""
+        """Validate and stage one browser-selected static-code directory."""
 
         if not uploads:
             raise LibraryImportError(
-                "Choose a Python directory containing at least one file."
+                "Choose a code directory containing at least one supported file."
             )
         if len(uploads) > max_files:
             raise LibraryImportError(
@@ -240,9 +241,10 @@ class ManagedStorage:
         for relative_path, upload in normalized:
             if _is_excluded_code_path(relative_path):
                 continue
-            if relative_path.suffix.lower() != ".py":
+            if language_for_relative_path(relative_path.as_posix()) is None:
                 raise LibraryImportError(
-                    "V3-G1 code-directory import currently accepts Python files only."
+                    "Code-directory import accepts .py, .c, .h, .java, .jl, "
+                    "and .r files only."
                 )
             if len(upload.content) > max_file_bytes:
                 raise LibraryImportError(
@@ -264,7 +266,7 @@ class ManagedStorage:
 
         if not eligible:
             raise LibraryImportError(
-                "The selected directory has no eligible UTF-8 Python files."
+                "The selected directory has no eligible UTF-8 source files."
             )
 
         content_hash = _code_directory_hash(eligible)
@@ -461,9 +463,9 @@ def _strip_uploaded_root(
         len(first_parts) == 1
         and all(len(path.parts) > 1 for path, _upload in uploads)
     )
-    inferred_name = next(iter(first_parts)) if has_shared_root else "Python project"
+    inferred_name = next(iter(first_parts)) if has_shared_root else "Code project"
     safe_name = " ".join((requested_project_name or inferred_name).split())
-    project_name = safe_name[:120] or "Python project"
+    project_name = safe_name[:120] or "Code project"
     if not has_shared_root:
         return project_name, uploads
     return (
@@ -484,10 +486,11 @@ def _is_excluded_code_path(path: PurePosixPath) -> bool:
     ):
         return True
     filename = path.name.casefold()
+    stem = path.stem.casefold()
     return (
         filename.startswith(".")
-        or filename in _SENSITIVE_CODE_FILENAMES
-        or filename.endswith(_SENSITIVE_CODE_SUFFIXES)
+        or stem in _SENSITIVE_CODE_FILENAMES
+        or stem.endswith(_SENSITIVE_CODE_SUFFIXES)
     )
 
 

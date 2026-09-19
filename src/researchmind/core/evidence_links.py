@@ -86,6 +86,26 @@ def create_user_confirmed_evidence_link(
             "The code selection does not belong to the opened code project."
         )
     code_file = get_code_file(code_project, code_selection.relative_path)
+    if code_selection.language != code_file.language:
+        raise ValueError(
+            "The code selection language no longer matches the opened project."
+        )
+    if code_selection.extraction_method == "text":
+        if (
+            code_selection.symbol_kind is not None
+            or code_selection.symbol_name is not None
+        ):
+            raise ValueError("A text range cannot claim a parsed code symbol.")
+    elif code_selection.extraction_method != code_file.extraction_method:
+        raise ValueError("The code selection extraction method is no longer valid.")
+    elif not any(
+        symbol.start_line == code_selection.start_line
+        and symbol.end_line == code_selection.end_line
+        and symbol.kind == code_selection.symbol_kind
+        and symbol.qualified_name == code_selection.symbol_name
+        for symbol in code_file.symbols
+    ):
+        raise ValueError("The selected code symbol is no longer valid.")
     if (
         code_selection.start_line < 1
         or code_selection.end_line < code_selection.start_line
@@ -120,6 +140,7 @@ def create_user_confirmed_evidence_link(
             end_line=code_selection.end_line,
             excerpt=code_selection.text,
             extraction_method=code_selection.extraction_method,
+            language=code_selection.language,
             symbol_kind=code_selection.symbol_kind,
             symbol_name=code_selection.symbol_name,
         ),

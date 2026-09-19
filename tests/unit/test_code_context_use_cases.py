@@ -51,6 +51,7 @@ def test_code_preview_and_explanation_use_the_same_bounded_prompt(
     assert preview.symbol_kind == "function"
     assert preview.symbol_name == "predict"
     assert preview.extraction_method == "ast"
+    assert preview.language == "python"
     assert preview.selected_code.startswith("def predict")
     assert preview.request_character_count > len(preview.selected_code)
     assert message.task == "explain:code"
@@ -60,6 +61,7 @@ def test_code_preview_and_explanation_use_the_same_bounded_prompt(
     request = "\n".join(item.content for item in calls[0][0])
     assert "<code_context>" in request
     assert "<relative_path>model.py</relative_path>" in request
+    assert "<language>python</language>" in request
     assert str(root) not in request
 
 

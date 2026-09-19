@@ -114,7 +114,20 @@ Current evidence is 48 G5 focused checks, 21 Streamlit AppTests, 474 production 
 1 existing Windows symlink environment skip, and 573 tests / 1 skip with the adopted
 G3 experiments. See docs/V3_G5_FORMULA_RECOGNITION_DECISION.md.
 
-V3-G6 and G7 remain Pending and are not started.
+V3-G6 is Completed. The user approved hybrid scheme A on 2026-09-16. Python
+keeps the standard-library AST; C/Java/Julia use tree-sitter 0.26 with separate
+official grammar wheels; R uses the project-owned conservative lexical adapter.
+All adapters map to CodeSymbol and keep language/extraction provenance through
+selection, context, prompts, evidence, and Markdown. Managed and external imports
+accept only .py/.c/.h/.java/.jl/.r under the existing resource, UTF-8, exclusion,
+symlink and containment boundaries. Non-Python code remains read-only and T5-B1 is
+still Python-only. Evidence is 24 focused G6 checks, 22 Streamlit AppTests,
+498 production tests / 1 existing Windows symlink environment skip, 597 tests /
+1 skip with adopted G3 experiments, a successful 1,080,710-byte wheel, and 2,000
+synthetic parses averaging 0.1388 ms. See
+docs/V3_G6_MULTILINGUAL_CODE_DECISION.md.
+
+V3-G7 remains Pending and is not started.
 Only one primary V3 stage may be Active. Preserve 2.0.0rc1 independently so every V3
 slice can be abandoned or rolled back without rewriting the accepted baseline.
 
@@ -139,7 +152,7 @@ V2 already implements:
 
 Automatic formula recognition, image-formula OCR, whole-PDF-to-LaTeX, browser text
 layer selection, persistence, Zotero integration, and non-Python parsing are not V2
-features. V3 has now adopted the G1–G5 slices described above; this does not rewrite
+features. V3 has now adopted the G1–G6 slices described above; this does not rewrite
 the accepted V2 baseline.
 
 V3-G1 adds persistence for the paper/code working library and managed asset metadata;
@@ -204,8 +217,9 @@ Candidates not implemented until later gates close:
 
 - Zotero Web API, group-library product workflow, writes, and sync; never direct
   Zotero SQLite;
-- Tree-sitter plus language grammar packages only after Python/C/Java/Julia/R parity,
-  Windows packaging, performance, license, and maintenance evidence.
+- C++/Notebook support, cross-file call graphs, dependency resolution, code
+  execution, compilation and reproduction automation; these need separate product,
+  parser and permission gates.
 
 No microservices, database server, Redis, Celery, queues, Kubernetes, separate backend,
 cloud sync, vector database, autonomous background agent, or general tool runtime is
@@ -241,10 +255,11 @@ Current adopted infrastructure ownership:
   unaccepted candidates session-only, while app/use_cases.py revalidates exact crop
   consent, acceptance and optional G4 evidence capture;
 
-After the corresponding later V3 gate is approved:
-
-- code may add language parser adapters that map to existing project models, but
-  remains non-executing and default read-only.
+- code/languages.py owns supported-extension mapping; code/parsers.py dispatches
+  Python AST, C/Java/Julia Tree-sitter, and conservative R lexical adapters.
+  code/tree_sitter_parser.py is the only boundary where grammar nodes exist.
+  Reader/storage map only project CodeSymbol/CodeFile objects and never execute
+  source. Language support does not extend T5-B1 beyond Python.
 
 Allowed flow:
 

@@ -34,8 +34,16 @@ _GOAL_LABELS = {
 _SYMBOL_KIND_LABELS = {
     "class": "类",
     "function": "函数",
+    "type": "类型",
     "method": "方法",
     "import": "导入",
+}
+_LANGUAGE_LABELS = {
+    "python": "Python",
+    "c": "C",
+    "java": "Java",
+    "julia": "Julia",
+    "r": "R",
 }
 _EVIDENCE_KIND_LABELS = {
     "paper": "论文内容",
@@ -57,13 +65,13 @@ _GENERATION_METHOD_LABELS = {
 
 
 def render_code_workspace() -> None:
-    """Render one bounded, non-executing local Python project workflow."""
+    """Render one bounded, non-executing static-code workflow."""
 
     st.subheader("代码学习与科研复现")
     st.caption(
-        "这是独立代码工作区，不需要先打开 PDF。默认只读分析 Python；"
-        "T5-B1 只允许对当前选择生成单文件替换建议，并须预览和逐次确认。"
-        "应用仍不会 import、执行、测试、安装依赖或调用 Shell。"
+        "这是独立代码工作区，不需要先打开 PDF。可只读分析 Python、C、Java、"
+        "Julia 与 R；应用不会 import、执行、测试、安装依赖、调用编译器或 Shell。"
+        "T5-B1 原地修改权限仍严格限于外部 Python 项目。"
     )
     goal = st.radio(
         "本次目标",
@@ -87,14 +95,15 @@ def render_code_workspace() -> None:
             project = use_cases.open_code_project(Path(path_text.strip()))
             state.set_opened_code_project(project)
             st.success(
-                f"已只读索引：{project.name} · {len(project.files)} 个 Python 文件"
+                f"已只读索引：{project.name} · "
+                f"{len(project.files)} 个源码文件"
             )
         except use_cases.USER_FACING_ERRORS as exc:
             st.error(str(exc))
 
     project = state.get_opened_code_project()
     if project is None:
-        st.info("输入本地文件夹路径后，可选择 Python 文件、符号或行范围。")
+        st.info("输入本地文件夹路径后，可选择源码文件、静态符号或行范围。")
         return
 
     st.markdown(
@@ -130,13 +139,13 @@ def render_code_workspace() -> None:
             f"{len(unreadable_files)} 个文件不是有效 UTF-8，未读取其源码。"
         )
     if empty_files:
-        st.caption(f"{len(empty_files)} 个空 Python 文件没有可选择内容。")
+        st.caption(f"{len(empty_files)} 个空源码文件没有可选择内容。")
     if not available_files:
-        st.warning("当前文件夹没有可选择的 UTF-8 Python 源码。")
+        st.warning("当前文件夹没有可选择的 UTF-8 支持源码。")
         return
 
     relative_path = st.selectbox(
-        "Python 文件",
+        "源码文件",
         options=[item.relative_path for item in available_files],
         key=f"code_file_select_{project.id}",
     )
@@ -219,9 +228,10 @@ def render_code_workspace() -> None:
     st.markdown("**当前代码选择**")
     st.caption(
         f"{selection.relative_path}:{selection.start_line}-"
-        f"{selection.end_line} · {selection.extraction_method}"
+        f"{selection.end_line} · {_LANGUAGE_LABELS[selection.language]} · "
+        f"{selection.extraction_method}"
     )
-    st.code(selection.text, language="python", line_numbers=True)
+    st.code(selection.text, language=selection.language, line_numbers=True)
     with st.expander("可选：连接论文证据", expanded=False):
         _render_evidence_link_creator(project, selection)
     _render_evidence_links()
@@ -385,7 +395,7 @@ def _render_project_summary(
 ) -> None:
     st.markdown("**静态项目概览**")
     columns = st.columns(4)
-    columns[0].metric("Python 文件", summary.total_files)
+    columns[0].metric("源码文件", summary.total_files)
     columns[1].metric("可解析文件", summary.parsed_files)
     columns[2].metric("定义数量", summary.definition_count)
     columns[3].metric("导入数量", summary.import_count)
@@ -393,6 +403,7 @@ def _render_project_summary(
         f"共 {summary.total_lines:,} 行 · 语法错误 "
         f"{summary.syntax_error_files} · 不可读 {summary.unreadable_files}"
     )
+    st.text(f"语言：{'、'.join(_LANGUAGE_LABELS[item] for item in summary.languages)}")
     if goal == "beginner":
         entry_points = "、".join(summary.entry_point_candidates) or "尚未识别"
         st.text(f"建议先看的入口文件：{entry_points}")
@@ -578,7 +589,10 @@ def _render_code_evidence(
         symbol = preview.symbol_name or "（显式行范围）"
         kind = preview.symbol_kind or "未指定"
         st.text(f"符号：{symbol} · {kind}")
-        st.text(f"提取方式：{preview.extraction_method}")
+        st.text(
+            "语言 / 提取方式："
+            f"{_LANGUAGE_LABELS[preview.language]} / {preview.extraction_method}"
+        )
         st.caption(
             f"请求估算：约 {preview.request_character_count:,} 字符 / "
             f"{preview.approximate_request_tokens:,} tokens。"
@@ -586,11 +600,11 @@ def _render_code_evidence(
         st.markdown("**当前问题**")
         st.code(preview.user_question, language=None)
         st.markdown("**选中代码**")
-        st.code(preview.selected_code, language="python", line_numbers=True)
+        st.code(preview.selected_code, language=preview.language, line_numbers=True)
         st.markdown("**预算内邻近代码**")
         st.code(
             preview.surrounding_code or "（无邻近代码）",
-            language="python",
+            language=preview.language,
             line_numbers=False,
         )
 
@@ -602,6 +616,11 @@ def _render_code_change_controls(
     if project.managed_by_researchmind:
         st.caption(
             "托管资料库代码保持只读，以保护已登记的哈希和修订。"
+        )
+        return
+    if selection.language != "python":
+        st.caption(
+            "当前语言仅支持只读静态理解；T5-B1 原地修改权限仅适用于 Python。"
         )
         return
     with st.expander("受控单文件修改（T5-B1）", expanded=False):

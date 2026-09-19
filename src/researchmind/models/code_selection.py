@@ -5,8 +5,9 @@ from typing import Literal
 from uuid import uuid4
 
 
-CodeExtractionMethod = Literal["ast", "text"]
-CodeSymbolKind = Literal["class", "function", "method", "import"]
+CodeLanguage = Literal["python", "c", "java", "julia", "r"]
+CodeExtractionMethod = Literal["ast", "tree_sitter", "lexical", "text"]
+CodeSymbolKind = Literal["class", "type", "function", "method", "import"]
 
 
 @dataclass(frozen=True)
@@ -22,5 +23,6 @@ class CodeSelection:
     extraction_method: CodeExtractionMethod
     symbol_kind: CodeSymbolKind | None = None
     symbol_name: str | None = None
+    language: CodeLanguage = "python"
     source_type: Literal["code"] = "code"
     id: str = field(default_factory=lambda: uuid4().hex)

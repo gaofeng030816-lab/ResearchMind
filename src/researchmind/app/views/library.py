@@ -78,13 +78,13 @@ def _render_imports() -> None:
             st.error(str(exc))
 
     code_uploads = st.file_uploader(
-        "选择或拖放一个 Python 代码目录",
-        type=["py"],
+        "选择或拖放一个代码目录",
+        type=["py", "c", "h", "java", "jl", "r"],
         accept_multiple_files="directory",
         key="library_code_directory_upload",
         help=(
-            "V3-G1 延续 V2 的 Python 静态阅读边界；C、Java、Julia、R "
-            "将在 V3-G6 通过解析器门禁后加入。"
+            "静态读取 Python、C、Java、Julia 与 R；不会执行源码、安装依赖"
+            "或调用编译器。浏览器筛选不是安全边界，服务器会再次验证。"
         ),
     )
     project_name = st.text_input(
@@ -252,8 +252,8 @@ def _render_revision_import(entry: LibraryEntry) -> None:
             return
 
         uploads = st.file_uploader(
-            "选择新的 Python 目录修订",
-            type=["py"],
+            "选择新的代码目录修订",
+            type=["py", "c", "h", "java", "jl", "r"],
             accept_multiple_files="directory",
             key=f"library_code_revision_{entry.record.id}",
         )

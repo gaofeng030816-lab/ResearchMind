@@ -77,9 +77,10 @@ def summarize_code_project(project: CodeProject) -> CodeProjectSummary:
         parsed_files=parsed_files,
         syntax_error_files=syntax_error_files,
         unreadable_files=unreadable_files,
+        languages=tuple(sorted({item.language for item in project.files})),
         total_lines=sum(item.line_count for item in project.files),
         definition_count=sum(
-            symbol.kind in {"class", "function", "method"}
+            symbol.kind in {"class", "type", "function", "method"}
             for symbol in symbols
         ),
         import_count=sum(symbol.kind == "import" for symbol in symbols),
@@ -96,7 +97,7 @@ def select_code_symbol(
     *,
     symbol_index: int,
 ) -> CodeSelection:
-    """Select exactly one AST-located symbol from an indexed file."""
+    """Select exactly one statically located symbol from an indexed file."""
 
     code_file = _required_code_file(project, relative_path)
     if symbol_index < 0 or symbol_index >= len(code_file.symbols):
@@ -116,7 +117,8 @@ def select_code_symbol(
         start_line=symbol.start_line,
         end_line=symbol.end_line,
         text=text,
-        extraction_method="ast",
+        extraction_method=code_file.extraction_method,
+        language=code_file.language,
         symbol_kind=symbol.kind,
         symbol_name=symbol.qualified_name,
     )
@@ -145,6 +147,7 @@ def select_code_lines(
         end_line=end_line,
         text=text,
         extraction_method="text",
+        language=code_file.language,
     )
 
 
@@ -191,6 +194,7 @@ def build_code_context(
         user_question=question,
         symbol_kind=selection.symbol_kind,
         symbol_name=selection.symbol_name,
+        language=selection.language,
     )
 
 
@@ -257,10 +261,10 @@ def _required_code_file(
         None,
     )
     if code_file is None:
-        raise ValueError(f"Python file is not part of this project: {normalized}")
+        raise ValueError(f"Code file is not part of this project: {normalized}")
     if not code_file.source:
         raise ValueError(
-            f"Python file is unavailable for selection: {normalized}"
+            f"Code file is unavailable for selection: {normalized}"
         )
     return code_file
 

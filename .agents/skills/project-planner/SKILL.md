@@ -47,8 +47,11 @@ the configured OpenAI-compatible single-crop adapter, exact remote-transfer cons
 editable strict LaTeX and optional accepted-formula evidence. The legacy GPL runtime
 was rejected and pix2tex/local weights remain deferred. Its low real normalized-exact
 score forbids source-recovery claims. Read
-docs/V3_G5_FORMULA_RECOGNITION_DECISION.md before changing this contract. G6/G7,
-Zotero Web API/sync and Tree-sitter packages remain unapproved.
+docs/V3_G5_FORMULA_RECOGNITION_DECISION.md before changing this contract. G6 is
+Completed under the user-approved hybrid scheme: Python AST, separate C/Java/Julia
+Tree-sitter wheels, and a conservative R lexical adapter. Read
+docs/V3_G6_MULTILINGUAL_CODE_DECISION.md before changing it. G7 and Zotero Web
+API/sync remain unapproved.
 
 ## Product Test
 

@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from researchmind.models.code_selection import (
     CodeExtractionMethod,
+    CodeLanguage,
     CodeSymbolKind,
 )
 from researchmind.models.text_block import BoundingBox
@@ -54,6 +55,7 @@ class CodeEvidenceReference:
     extraction_method: CodeExtractionMethod
     symbol_kind: CodeSymbolKind | None = None
     symbol_name: str | None = None
+    language: CodeLanguage = "python"
     source_type: Literal["code"] = "code"
 
 

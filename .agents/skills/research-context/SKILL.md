@@ -9,7 +9,7 @@ Give the configured model the smallest relevant, traceable evidence for the user
 current task. More stored data, a database ID, or a richer parser tree does not by
 itself improve context.
 
-Read docs/ARCHITECTURE.md for implemented V2 + V3-G1–G5 behavior and
+Read docs/ARCHITECTURE.md for implemented V2 + V3-G1–G6 behavior and
 V2 to V3过渡要求.md for stage gates. G4 is Completed: it persists explicit
 NoteDraft/EvidenceSnapshot data, exposes click-only translation and the evidence
 basket, and deterministically combines one saved revision with included ordered

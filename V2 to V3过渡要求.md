@@ -1,6 +1,6 @@
 # ResearchMind V2 → V3 过渡要求与实施门禁
 
-版本：2026-09-13 · 当前实现基线：2.0.0rc1 V2 Accepted + V3-G1–G5 增量 · 当前阶段：V3-G0–G5 Completed；G6/G7 Pending · 不对外发布
+版本：2026-09-16 · 当前实现基线：2.0.0rc1 V2 Accepted + V3-G1–G6 增量 · 当前阶段：V3-G0–G6 Completed；G7 Pending · 不对外发布
 
 ## 1. 文档目的与权威边界
 
@@ -16,9 +16,9 @@
 - AGENTS.md：所有任务必须遵守的顶层开发、安全和测试规则；
 - .agents/skills：规划、实现、PDF、上下文、资料库、测试和学习工作流。
 
-整体 V3 方向已经由用户明确批准。数据库/文件所有权、Zotero 只读模式和 PDF
-组件已分别在 G1、G2、G3 关闭门禁；公式服务和多语言解析依赖仍须在后续对应
-门禁确认后进入生产。
+整体 V3 方向已经由用户明确批准。数据库/文件所有权、Zotero 只读模式、PDF
+组件、公式服务和多语言解析已分别在 G1–G6 关闭门禁；最终加固与内部验收仍须
+通过 G7。
 
 ## 2. V3 产品目标
 
@@ -199,7 +199,7 @@ ZoteroSourceLink；其余概念仍须在对应门禁固定 schema：
 | V3-G3 PDF 文字层与自适应工作台 | Completed（用户确认） | CCv2/pdf.js 划词、全宽/分栏、AI 快捷键、滚轮交互 | 用户确认物理触控板并批准采用；正式 ReadingSelection 对账、回退、Edge 8/8、wheel 与 486 passed / 1 skip 已完成 |
 | V3-G4 划词翻译与显式笔记草稿 | Completed（用户确认） | schema v3 草稿/证据、准确翻译预览、显式证据篮、可编辑正文、同版预览与明确 Vault 输出 | 42 focused；425 passed / 1 skip；G3 联合 524 passed / 1 skip；Edge 8/8；用户确认通过 |
 | V3-G5 公式识别与 LaTeX | Completed | 区域检测、单 crop 识别、编辑接受和可选笔记证据 | 20 合成 + 18 真实标注、隐私/错误/性能、Edge 假服务旅程、全量回归 |
-| V3-G6 多语言 CodeContext | Pending | Python/C/Java/Julia/R 静态解析 | 五语言 fixture、Python parity、无执行、性能 |
+| V3-G6 多语言 CodeContext | Completed | Python/C/Java/Julia/R 静态解析 | 24 focused；22 AppTests；498 passed / 1 skip；联合 597 passed / 1 skip；wheel/性能 |
 | V3-G7 V3 加固与内部验收 | Pending | 数据恢复、安全、性能、完整旅程和人工验收 | 全量回归、迁移/恢复、浏览器、隐私、用户确认 |
 
 ### V3-G0：规则与架构入口
@@ -375,10 +375,23 @@ similarity 和 100% structural exact，全部预设阈值通过。用户授权�
 [G5 架构与质量门禁](docs/V3_G5_FORMULA_RECOGNITION_DECISION.md)。G5 完成不自动
 启动 G6，也不授权本地权重、批量/后台识别或整篇 PDF→LaTeX。
 
-### V3-G6：多语言代码
+### V3-G6：多语言代码（Completed）
 
-先 Spike Tree-sitter 与 grammar wheel，再用小 parser protocol 映射到现有模型。
-每种语言只承诺经过 fixture 验证的符号类型；不把静态解析称为代码可运行/可复现。
+用户于 2026-09-16 确认方案 A。Python 保留标准库 AST；C/Java/Julia 采用
+tree-sitter 0.26 与三个独立官方 grammar wheel；R 采用项目内保守、非执行的
+lexical adapter。所有 parser 只返回项目自有 CodeSymbol，语法错误保留 UTF-8
+文本并降级为显式行选择。
+
+本地与托管目录接受 .py/.c/.h/.java/.jl/.r，继续执行 2,000 文件、20 MB 总量、
+1 MB 单文件、UTF-8、相对路径、隐藏/敏感/vendor/build 排除及 symlink/root
+containment。语言与提取方式贯穿 CodeFile、CodeSelection、CodeContext、prompt、
+EvidenceLink 和 Markdown。非 Python 在 UI 与用例层都保持只读，T5-B1 仍仅限
+外部 Python 项目。
+
+退出证据为 24 项聚焦 G6 检查、22/22 Streamlit AppTests、498 production passed /
+1 个既有 Windows symlink 环境 skip、加入 G3 实验为 597 passed / 1 skip；本地
+wheel 构建成功。五语言 2,000 次合成解析平均 0.1388 ms/次。完整决策、拒绝项与
+限制见 docs/V3_G6_MULTILINGUAL_CODE_DECISION.md。
 
 ### V3-G7：加固与内部验收
 

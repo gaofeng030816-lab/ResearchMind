@@ -134,6 +134,7 @@ def build_code_explanation_prompt(context: CodeContext) -> list[ChatMessage]:
     fields = (
         ("project_name", context.project_name),
         ("source_type", context.source),
+        ("language", context.language),
         ("relative_path", context.relative_path),
         ("start_line", str(context.start_line)),
         ("end_line", str(context.end_line)),
@@ -163,6 +164,7 @@ def build_code_change_prompt(context: CodeContext) -> list[ChatMessage]:
     fields = (
         ("project_name", context.project_name),
         ("source_type", context.source),
+        ("language", context.language),
         ("relative_path", context.relative_path),
         ("start_line", str(context.start_line)),
         ("end_line", str(context.end_line)),

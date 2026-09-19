@@ -6,6 +6,7 @@ from typing import Literal
 
 from researchmind.models.code_selection import (
     CodeExtractionMethod,
+    CodeLanguage,
     CodeSelection,
     CodeSymbolKind,
 )
@@ -16,7 +17,7 @@ CodeFileStatus = Literal["parsed", "syntax_error", "unreadable"]
 
 @dataclass(frozen=True)
 class CodeSymbol:
-    """One statically located Python symbol."""
+    """One statically located source symbol."""
 
     relative_path: str
     name: str
@@ -29,7 +30,7 @@ class CodeSymbol:
 
 @dataclass(frozen=True)
 class CodeFile:
-    """One bounded Python source file converted at the code-reader boundary."""
+    """One bounded source file converted at the code-reader boundary."""
 
     relative_path: str
     source: str
@@ -37,6 +38,7 @@ class CodeFile:
     line_count: int
     status: CodeFileStatus
     extraction_method: CodeExtractionMethod
+    language: CodeLanguage = "python"
     symbols: tuple[CodeSymbol, ...] = ()
     error: str | None = None
 
@@ -67,6 +69,7 @@ class CodeProjectSummary:
     import_count: int
     entry_point_candidates: tuple[str, ...] = ()
     imported_modules: tuple[str, ...] = ()
+    languages: tuple[CodeLanguage, ...] = ()
     external_dependency_candidates: tuple[str, ...] = ()
     problem_files: tuple[str, ...] = ()
 
@@ -86,4 +89,5 @@ class CodeContext:
     user_question: str
     symbol_kind: CodeSymbolKind | None = None
     symbol_name: str | None = None
+    language: CodeLanguage = "python"
     source: Literal["code"] = "code"

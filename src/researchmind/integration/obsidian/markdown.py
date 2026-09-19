@@ -251,6 +251,7 @@ def _code_note_lines(
         symbol_labels = {
             "class": "类",
             "function": "函数",
+            "type": "类型",
             "method": "方法",
             "import": "导入",
         }
@@ -259,6 +260,8 @@ def _code_note_lines(
     extraction = {
         "ast": "AST 静态提取",
         "text": "显式文本范围",
+        "tree_sitter": "Tree-sitter 静态提取",
+        "lexical": "保守词法提取",
     }.get(selection.extraction_method)
     if extraction is None:
         raise MarkdownRenderError("Code selection extraction method is unsupported.")
@@ -271,6 +274,7 @@ def _code_note_lines(
         f"- 代码项目：{project_name}",
         f"- 相对路径：{relative_path}",
         f"- 行号：{selection.start_line}-{selection.end_line}",
+        f"- 语言：{selection.language}",
         f"- 代码符号：{symbol}",
         f"- 提取方式：{extraction}",
         "- 来源类型：code",
@@ -340,6 +344,7 @@ def _append_evidence_links(
     }
     symbol_kind_labels = {
         "class": "类",
+        "type": "类型",
         "function": "函数",
         "method": "方法",
         "import": "导入",
@@ -347,6 +352,8 @@ def _append_evidence_links(
     extraction_labels = {
         "ast": "AST 静态提取",
         "text": "显式文本范围",
+        "tree_sitter": "Tree-sitter 静态提取",
+        "lexical": "保守词法提取",
     }
     lines.extend(["", "## 证据链接"])
     for index, link in enumerate(note.evidence_links, start=1):
@@ -388,6 +395,7 @@ def _append_evidence_links(
                 f"- 代码位置：{_single_line(link.code.relative_path)}:"
                 f"{link.code.start_line}-{link.code.end_line}",
                 f"- 代码符号：{symbol}",
+                f"- 代码语言：{link.code.language}",
                 "- 代码提取："
                 f"{extraction_labels[link.code.extraction_method]}",
                 f"- 建立时间：{link.created_at.isoformat()}",

@@ -1,5 +1,6 @@
 """Tests for explicit paper-to-code evidence links."""
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -212,3 +213,25 @@ def _project() -> CodeProject:
         files=(code_file,),
         total_source_bytes=code_file.size_bytes,
     )
+
+
+def test_evidence_link_rejects_tampered_code_language() -> None:
+    project = _project()
+    selection = replace(
+        select_code_symbol(project, "solver.py", symbol_index=0),
+        language="java",
+    )
+
+    with pytest.raises(ValueError, match="language"):
+        create_user_confirmed_evidence_link(
+            _document(),
+            ReadingSelection(
+                text="Located text",
+                locator={"page_number": 1},
+            ),
+            project,
+            selection,
+            evidence_kind="paper",
+            relation="related",
+            confidence=0.8,
+        )

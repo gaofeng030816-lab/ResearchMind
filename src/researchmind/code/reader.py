@@ -1,4 +1,4 @@
-"""Read one explicitly selected local Python folder within T3 limits."""
+"""Read one explicitly selected local code folder within fixed safety limits."""
 
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ from researchmind.code.errors import (
     CodeProjectPathError,
     CodeProjectReadError,
 )
-from researchmind.code.python_parser import parse_python_symbols
+from researchmind.code.languages import language_for_relative_path
+from researchmind.code.parsers import parse_code_symbols
 from researchmind.models import CodeFile, CodeProject
 
 
@@ -44,16 +45,16 @@ _EXCLUDED_DIRECTORIES = frozenset(
 )
 _SENSITIVE_FILENAMES = frozenset(
     {
-        "secrets.py",
-        "credentials.py",
-        "local_settings.py",
+        "secrets",
+        "credentials",
+        "local_settings",
     }
 )
 _SENSITIVE_SUFFIXES = (
-    "_secrets.py",
-    "_credentials.py",
-    "_tokens.py",
-    "_apikeys.py",
+    "_secrets",
+    "_credentials",
+    "_tokens",
+    "_apikeys",
 )
 
 
@@ -64,14 +65,14 @@ def open_code_project(
     max_total_bytes: int = DEFAULT_MAX_TOTAL_BYTES,
     max_file_bytes: int = DEFAULT_MAX_FILE_BYTES,
 ) -> CodeProject:
-    """Index eligible Python files without importing or executing any source."""
+    """Index eligible source files without importing or executing any source."""
 
     _validate_limits(max_files, max_total_bytes, max_file_bytes)
     root = _validated_root(path)
-    candidates = _candidate_python_files(root)
+    candidates = _candidate_code_files(root)
     if len(candidates) > max_files:
         raise CodeProjectLimitError(
-            f"Python file limit exceeded: {len(candidates)} found, "
+            f"Code file limit exceeded: {len(candidates)} found, "
             f"maximum {max_files}. Choose a smaller folder."
         )
 
@@ -138,7 +139,7 @@ def _validated_root(path: Path) -> Path:
     return root
 
 
-def _candidate_python_files(root: Path) -> list[Path]:
+def _candidate_code_files(root: Path) -> list[Path]:
     candidates: list[Path] = []
     try:
         for current_root, directory_names, file_names in os.walk(
@@ -186,11 +187,12 @@ def _excluded_directory(name: str) -> bool:
 
 def _excluded_file(name: str) -> bool:
     normalized = name.casefold()
-    if normalized.startswith(".") or not normalized.endswith(".py"):
+    if normalized.startswith(".") or language_for_relative_path(normalized) is None:
         return True
+    stem = Path(normalized).stem
     return (
-        normalized in _SENSITIVE_FILENAMES
-        or normalized.endswith(_SENSITIVE_SUFFIXES)
+        stem in _SENSITIVE_FILENAMES
+        or stem.endswith(_SENSITIVE_SUFFIXES)
     )
 
 
@@ -209,12 +211,12 @@ def _validated_file_sizes(
         except OSError as exc:
             relative_path = candidate.relative_to(root).as_posix()
             raise CodeProjectReadError(
-                f"Could not inspect Python source file: {relative_path}"
+                f"Could not inspect source file: {relative_path}"
             ) from exc
         if size > max_file_bytes:
             relative_path = candidate.relative_to(root).as_posix()
             raise CodeProjectLimitError(
-                f"Python per-file size limit exceeded by {relative_path}: "
+                f"Code per-file size limit exceeded by {relative_path}: "
                 f"{size} bytes, maximum {max_file_bytes}. "
                 "Choose a smaller file or folder."
             )
@@ -222,7 +224,7 @@ def _validated_file_sizes(
         total += size
         if total > max_total_bytes:
             raise CodeProjectLimitError(
-                f"Python total source-size limit exceeded: {total} bytes, "
+                f"Code total source-size limit exceeded: {total} bytes, "
                 f"maximum {max_total_bytes}. Choose a smaller folder."
             )
     return sizes
@@ -239,8 +241,11 @@ def _read_code_file(
         source_bytes = path.read_bytes()
     except OSError as exc:
         raise CodeProjectReadError(
-            f"Could not read Python source file: {relative_path}"
+            f"Could not read source file: {relative_path}"
         ) from exc
+    language = language_for_relative_path(relative_path)
+    if language is None:
+        raise CodeProjectReadError(f"Unsupported source file: {relative_path}")
     try:
         source = source_bytes.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -251,12 +256,15 @@ def _read_code_file(
             line_count=0,
             status="unreadable",
             extraction_method="text",
+            language=language,
             error="File is not valid UTF-8 and was not indexed.",
         )
 
     line_count = len(source.splitlines())
     try:
-        symbols = parse_python_symbols(relative_path, source)
+        symbols, extraction_method = parse_code_symbols(
+            language, relative_path, source
+        )
     except SyntaxError as exc:
         line_label = exc.lineno or "unknown"
         return CodeFile(
@@ -266,7 +274,11 @@ def _read_code_file(
             line_count=line_count,
             status="syntax_error",
             extraction_method="text",
-            error=f"Python syntax error at line {line_label}; text selection remains available.",
+            language=language,
+            error=(
+                f"Source syntax error at line {line_label}; "
+                "text selection remains available."
+            ),
         )
     return CodeFile(
         relative_path=relative_path,
@@ -274,7 +286,8 @@ def _read_code_file(
         size_bytes=size_bytes,
         line_count=line_count,
         status="parsed",
-        extraction_method="ast",
+        extraction_method=extraction_method,
+        language=language,
         symbols=symbols,
     )
 

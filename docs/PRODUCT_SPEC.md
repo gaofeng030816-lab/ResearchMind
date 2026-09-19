@@ -1,14 +1,15 @@
 # ResearchMind 产品规格说明书
 
-版本：2.0.0rc1 V2 Accepted + V3-G1–G5 source increment · 同步日期：2026-09-13 · 状态：V3-G0–G5 Completed；G6/G7 Pending，T5-BX 未批准，不对外发布
+版本：2.0.0rc1 V2 Accepted + V3-G1–G6 source increment · 同步日期：2026-09-16 · 状态：V3-G0–G6 Completed；G7 Pending，T5-BX 未批准，不对外发布
 配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
 
-> 本文件描述已验收 `2.0.0rc1` 和其上的 V3-G1–G5 当前已实现能力；这不是
+> 本文件描述已验收 `2.0.0rc1` 和其上的 V3-G1–G6 当前已实现能力；这不是
 > 公开发布或稳定公共 API 承诺。G2 Zotero 只读复制和 G3 PDF 文字层的人工门禁
 > 已由用户确认；G4 的持久草稿/证据、点击翻译、可编辑 Markdown、同版预览和
 > 明确 Vault 输出也已于 2026-09-09 通过用户验收。G5 已完成本地单公式检测/crop、
-> 逐 crop 外发确认、可编辑/校验/接受和可选公式证据；G6–G7 尚未启动。后续状态和
-> 采用门禁由 V2→V3 过渡要求管理。
+> 逐 crop 外发确认、可编辑/校验/接受和可选公式证据；G6 已完成五语言静态读取、
+> 语言 provenance 与托管导入，且不扩大 Python-only T5-B1。G7 尚未启动。后续
+> 状态和采用门禁由 V2→V3 过渡要求管理。
 
 ## 1. 产品概述
 
@@ -38,6 +39,9 @@ T3 已实现独立、只读 Python CodeContext；T4 已实现用户确认的显�
 Python 选择的单范围 proposal/diff/确认/恢复/回滚，但仍不执行代码。
 T6-D 冻结前又加入独立 Code → Obsidian 代码笔记：从当前选择生成带相对路径、
 行号和符号 provenance 的专用 Markdown，先预览再显式保存，不依赖 PDF。
+V3-G6 在同一 CodeContext 形状中加入 C、Java、Julia 和 R 静态读取；语言与提取
+方式进入选择、提示预览和笔记 provenance。它不执行、编译或解析项目依赖。
+
 
 发布策略：V1、当前 V2 和中间版本全部作为内部开发基线。最终公开发布需要在稳定的
 论文阅读闭环之上具备代码识别、论文—数学—代码—笔记关联和更进一步的智能化；
@@ -51,8 +55,8 @@ T6-D 冻结前又加入独立 Code → Obsidian 代码笔记：从当前选择�
 
 V3-G1 在不改变上述阅读闭环的前提下增加入口：
 
-**点击/拖放导入 PDF 或 Python 目录 → 跨重启资料库 → 打开当前托管修订进入既有
-论文/代码旅程**
+**点击/拖放导入 PDF 或支持语言代码目录 → 跨重启资料库 → 打开当前托管修订
+进入既有论文/代码旅程**
 
 G1 支持精确哈希去重、显式修订、软移除/恢复、单独确认删除托管副本和资料库
 备份/恢复。它不持久化对话、选择、证据链接或笔记草稿。
@@ -84,22 +88,22 @@ V3-G2 又增加一个默认关闭的可选入口：
 | S2 | 翻译后仍不理解概念/公式/算法 | 要去搜索引擎/AI 单独提问，且提问不带论文上下文 |
 | S3 | 理解了一个点之后还想继续追问 | 与通用 AI 聊天时论文上下文已丢失，需要重新粘贴背景 |
 | S4 | 想保存这次问答的结果 | 手动复制到笔记软件，丢失出处（哪篇论文、哪一页），且与自己的 Obsidian 知识体系脱节 |
-| S5 | 阅读科研 Python 代码时想理解一个函数/类 | 通用 AI 缺少文件/行/符号来源，复制过多代码又增加隐私和上下文噪声 |
+| S5 | 阅读科研代码时想理解函数/类型/方法 | 通用 AI 缺少语言/文件/行/符号来源，复制过多代码又增加隐私和上下文噪声 |
 | S6 | 理解代码后想保存到 Obsidian | 手动复制容易丢失相对路径、行号、符号、问题和解释之间的对应关系 |
 
 ### 2.3 V3 已确认场景与状态
 
 - **V3-G1 已实现**：跨重启管理 ResearchMind 本地论文/代码工作资料库并点击/
-  拖放导入 PDF 或 Python 目录；
+  拖放导入 PDF 或 Python/C/Java/Julia/R 代码目录；
 - **V3-G2 已验收**：可选从 Local API 获取个人资料库条目，链接文献元数据/
   附件来源及批准目录内 Windows 单 PDF 复制；真实 Zotero 人工验收已由用户确认通过；
-- 在 PDF 文字层直接划词翻译或解释并保留页码/几何位置；
-- 识别常用数学公式区域，生成可编辑、可校验、可追溯的 LaTeX 候选；
-- 在现有 CodeContext 架构中支持 Python、C、Java、Julia 和 R；
-- 只把用户明确选择的证据加入可编辑 Markdown 草稿，预览后可选保存到 Obsidian；
-- 论文全宽、论文+代码分栏，以及不会干扰输入的 AI 快捷键。
-
-除已标记的 G1/G2 外，其余仍是待门禁目标，不是当前能力；阶段和采用门禁见
+- **V3-G3 已实现**：在 PDF 文字层直接划词并保留页码/几何位置，论文全宽、
+  论文+代码分栏，并提供输入安全的 AI 快捷键；
+- **V3-G4 已验收**：点击翻译、显式证据篮、持久可编辑 Markdown 草稿与可选
+  Obsidian 保存；
+- **V3-G5 已实现**：识别当前页常用公式候选区域，生成可编辑、可校验、可追溯
+  的 LaTeX 候选；
+- **V3-G6 已实现**：在现有 CodeContext 架构中静态读取 Python、C、Java、Julia
 V2→V3 过渡要求。
 
 ## 3. V2 用户旅程
@@ -421,7 +425,7 @@ T5-B1 在普通代码解释旁提供一条独立受控修改旅程：
 | Zotero 写入/双向同步、Web API、组资料库产品流或全库缓存 | G2 仅实现默认关闭的个人资料库 Local API 只读流；其他能力需独立门禁 |
 | 跨论文搜索、复杂 RAG | 候选（未排期，确需再评估） |
 | 跨会话对话、证据篮和 NoteDraft 持久化 | G4 已实现显式草稿/证据、证据篮、可编辑正文、同版预览与明确 Vault 输出；对话仍不持久 |
-| Julia/R/C/C++/Notebook、跨文件调用图或 IDE 深度集成 | T3 仅支持本地 UTF-8 Python；其他来源另行评估 |
+| C++/Notebook、跨文件调用图、依赖解析或 IDE 深度集成 | G6 只支持 Python/C/Java/Julia/R 静态读取；其余另行评估 |
 | 自动 Paper ↔ Code 发现、模型推断链接、联合论文/代码 prompt | T4 仅实现用户确认、会话内链接；自动化需后续独立评测 |
 | 超出 T5-B1 当前选择单范围的代码生成/修改；运行 shell/测试、安装依赖或其他模型工具 | 未授权；执行需独立 T5-BX 沙箱 Spike 与权限门禁 |
 | VS Code Extension、浏览器 Extension | 候选（未排期，确需再评估） |
@@ -444,12 +448,13 @@ T5-B1 在普通代码解释旁提供一条独立受控修改旅程：
 | T5（Completed） | 受限助手 | 三个当前会话无参数只读工具、逐次用户继续、严格协议、预算、审计和停止；220 项回归 |
 | T5-B1（Completed） | 当前选择单范围受控替换 | strict proposal、diff、逐次确认、恢复副本、SHA-256 冲突和安全回滚；无执行权限；261 项回归（1 项 symlink 环境 skip） |
 | 2.0.0rc1 / T6（Completed） | 本地内部候选 | 自动门禁、代码索引优化、隔离安装/启动/诊断/恢复、用户确认的论文/代码/T5-B1 旅程，以及可选 Code→Obsidian 代码笔记已进入内部冻结；不公开发布 |
-| V3-G1（Completed） | 本地工作资料库与点击导入 | sqlite3 schema v1、托管 PDF/Python assets、重启重开、去重/修订、移除/删除和备份/恢复；不公开发布 |
+| V3-G1（Completed） | 本地工作资料库与点击导入 | sqlite3 schema v1、托管 PDF/代码 assets、重启重开、去重/修订、移除/删除和备份/恢复；不公开发布 |
 | V3-G2（Completed） | 可选 Zotero 只读来源 | GET-only 元数据、schema v2、显式 browse/link/unlink；批准目录内 Windows 单 PDF 复制及自动测试已完成，用户已确认人工验收通过；回归见 G2 验证记录 |
 | V3-G3（Completed） | 页面划词与自适应工作台 | 用户确认触控板并批准正式 CCv2/pdf.js；选择经 PyMuPDF 对账进入 ReadingSelection，旧阅读器回退、全宽/分栏、AI 快捷键、Edge 8/8、wheel 和 486 passed / 1 skip 已完成 |
 | V3-G4（Completed） | 划词翻译与显式笔记草稿 | schema v3、点击翻译、来源绑定、显式证据篮、可编辑正文、同版预览与确认式非覆盖 Vault 输出；425 passed / 1 skip，G3 联合 524 passed / 1 skip，Edge 8/8，用户确认通过 |
 | V3-G5（Completed） | 单公式识别与 LaTeX | 本地检测/crop、精确外发预览和逐次同意、provider-neutral recognizer、可编辑/严格校验/接受、可选 G4 证据；48 focused、474 production / 1 skip |
-| V3-G6–G7 | 多语言和加固 | 尚未启动 |
+| V3-G6（Completed） | 多语言 CodeContext | Python AST、C/Java/Julia Tree-sitter、R 保守词法；24 focused、22 AppTests、498 passed / 1 skip，联合 597 passed / 1 skip |
+| V3-G7 | 加固与内部验收 | 尚未启动 |
 
 ## 8. V2 内部验收标准
 

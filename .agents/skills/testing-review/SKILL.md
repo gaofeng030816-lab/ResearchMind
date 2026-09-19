@@ -53,6 +53,12 @@ authorized real crops are 100% strict-valid, 95.09% token and 100% structural bu
 11.11% normalized exact. Preserve that limitation, the three known detector
 false/over-merged cases, the one-crop consent boundary and the Edge 152 fake-provider
 journey. Read docs/V3_G5_FORMULA_RECOGNITION_DECISION.md.
+G6 is Completed under hybrid scheme A. Its baseline is 24 focused checks, 22
+Streamlit AppTests, 498 production tests / 1 existing Windows symlink environment
+skip, and 597 tests / 1 skip with adopted G3 experiments. Preserve Python AST parity,
+C/Java/Julia Tree-sitter mapping, conservative R lexical behavior, language
+provenance, no-execution sentinels, managed-import exclusions, wheel packaging and
+the Python-only T5-B1 boundary. Read docs/V3_G6_MULTILINGUAL_CODE_DECISION.md.
 
 Protect this loop in proportion to the change:
 

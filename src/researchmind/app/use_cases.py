@@ -261,6 +261,7 @@ class CodeContextEvidencePreview:
     symbol_kind: str | None
     symbol_name: str | None
     extraction_method: str
+    language: str
     selected_code: str
     surrounding_code: str
     user_question: str
@@ -672,7 +673,7 @@ def import_code_directory_to_library(
     record_id: str | None = None,
     settings: Settings | None = None,
 ) -> LibraryImportResult:
-    """Validate and atomically import one browser-selected Python directory."""
+    """Validate and atomically import one browser-selected static-code directory."""
 
     resolved_settings = settings or load_settings()
     repository, storage = _library_infrastructure(resolved_settings)
@@ -728,7 +729,7 @@ def import_code_directory_to_library(
             relative_path=staged.relative_path,
             sha256=staged.sha256,
             size_bytes=staged.size_bytes,
-            media_type="application/vnd.researchmind.python-directory",
+            media_type="application/vnd.researchmind.code-directory",
             revision=revision,
             managed=True,
             created_at=moment,
@@ -791,7 +792,7 @@ def open_library_code_project(
     *,
     settings: Settings | None = None,
 ) -> CodeProject:
-    """Open the latest managed Python-directory revision after restart."""
+    """Open the latest managed code-directory revision after restart."""
 
     repository, storage = _library_infrastructure(settings)
     entry = repository.get_entry(record_id)
@@ -2092,7 +2093,7 @@ def _utc_now() -> datetime:
 
 
 def open_code_project(path: Path) -> CodeProject:
-    """Open one local Python folder through the fixed T3 safety limits."""
+    """Open one local code folder through the fixed safety limits."""
 
     return code_open_code_project(path)
 
@@ -2168,6 +2169,7 @@ def preview_code_context(
         symbol_kind=context.symbol_kind,
         symbol_name=context.symbol_name,
         extraction_method=context.extraction_method,
+        language=context.language,
         selected_code=context.selected_code,
         surrounding_code=context.surrounding_code,
         user_question=context.user_question,
@@ -2216,6 +2218,10 @@ def propose_code_change(
     """Request and validate one preview-only selected-range replacement."""
 
     _require_editable_external_code_project(project)
+    if selection.language != "python":
+        raise ValueError(
+            "T5-B1 code changes remain limited to Python selections."
+        )
     resolved_settings = settings or load_settings()
     snapshot = read_code_snapshot(project, selection.relative_path)
     validate_code_change_snapshot(project, selection, snapshot)
@@ -3109,6 +3115,7 @@ def _serialize_code_context(context: CodeContext) -> str:
     fields = (
         ("Project", context.project_name),
         ("Source type", context.source),
+        ("Language", context.language),
         ("Relative path", context.relative_path),
         ("Lines", f"{context.start_line}-{context.end_line}"),
         ("Symbol kind", context.symbol_kind or ""),
@@ -3152,6 +3159,7 @@ def _serialize_evidence_links(evidence_links: list[EvidenceLink]) -> str:
                 f"Paper excerpt: {link.paper.excerpt}",
                 f"Code project: {link.code.project_name}",
                 f"Code relative path: {link.code.relative_path}",
+                f"Code language: {link.code.language}",
                 f"Code lines: {link.code.start_line}-{link.code.end_line}",
                 f"Code symbol kind: {link.code.symbol_kind or ''}",
                 f"Code symbol name: {link.code.symbol_name or ''}",
@@ -3445,6 +3453,8 @@ def _validate_code_knowledge_selection(
     code_file = core_get_code_file(project, selection.relative_path)
     if selection.relative_path != code_file.relative_path:
         raise ValueError("Code selection must use a normalized relative path.")
+    if selection.language != code_file.language:
+        raise ValueError("Code selection language no longer matches the indexed file.")
     current_lines = select_code_lines(
         project,
         selection.relative_path,
@@ -3455,9 +3465,9 @@ def _validate_code_knowledge_selection(
         raise ValueError("Code selection no longer matches the indexed source.")
     if selection.extraction_method == "text":
         if selection.symbol_kind is not None or selection.symbol_name is not None:
-            raise ValueError("Line-range code selection cannot claim an AST symbol.")
+            raise ValueError("Line-range code selection cannot claim a parsed symbol.")
         return
-    if selection.extraction_method != "ast":
+    if selection.extraction_method != code_file.extraction_method:
         raise ValueError("Code selection extraction method is unsupported.")
     if not any(
         symbol.start_line == selection.start_line
@@ -3466,7 +3476,7 @@ def _validate_code_knowledge_selection(
         and symbol.qualified_name == selection.symbol_name
         for symbol in code_file.symbols
     ):
-        raise ValueError("Code selection no longer matches an indexed AST symbol.")
+        raise ValueError("Code selection no longer matches an indexed symbol.")
 
 
 def _selection_page_number(selection: ReadingSelection | None) -> int | None:

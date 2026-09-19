@@ -790,6 +790,43 @@ def test_code_workspace_opens_selects_previews_and_explains_without_execution(
     )
 
 
+def test_java_workspace_is_read_only_and_preserves_language(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    project_path = tmp_path / "java-project"
+    project_path.mkdir()
+    (project_path / "Main.java").write_text(
+        "class Main { int run() { return 1; } }\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        use_cases,
+        "load_settings",
+        lambda: Settings(context_token_budget=200),
+    )
+
+    app = AppTest.from_file(APP_PATH, default_timeout=10).run()
+    app.radio(key="workspace_navigation").set_value("code").run()
+    app.text_input(key="code_project_path_input").set_value(str(project_path))
+    app.button(key="open_code_project_button").click().run()
+    app.button(key="select_code_button").click().run()
+
+    assert not app.exception
+    selection = app.session_state["current_code_selection"]
+    assert selection.language == "java"
+    assert selection.extraction_method == "tree_sitter"
+    assert any("Java / tree_sitter" in item.value for item in app.text)
+    assert not any(
+        item.label == "受控单文件修改（T5-B1）"
+        for item in app.expander
+    )
+    assert any(
+        "T5-B1 原地修改权限仅适用于 Python" in item.value
+        for item in app.caption
+    )
+
+
 def test_code_workspace_previews_and_saves_optional_obsidian_note(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

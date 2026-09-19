@@ -1,4 +1,4 @@
-"""Integration coverage for V3-G1 managed Python-directory imports."""
+"""Integration coverage for managed static-code directory imports."""
 
 from pathlib import Path
 
@@ -106,7 +106,7 @@ def test_code_directory_hash_is_order_independent_and_supports_revision(
         ),
         (
             [UploadedFileData(name="demo/readme.txt", content=b"text")],
-            "Python files only",
+            "accepts .py",
         ),
     ),
 )

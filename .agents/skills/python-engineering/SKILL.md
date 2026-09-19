@@ -101,12 +101,14 @@ local model/weight without a new dependency gate.
 
 ### Multilingual code
 
-Preserve the current CodeProject, CodeSelection, CodeContext, limits, relative-path
-provenance, and no-execution design. Introduce a small parser protocol only after the
-Tree-sitter gate. Each language adapter maps vendor nodes to project CodeSymbol data;
-vendor nodes never leave code. Keep the standard-library Python AST adapter until
-parity evidence justifies changing it. Adding languages does not extend T5-B1 writes
-beyond the currently approved Python range.
+Preserve CodeProject, CodeSelection, CodeContext, limits, relative-path provenance,
+and no execution. G6 adopted Python standard-library AST, separate C/Java/Julia
+Tree-sitter adapters, and a conservative R lexical adapter. Vendor nodes exist only
+inside code/tree_sitter_parser.py and map to project CodeSymbol data. Keep language
+and extraction_method through files, selections, contexts, prompts, evidence and
+Markdown. Parser errors degrade to explicit text selection. Do not add runtime
+grammar downloads, language packs, compilation, dependency resolution or execution.
+Adding languages does not extend T5-B1 beyond the approved Python range.
 
 ### Editable notes
 

@@ -20,6 +20,7 @@ from researchmind.models.code_context import (
 )
 from researchmind.models.code_selection import (
     CodeExtractionMethod,
+    CodeLanguage,
     CodeSelection,
     CodeSymbolKind,
 )
@@ -100,6 +101,7 @@ from researchmind.models.zotero import (
 )
 
 __all__ = [
+    "CodeLanguage",
     "BoundingBox",
     "CodeChangeAuditAction",
     "CodeChangeAuditEvent",

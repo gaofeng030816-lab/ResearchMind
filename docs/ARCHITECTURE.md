@@ -1,6 +1,6 @@
-# ResearchMind 系统架构（V2 Accepted + V3-G1–G5 增量）
+# ResearchMind 系统架构（V2 Accepted + V3-G1–G6 增量）
 
-版本：2.0.0rc1 V2 Accepted + V3-G1–G5 source increment · 同步日期：2026-09-13 · 状态：V3-G0–G5 Completed；G6/G7 Pending，T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
+版本：2.0.0rc1 V2 Accepted + V3-G1–G6 source increment · 同步日期：2026-09-16 · 状态：V3-G0–G6 Completed；G7 Pending，T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
 
 > 验收口径：项目于 2026-09-01 完成 **V2 Internal Acceptance**。用户于 2026-08-31
 > 明确将自动公式区域识别、图片公式 OCR 和整页 PDF→LaTeX 排除在 V2 验收之外；
@@ -266,7 +266,8 @@ V1 继续选择 Streamlit：
 T3 代码解释是一条独立路径：
 
 1. 用户明确输入一个本地文件夹，UI 调用 `open_code_project`；
-2. `code/reader.py` 应用排除和规模规则，并把标准库 AST 转成 `CodeSymbol`；
+2. `code/reader.py` 应用排除和规模规则，parser dispatcher 把 Python AST、
+   C/Java/Julia Tree-sitter 或 R 保守词法结果转成 `CodeSymbol`；
 3. 用户选择一个符号或行范围，Application 调用 Core 建立 `CodeSelection`；
 4. `core/code_context.py` 在预算内加入最近邻行，生成独立 `CodeContext`；
 5. 预览和真实调用复用 `build_code_explanation_prompt`；只有用户点击解释后才
@@ -277,8 +278,8 @@ T3 代码解释是一条独立路径：
 
 1. `capture_code_knowledge` 重新验证当前 `CodeSelection` 属于当前项目、仍匹配
    已索引源码，并只接受绑定到该选择的 `explain:code` 回答；
-2. `KnowledgeNote.code_selection` 保存项目名、相对路径、行范围、符号和提取方式，
-   不保存 `CodeProject.root_path`；
+2. `KnowledgeNote.code_selection` 保存项目名、相对路径、语言、行范围、符号和
+   提取方式，不保存 `CodeProject.root_path`；
 3. 用户先预览代码专用 Markdown，再明确点击保存；
 4. `integration/obsidian/` 仍是唯一 Vault writer，采用日期文件名、非覆盖创建和
    配置子目录；该动作不会写入或执行代码源文件。
@@ -323,18 +324,18 @@ T5-B1 在代码解释路径旁增加一条逐次确认的单范围修改路径�
 | `Conversation` | document_id、messages、created_at | 围绕一篇文档的问答会话 | 内存对象；每篇文档一个会话 |
 | `Message` | role、task、selection_id、content、created_at | 一条 AI/翻译结果 | 另含 T3 `explain:code`；代码回答不进入论文 Conversation |
 | `KnowledgeNote` | title、source、source_type、论文 locator 字段、selected_text、translation、latex、question、ai_explanation、user_notes、tags、evidence_links、code_selection、created_at | 一次论文或代码知识沉淀的完整记录（第 12 节） | 代码笔记必须携带 `CodeSelection` 且不含绝对 root；渲染后写入 Vault |
-| `CodeSymbol` | relative_path、name、qualified_name、kind、start_line、end_line | AST 边界转换后的静态符号 | import / function / class / method；不是 AST 节点 |
-| `CodeFile` | relative_path、source、size_bytes、line_count、status、symbols | 一个受限 Python 文件 | UTF-8；语法错误退化为 text，非 UTF-8 不保留 source |
+| `CodeSymbol` | relative_path、name、qualified_name、kind、start_line、end_line | parser 边界转换后的静态符号 | import / function / class / type / method；不是 vendor 节点 |
+| `CodeFile` | relative_path、language、source、size_bytes、line_count、status、extraction_method、symbols | 一个受限支持语言文件 | UTF-8；语法错误退化为 text，非 UTF-8 不保留 source |
 | `CodeProject` | id、name、root_path、files、total_source_bytes | 用户明确打开的单个本地文件夹 | 会话内存；绝对 root_path 不进入 prompt |
-| `CodeProjectSummary` | project_name、文件/行/定义/import 计数、入口/import/第三方依赖/问题文件候选 | 从已索引 CodeProject 生成的静态概览 | 纯函数结果；不额外读文件，不代表代码已运行或可复现 |
-| `CodeSelection` | project、relative_path、start/end line、text、symbol、extraction_method | 用户确认的代码来源 | ast 或 text；只读、可追溯 |
-| `CodeContext` | CodeSelection、selected/surrounding code、路径/行/符号、question | 一次代码解释的有界证据 | 与 ResearchContext 分离；T3 不组合论文证据 |
+| `CodeProjectSummary` | project_name、languages、文件/行/定义/import 计数、入口/import/第三方依赖/问题文件候选 | 从已索引 CodeProject 生成的静态概览 | 纯函数结果；不额外读文件，不代表代码已运行或可复现 |
+| `CodeSelection` | project、language、relative_path、start/end line、text、symbol、extraction_method | 用户确认的代码来源 | ast/tree_sitter/lexical/text；只读、可追溯 |
+| `CodeContext` | CodeSelection、language、selected/surrounding code、路径/行/符号、question | 一次代码解释的有界证据 | 与 ResearchContext 分离；不组合论文证据 |
 | `CodeFileSnapshot` | project、relative path、source、raw SHA-256、size、BOM | proposal 前的精确磁盘事实 | source 仅在当前调用/会话，不进审计 |
 | `CodeChangeProposal` | selection、range、before/after hash、replacement、candidate、diff、计数 | T5-B1 待逐动作确认的替换建议 | 无写权限；只在会话内 |
 | `CodeChangeReceipt` / `CodeChangeRollbackReceipt` | project、proposal、relative path、hash、recovery relative path、time | 已应用/回滚的最小凭据 | 不含源码或绝对路径 |
 | `CodeChangeAuditEvent` | action/status、relative path、line、time、可选 hash/recovery/error type | 会话内权限审计 | 不含源码、修改要求、完整 payload、Key |
 | `PaperEvidenceReference` | document id/title、evidence kind、page/block/bbox、excerpt | T4 链接的论文端点 | 只接受已定位 PDF 选择 |
-| `CodeEvidenceReference` | project id/name、relative path、line、symbol、extraction method、excerpt | T4 链接的代码端点 | 不保存绝对根路径 |
+| `CodeEvidenceReference` | project id/name、language、relative path、line、symbol、extraction method、excerpt | T4 链接的代码端点 | 不保存绝对根路径 |
 | `EvidenceLink` | paper、code、relation、confidence、generation_method、rationale、created_at | 一个显式论文—代码主张 | 当前生产路径仅 user_confirmed；会话内，随 KnowledgeNote 导出 |
 | `ConfigurationCheck` / `ConfigurationReport` | code、label、status、message、checks | T6-B 本地启动检查 | 不含 Key、完整路径或网络结果 |
 | `MarkdownBackupResult` / `MarkdownRestoreResult` | archive/output path、note_count、total_bytes | 维护命令的明确结果 | 路径只在本地 CLI/UI 边界使用，不进入 LLM |
@@ -435,20 +436,24 @@ page/block/bbox provenance；T3 没有继续扩张其 locator，而是为代码�
 
 ### 8.1 CodeSelection 与 CodeContext（T3）
 
-T3 由用户显式打开一个本地文件夹，只处理 `.py`。`code/reader.py` 默认最多
-索引 2,000 个候选文件、20 MB 源码、单文件 1 MB；排除隐藏/VCS、虚拟环境、
-缓存、构建、vendor/`node_modules` 和已知秘密文件名，不跟随符号链接越出根目录。
+T3 建立了 Python-first 基线；V3-G6 在相同模型内加入 `.c/.h/.java/.jl/.r`。
+`code/reader.py` 默认最多索引 2,000 个候选文件、20 MB 源码、单文件 1 MB；
+排除隐藏/VCS、虚拟环境、缓存、构建、vendor/`node_modules` 和已知秘密文件名，
+不跟随符号链接越出根目录。
 
-`code/python_parser.py` 只调用标准库 `ast.parse`，把 import、function、class、
-method 转换为 `CodeSymbol`。语法错误文件保留 UTF-8 文本并允许显式行选择；
-非 UTF-8 文件只保留诊断。T3 reader 不会写回源码；整个产品仍不会 import、
-exec、eval、subprocess 或运行测试。唯一写入例外见下一节。
+`code/python_parser.py` 保留标准库 `ast.parse`；`code/tree_sitter_parser.py`
+用批准的核心/C/Java/Julia wheel 映射 import、function、method 和 type；
+`code/r_parser.py` 只保守定位常见赋值函数和导入/namespace 引用。vendor node
+不离开 code 层。语法错误文件保留 UTF-8 文本并允许显式行选择；非 UTF-8 文件
+只保留诊断。reader 不会写回源码；整个产品仍不会 import、exec、eval、
+subprocess、编译或运行测试。唯一写入例外见下一节。
 
 `core/code_context.py` 支持两种显式选择：
 
-1. AST 符号：保留 relative_path、start/end line、kind、qualified_name 和
-   extraction_method=ast；
-2. 行范围：保留 relative_path、start/end line 和 extraction_method=text。
+1. 静态符号：保留 language、relative_path、start/end line、kind、
+   qualified_name，以及 ast/tree_sitter/lexical 提取方式；
+2. 行范围：保留 language、relative_path、start/end line 和
+   extraction_method=text。
 
 选择内容必须完整落在 context token budget 内；过大时要求用户缩小范围，不静默
 截断。剩余预算只加入距离选择最近的行。`build_code_explanation_prompt` 用
@@ -853,7 +858,7 @@ T5-B1 另有 `code_change_proposal`、apply/rollback receipt 和 session-only au
 |------|------|------|
 | 本地资料库 | `app/views/library.py` | G1 点击导入、重开、修订、移除/恢复与删除；G2 显式浏览/来源链接；批准目录内 Windows 单 PDF 复制 |
 | 论文阅读与笔记 | `app/views/reader.py`、`actions.py`、`conversation.py`、`knowledge.py` | G3 本地 PDF.js 文字层/确认选择与 PyMuPDF 回退；翻译、LaTeX、解释与追问；KnowledgeNote 和 Obsidian 导出；仅论文全宽、论文+代码响应式分栏、Ctrl+Shift+A AI 面板 |
-| 代码学习与复现 | `app/views/code_workspace.py` | 独立打开一个本地 Python 文件夹；初学/科研复现目标；静态项目概览；文件/符号/行选择；CodeContext 预览和非执行解释；可选代码 KnowledgeNote 预览/Obsidian 保存；显式证据链接；T5-B1 proposal/diff/确认/取消/恢复/回滚/审计 |
+| 代码学习与复现 | `app/views/code_workspace.py` | 独立打开 Python/C/Java/Julia/R 文件夹；初学/科研复现目标；静态项目概览；语言/文件/符号/行选择；CodeContext 预览和非执行解释；可选代码 KnowledgeNote/Obsidian；显式证据链接；T5-B1 proposal/diff/确认/恢复/回滚仍仅限 Python |
 | 只读研究助手 | `app/views/read_only_assistant.py` | 显示三个工具可用性；输入问题；开始/继续/停止；每步待发送结果；会话内审计元数据和独立 final |
 
 规则：视图不直接碰 PDF/LLM/翻译/Vault，全部经 use_cases；任何 st.session_state 写入只发生在 state.py。
@@ -1028,10 +1033,12 @@ PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、�
 
 ### 20.3 用户打开的代码目录
 
-- 只读取用户明确指定根目录内符合规则的 `.py`，不跟随外部符号链接；
+- 只读取用户明确指定根目录内符合规则的 `.py/.c/.h/.java/.jl/.r`，不跟随
+  外部符号链接；
 - 固定 2,000 文件/20 MB/单文件 1 MB 上限；超限明确拒绝；
 - 排除隐藏/VCS、虚拟环境、缓存、构建、vendor/`node_modules` 和已知秘密文件名；
-- reader 只解码 UTF-8 并调用标准库 `ast.parse`；不 import、执行、测试或安装依赖；
+- reader 只解码 UTF-8 并调用已批准的静态 parser；不 import、执行、编译、测试、
+  解析/安装依赖或调用 Shell；
 - 基础设施只返回 ResearchMind 自有 `CodeProject`/`CodeFile`/`CodeSymbol`。
 - 唯一写入例外 T5-B1 只接受当前选择的一个既有 `.py`；拒绝 symlink/越界/过期
   hash，写前恢复，原子替换，外部编辑时拒绝回滚；不创建、删除或重命名源码。
@@ -1118,16 +1125,16 @@ PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、�
 
 ### 21.1 扩展点与已采用 V3 增量
 
-本节以 V2 冻结边界为起点。V3-G1–G5 已分别实现本地资料库、可选 Zotero
-Local API 只读来源、页面划词、持久草稿/证据和单公式识别。多语言代码与最终
-加固仍由仓库根目录 V2 to V3过渡要求.md 管理。
+本节以 V2 冻结边界为起点。V3-G1–G6 已分别实现本地资料库、可选 Zotero
+Local API 只读来源、页面划词、持久草稿/证据、单公式识别和五语言静态代码。
+最终加固仍由仓库根目录 V2 to V3过渡要求.md 管理。
 
 原则：每个未来能力 = 新增一个基础设施模块 + 新增若干用例函数，**分层骨架不变**。
 
 | 未来能力 | 当前架构留下的接口 | V1 状态 |
 |----------|--------------------|---------|
 | Zotero 元数据集成 | `integration/zotero` → 项目模型 → use cases → `zotero_links`（第 14 节） | V3-G2 只读个人资料库实现；用户确认人工验收通过 |
-| VS Code / 更多代码语言 | 当前 T3 本地 Python CodeContext 是证据基线；IDE、Notebook、Julia/R 等需另行评估 | 不实现 |
+| VS Code / 更多代码语言 | G6 支持 Python/C/Java/Julia/R 静态 CodeContext；IDE、Notebook、C++、调用图与依赖解析需另行评估 | 五语言已实现；其余不实现 |
 | 网页等其他内容源 | 同上 | 不实现 |
 | 页面级划词/高亮/标注 | G3 采用 CCv2/pdf.js 文字层和 PyMuPDF 对账；当前实现同页划词与确认选择，不含持久高亮/标注 | 划词已实现；持久高亮/标注不实现 |
 | OCR / 语义表格 / 图片公式 / 图表内容识别 | `pdf/formulas.py` 检测并裁剪一个 bounded region，`llm/formula_recognizer.py` 只识别一张确认 crop | G5 已实现单公式候选；扫描整页 OCR、整篇转换、表格/图表理解仍不实现 |
@@ -1153,7 +1160,7 @@ Local API 只读来源、页面划词、持久草稿/证据和单公式识别。
 ## 22. 文档一致性状态
 
 PRODUCT_SPEC.md、ARCHITECTURE.md 与 V2→V3 过渡要求的当前实现口径为
-已验收 2.0.0rc1 加 V3-G1–G5 source increment。V1→V2 与 DEVELOPMENT_PLAN 保留
+已验收 2.0.0rc1 加 V3-G1–G6 source increment。V1→V2 与 DEVELOPMENT_PLAN 保留
 历史状态；后续 V3 门禁由 V2 to V3过渡要求.md 管理：
 
 - 当前内部实现为 V1.3.2 + T1/T3/T4/T5-A/T5-B1/T6-A/T6-B/T6-C 增量，仍不对外发布；
@@ -1209,5 +1216,13 @@ OpenAI-compatible FormulaRecognizer → 不可信可编辑 LaTeX → 严格校�
 99.41% mean token similarity 和 100% structural exact；18 条授权真实 crop 为
 18/18 strict-valid、95.09% token similarity、100% structural exact，但 exact 仅
 11.11%，因此绝不称作原源码复原。生产回归为 474 passed / 1 skip，含 G3 实验为
-573 passed / 1 skip；G6/G7 尚未启动。完整证据见
+573 passed / 1 skip。完整证据见
 [G5 公式识别门禁](V3_G5_FORMULA_RECOGNITION_DECISION.md)。
+
+G6 已按用户确认的方案 A 完成：Python 保留标准库 AST，C/Java/Julia 使用独立
+Tree-sitter grammar wheel，R 使用保守词法 adapter；五语言共享原 CodeContext
+形状并显式携带 language/extraction_method。托管导入支持六种扩展名，全部代码
+仍不执行；非 Python 与托管修订只读，T5-B1 仍仅限外部 Python。退出证据为
+24 focused、22/22 AppTests、498 passed / 1 skip，含 G3 实验为 597 passed /
+1 skip，wheel 构建通过，2,000 次合成解析平均 0.1388 ms。G7 尚未启动。详见
+[G6 多语言门禁](V3_G6_MULTILINGUAL_CODE_DECISION.md)。
