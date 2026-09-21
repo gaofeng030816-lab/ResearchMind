@@ -1,7 +1,7 @@
 # ResearchMind 产品规格说明书
 
 版本：3.0.0rc1 V3 Internal Accepted · 同步日期：2026-09-21 · 状态：V3-G0–G7 Completed（用户确认），T5-BX 未批准，不对外发布
-配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [G7 加固与验收](./V3_G7_HARDENING_ACCEPTANCE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md)
+配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [G7 加固与验收](./V3_G7_HARDENING_ACCEPTANCE.md)
 
 > 本文件描述已通过内部验收的 `3.0.0rc1` V3 当前能力；这不是公开发布或稳定
 > 公共 API 承诺。G2 Zotero 只读复制、G3 PDF 文字层、G4 持久草稿/证据与明确
@@ -9,7 +9,7 @@
 > 可编辑/校验/接受和可选公式证据；G6 完成五语言静态读取、语言 provenance 与
 > 托管导入，且不扩大 Python-only T5-B1；G7 完成安全、恢复、性能、浏览器、
 > wheel、隔离安装和联合回归。用户于 2026-09-21 明确确认 G7/V3 内部验收通过。
-> 未来状态和采用门禁仍由 V2→V3 过渡要求及后续新门禁管理。
+> 后续扩展须建立新的具名门禁，并同步当前架构、产品规格和验证记录。
 
 ## 1. 产品概述
 
@@ -104,7 +104,8 @@ V3-G2 又增加一个默认关闭的可选入口：
 - **V3-G5 已实现**：识别当前页常用公式候选区域，生成可编辑、可校验、可追溯
   的 LaTeX 候选；
 - **V3-G6 已实现**：在现有 CodeContext 架构中静态读取 Python、C、Java、Julia
-V2→V3 过渡要求。
+  和 R 代码，保持只读且不执行导入源码；
+- **V3-G7 已验收**：完成安全、恢复、性能、浏览器、隔离安装和联合回归验证。
 
 ## 3. V2 用户旅程
 

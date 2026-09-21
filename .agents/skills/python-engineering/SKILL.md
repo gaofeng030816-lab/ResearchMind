@@ -6,7 +6,8 @@ description: Implement an explicitly approved ResearchMind V3 Python slice while
 # Python Engineering
 
 Build explicit, typed, testable Python for one approved V3 slice. Read
-docs/ARCHITECTURE.md for current code and V2 to V3过渡要求.md for the active gate.
+docs/ARCHITECTURE.md for current code and the relevant named decision record for the
+approved gate.
 The accepted 3.0.0rc1 V3 internal candidate is the current implementation baseline;
 the accepted 2.0.0rc1 V2 behavior remains an independent historical regression baseline.
 

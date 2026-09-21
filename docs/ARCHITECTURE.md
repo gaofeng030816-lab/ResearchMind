@@ -1,6 +1,6 @@
 # ResearchMind 系统架构（3.0.0rc1 V3 Internal Accepted）
 
-版本：3.0.0rc1 V3 Internal Accepted · 同步日期：2026-09-21 · 状态：V3-G0–G7 Completed（用户确认），T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [G7 加固与验收](./V3_G7_HARDENING_ACCEPTANCE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md)
+版本：3.0.0rc1 V3 Internal Accepted · 同步日期：2026-09-21 · 状态：V3-G0–G7 Completed（用户确认），T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [G7 加固与验收](./V3_G7_HARDENING_ACCEPTANCE.md)
 
 > 验收口径：项目于 2026-09-01 完成 **V2 Internal Acceptance**。用户于 2026-08-31
 > 明确将自动公式区域识别、图片公式 OCR 和整页 PDF→LaTeX 排除在 V2 验收之外；
@@ -8,7 +8,7 @@
 > 数字文字层内容 → ResearchContext → 受限 LaTeX → 预览/知识笔记”能力。
 
 > 事实边界：本文主体保留 V1→V2 演进时的章节名称，但描述的是已通过内部验收的
-> 3.0.0rc1 架构。V2→V3 过渡要求保留 G0–G7 的采用证据；任何未来候选 schema、
+> 3.0.0rc1 架构。V3-G1–G7 决策文档保留各阶段的采用证据；任何未来候选 schema、
 > 组件、依赖或权限在新门禁完成前仍不得写成当前事实。
 >
 > 发布策略：V1 及当前中间版本只作为内部能力基线。T3 已加入只读、不可执行的
@@ -1127,7 +1127,7 @@ PDF fixture 覆盖（testing-review skill 要求）：正常单页、多页、�
 
 本节以 V2 冻结边界为起点。V3-G1–G6 已分别实现本地资料库、可选 Zotero
 Local API 只读来源、页面划词、持久草稿/证据、单公式识别和五语言静态代码。
-最终加固仍由仓库根目录 V2 to V3过渡要求.md 管理。
+G7 最终加固证据保存在 `docs/V3_G7_HARDENING_ACCEPTANCE.md`。
 
 原则：每个未来能力 = 新增一个基础设施模块 + 新增若干用例函数，**分层骨架不变**。
 
@@ -1160,7 +1160,7 @@ Local API 只读来源、页面划词、持久草稿/证据、单公式识别和
 ## 22. 当前版本与文档边界
 
 当前实现版本为 `3.0.0rc1`。本文与 `PRODUCT_SPEC.md` 描述当前代码事实；
-`V2 to V3过渡要求.md` 和 V3-G1–G7 文档保留仍在使用的架构决定、安全边界与可复核证据。
+V3-G1–G7 文档保留仍在使用的架构决定、安全边界与可复核证据。
 
 旧的 M/V1/T/V2 阶段日志、重复开发计划和上传操作记录已从当前源码树移除；
 历史过程仍可通过 Git 历史查阅。后续修改产品范围、架构、外部数据权限或依赖时，

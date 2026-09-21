@@ -8,8 +8,8 @@ description: Design, implement, migrate, and review ResearchMind's V3 local pape
 Build a small local working library that gives ResearchMind stable paper/code IDs and
 cross-session state without replacing Zotero or Obsidian.
 
-Read docs/ARCHITECTURE.md for implemented G1/G2 ownership and
-V2 to V3过渡要求.md for the active gate. G2 metadata/source linking is implemented,
+Read docs/ARCHITECTURE.md for implemented G1/G2 ownership and the relevant V3
+decision records for accepted evidence. G2 metadata/source linking is implemented,
 and the user-approved Windows single-attachment copy is implemented via
 /file/view/url plus locked local read handles. The user confirmed G2 manual acceptance on 2026-09-04; G2 is Completed.
 G3 and G4 are Completed. The user confirmed G4 manual acceptance on 2026-09-09.

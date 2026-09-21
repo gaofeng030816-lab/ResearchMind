@@ -8,8 +8,9 @@ description: Evaluate and review ResearchMind V3 PDF viewing, the adopted browse
 Make evidence-based PDF decisions for ResearchMind's reading-to-context workflow.
 Preserve the accepted PyMuPDF V2 baseline until a V3 gate adopts a measured change.
 
-Read docs/ARCHITECTURE.md for current behavior, V2 to V3过渡要求.md for the active
-gate, and docs/PDF_FORMULA_LATEX_SPIKE.md when formula recognition is involved.
+Read docs/ARCHITECTURE.md for current behavior, the relevant V3 decision record for
+accepted evidence, and docs/PDF_FORMULA_LATEX_SPIKE.md when formula recognition is
+involved.
 V3-G3 adopted a locally bundled CCv2/pdf.js 6.3.289 text layer on top of the stable
 G1 PDF identity/revision. V3-G4 subsequently completed click-only translation and
 explicit evidence/draft capture from verified ReadingSelection values. V3-G5 is

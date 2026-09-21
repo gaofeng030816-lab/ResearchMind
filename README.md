@@ -266,9 +266,8 @@ ResearchMind 没有复制或捆绑上述两个项目的源码、模型权重、J
 相关成果被用作研究、设计与对照参考。运行时依赖和许可证信息见
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-## 发布与许可证说明
+## 开源许可证
 
-当前仓库提供 V3 候选源码，但尚未创建公开软件包 Release，也没有声明稳定公共 API。
-项目没有在当前树中授予单独的开源许可证；第三方组件仍受各自许可证约束。
-特别是 PyMuPDF 采用 AGPL-3.0/商业许可双重模式，在重新分发、闭源部署或商业使用前，
-请自行评估并选择符合要求的许可路线。本说明不构成法律意见。
+ResearchMind 以 [GNU Affero General Public License v3.0](LICENSE) 开源。
+第三方组件仍适用各自的许可证，详见
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

@@ -32,10 +32,10 @@ manager rather than copied into the ResearchMind wheel. Their published licenses
 - `python-dotenv`: BSD-3-Clause;
 - `PyMuPDF`: dual licensed under AGPL-3.0 or an Artifex commercial license.
 
-The current V3 candidate is for local internal acceptance only. Before any public
-distribution, the project must select and document a PyMuPDF-compatible licensing
-route and repeat the complete dependency/license review. Internal acceptance is not
-a public-distribution license decision.
+ResearchMind's own source code is licensed under the GNU Affero General Public
+License v3.0 as stated in `LICENSE`. Third-party components remain under their
+respective licenses described in this notice.
+
 ## Research and design acknowledgements
 
 ResearchMind thanks the following open-source projects for publicly documenting ideas

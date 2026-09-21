@@ -13,8 +13,8 @@ adopt a dependency or change architecture.
 
 - docs/ARCHITECTURE.md describes what is implemented now and remains the code
   source of truth.
-- V2 to V3过渡要求.md describes approved V3 requirements, stage order, decision
-  points, and entry/exit evidence.
+- docs/PRODUCT_SPEC.md defines the accepted current scope, while the relevant
+  docs/V3_G1–G7 records preserve adopted decisions and verification evidence.
 - V1 to V2过渡要求.md and V2 validation records are historical baselines.
 
 V3-G0 and V3-G1 are completed. G1 adopted standard-library sqlite3, explicit
@@ -148,7 +148,7 @@ topology, external file ownership, or code write/execute authority:
 1. show the requirement the V2 architecture cannot meet;
 2. compare the smallest alternatives and their migration/maintenance cost;
 3. define regression and rollback impact;
-4. obtain the specific gate confirmation recorded in V2 to V3过渡要求.md.
+4. obtain specific confirmation and record it in a new named decision gate.
 
 ## Finish Check
 

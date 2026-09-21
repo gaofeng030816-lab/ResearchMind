@@ -6,11 +6,10 @@ Global rules for ResearchMind. Task-specific workflows live in .agents/skills.
 
 - docs/ARCHITECTURE.md is the source of truth for currently implemented behavior,
   module ownership, data flow, and technical choices.
-- V2 to V3过渡要求.md governs V3 requirements, stage order, architecture decisions,
-  and entry/exit evidence. A roadmap entry does not by itself adopt a dependency or
-  authorize a later stage.
 - docs/PRODUCT_SPEC.md describes the accepted current product behavior and user-facing
   boundaries.
+- docs/V3_G1–G7 records preserve the adopted architecture decisions, validation
+  evidence, and explicit exclusions for the completed V3 stages.
 - Obsolete M/V1/T/V2 milestone documents were removed from the current public tree;
   Git history remains the historical record.
 - If a planning document conflicts with current architecture, follow
@@ -181,9 +180,10 @@ The approved V3 requirements are:
 7. paper-only full-width PDF, paper+code split workspace, and shortcut-opened AI;
 8. V3 hardening, recovery, privacy, performance, and manual acceptance.
 
-Implement them in the stages defined by V2 to V3过渡要求.md. Overall V3 approval does
-not automatically select a database schema, managed storage root, Zotero API mode,
-PDF component, formula provider, parser packages, or broader code authority.
+Their implemented contracts are recorded in docs/ARCHITECTURE.md,
+docs/PRODUCT_SPEC.md, and the relevant docs/V3_G1–G7 decision records. Any future
+expansion still requires a named gate; completed V3 approval does not grant broader
+code, data, network, or file-system authority.
 
 ## Current and Candidate Technology
 

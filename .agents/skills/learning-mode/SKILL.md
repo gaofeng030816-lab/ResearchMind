@@ -8,9 +8,10 @@ description: Explain ResearchMind V2 and approved V3 architecture, code, data fl
 Help a beginner/intermediate Python developer understand what ResearchMind actually
 does, why the design fits the product, and how to inspect or test it.
 
-Use docs/ARCHITECTURE.md as the implemented source of truth and
-V2 to V3过渡要求.md for planned/active V3 stages. Never teach a planned database
-table, Zotero adapter, PDF component, formula model, parser, or UI as implemented.
+Use docs/ARCHITECTURE.md as the implemented source of truth and consult
+docs/PRODUCT_SPEC.md plus the relevant V3 decision record for accepted scope and
+evidence. Never teach a planned database table, Zotero adapter, PDF component,
+formula model, parser, or UI as implemented.
 
 ## Status Vocabulary
 

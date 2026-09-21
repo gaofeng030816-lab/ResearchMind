@@ -7,7 +7,7 @@ description: Verify ResearchMind V3 stages and preserve the accepted V2 baseline
 
 Code is complete only after the changed behavior has been exercised. Inspection does
 not replace execution. docs/ARCHITECTURE.md defines implemented behavior;
-V2 to V3过渡要求.md defines the active V3 exit evidence.
+docs/PRODUCT_SPEC.md and the relevant V3 decision record define scope and evidence.
 
 ## Baseline
 
