@@ -1,7 +1,7 @@
 # ResearchMind 产品规格说明书
 
 版本：3.0.0rc1 V3 Internal Accepted · 同步日期：2026-09-21 · 状态：V3-G0–G7 Completed（用户确认），T5-BX 未批准，不对外发布
-配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [G7 加固与验收](./V3_G7_HARDENING_ACCEPTANCE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
+配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [G7 加固与验收](./V3_G7_HARDENING_ACCEPTANCE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md)
 
 > 本文件描述已通过内部验收的 `3.0.0rc1` V3 当前能力；这不是公开发布或稳定
 > 公共 API 承诺。G2 Zotero 只读复制、G3 PDF 文字层、G4 持久草稿/证据与明确
@@ -433,56 +433,19 @@ T5-B1 在普通代码解释旁提供一条独立受控修改旅程：
 | 向量数据库、知识图谱 | 远期，无计划 |
 | 微服务 / Kubernetes / Redis / Celery | 永不（除非有充分理由推翻本规则） |
 
-## 7. 版本路线图
+## 7. 当前版本范围
 
-| 版本 | 主题 | 内容 |
-|------|------|------|
-| V1.x（内部） | 科研阅读与知识沉淀闭环优化 | 稳定性、性能、PDF 可用性、上下文质量与知识沉淀体验 |
-| V1.3.1（内部修订） | 上下文质量评测、纠错与公式文字层阅读 | 真实论文结构关联评测、规则回归修正、公式候选复制与上下文关联；不使用 V1.4 版本号 |
-| V1.3.2（内部修订） | 选择驱动的 LaTeX 与知识沉淀 | ResearchContext 转换、严格响应校验、可复制源码、Streamlit 预览和 Obsidian 显示公式；无新增运行时依赖 |
-| T0（Completed） | 基线封口与评测准备 | 人工视觉环境阻塞已记录；Selection/Context/公式最小评测集；174 项回归基线 |
-| T1（Completed） | Selection 与 provenance | 一键选择、page/block/bbox 来源与知识笔记追溯；177 项回归基线 |
-| T2（Completed） | PDF 与数学证据 | 五份真实基准；保留 PyMuPDF，暂缓 OpenDataLoader-PDF 生产接入 |
-| T3（Completed） | CodeContext | 本地单文件夹、Python-first、固定上限、只读 AST、行/符号 provenance、预览和非执行解释；188 项回归 |
-| T4（Completed） | 显式证据链接 | 用户确认的 Paper/Math/Algorithm–Code 双端点；关系、置信度、generation method、KnowledgeNote/Obsidian 导出；198 项回归 |
-| T5（Completed） | 受限助手 | 三个当前会话无参数只读工具、逐次用户继续、严格协议、预算、审计和停止；220 项回归 |
-| T5-B1（Completed） | 当前选择单范围受控替换 | strict proposal、diff、逐次确认、恢复副本、SHA-256 冲突和安全回滚；无执行权限；261 项回归（1 项 symlink 环境 skip） |
-| 2.0.0rc1 / T6（Completed） | 本地内部候选 | 自动门禁、代码索引优化、隔离安装/启动/诊断/恢复、用户确认的论文/代码/T5-B1 旅程，以及可选 Code→Obsidian 代码笔记已进入内部冻结；不公开发布 |
-| V3-G1（Completed） | 本地工作资料库与点击导入 | sqlite3 schema v1、托管 PDF/代码 assets、重启重开、去重/修订、移除/删除和备份/恢复；不公开发布 |
-| V3-G2（Completed） | 可选 Zotero 只读来源 | GET-only 元数据、schema v2、显式 browse/link/unlink；批准目录内 Windows 单 PDF 复制及自动测试已完成，用户已确认人工验收通过；回归见 G2 验证记录 |
-| V3-G3（Completed） | 页面划词与自适应工作台 | 用户确认触控板并批准正式 CCv2/pdf.js；选择经 PyMuPDF 对账进入 ReadingSelection，旧阅读器回退、全宽/分栏、AI 快捷键、Edge 8/8、wheel 和 486 passed / 1 skip 已完成 |
-| V3-G4（Completed） | 划词翻译与显式笔记草稿 | schema v3、点击翻译、来源绑定、显式证据篮、可编辑正文、同版预览与确认式非覆盖 Vault 输出；425 passed / 1 skip，G3 联合 524 passed / 1 skip，Edge 8/8，用户确认通过 |
-| V3-G5（Completed） | 单公式识别与 LaTeX | 本地检测/crop、精确外发预览和逐次同意、provider-neutral recognizer、可编辑/严格校验/接受、可选 G4 证据；48 focused、474 production / 1 skip |
-| V3-G6（Completed） | 多语言 CodeContext | Python AST、C/Java/Julia Tree-sitter、R 保守词法；24 focused、22 AppTests、498 passed / 1 skip，联合 597 passed / 1 skip |
-| V3-G7（Completed，用户确认） | 加固与内部验收 | 500 production / 1 skip、599 combined / 1 skip、安全、恢复、性能、Edge、wheel、隔离安装及用户验收通过 |
+当前源码版本为 `3.0.0rc1`，核心用户闭环是：
 
-## 8. V2 内部验收标准
+```text
+导入论文或代码
+→ 明确选择文本、公式区域或代码范围
+→ 翻译/解释/公式候选
+→ 用户选择证据并编辑 Markdown 草稿
+→ 预览
+→ 明确确认后非覆盖写入 Obsidian
+```
 
-1. **闭环可用**：能完整走通 打开→阅读→选择→翻译/LaTeX/解释→追问→知识沉淀→写入 Obsidian Vault。
-2. **全部测试通过**：单元/集成/冒烟测试真实运行且通过（见 DEVELOPMENT_PLAN.md）。
-3. **简单可懂**：项目结构符合 ARCHITECTURE.md；没有未经解释的依赖或架构复杂度。
-4. **安全底线**：密钥不进代码、不进日志；打开文件有校验；安全清单（ARCHITECTURE.md 第 20 节）逐项通过。
-5. **T3 可追溯性**：代码解释能回到相对路径、行范围和可用符号；没有代码执行或写入路径。
-6. **T4 证据诚实性**：链接能回到论文与代码双方位置，UI/Markdown 显示关系、
-   置信度和生成方式；模型推断不能伪装成用户确认事实。
-7. **代码笔记可追溯性**：代码笔记只使用当前选择的项目名、相对路径、行范围、
-   符号和代码内容；不泄露绝对 root，不伪造 PDF 来源，不扩大源码写入权限。
-
-## 9. V3 当前状态
-
-V3 需求已由用户确认；G0 规则同步和 G1 本地工作资料库已经完成。用户于
-2026-09-02 确认 G2 只读方案，元数据/来源链接已实现。2026-09-04 官方协议复核
-发现附件返回本地文件重定向，当时停用直接导入并纠正完成声明；随后已按用户
-批准边界完成 Windows 单 PDF 复制和自动测试，用户已确认真实桌面验收通过。2.0.0rc1 的
-功能需求与验收标准保持独立，G1/G2 可回退而不改写 V2 基线。
-
-G2 已实现安全读取，用户于 2026-09-04 确认验收通过。G3 的隔离证据完成后，
-用户于 2026-09-07 确认物理触控板验收并正式采纳 CCv2/pdf.js；2026-09-08 已接入
-正式 ReadingSelection、PyMuPDF 回退、全宽/分栏和 AI 快捷键。Edge 正式验收
-8/8、0 页面错误/外部请求，生产 wheel 与最终 486 passed / 1 skip 通过。G3 状态
-为 Completed。G4 于 2026-09-08 启动并在 2026-09-09 由用户确认验收；现已实现
-schema v3 显式草稿/证据、准确翻译预览、点击调用、资料库来源绑定、证据篮、
-可编辑 Markdown、revision/SHA-256 绑定预览和确认式非覆盖 Vault 输出。最终
-联合回归为 524 passed / 1 skip，Edge 152 为 8/8。G2/G4 确认不授权 Web API、
-Zotero 写入/同步、组资料库
-产品流或全库缓存。
+当前不提供整篇 PDF→LaTeX、扫描整页 OCR、Zotero 写入/同步、代码执行、
+多文件自动修改、云同步或后台自主 Agent。未来能力只有在独立设计、安全与测试边界
+明确后才能进入当前产品合同。

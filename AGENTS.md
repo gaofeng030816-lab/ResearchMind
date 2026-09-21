@@ -9,9 +9,10 @@ Global rules for ResearchMind. Task-specific workflows live in .agents/skills.
 - V2 to V3过渡要求.md governs V3 requirements, stage order, architecture decisions,
   and entry/exit evidence. A roadmap entry does not by itself adopt a dependency or
   authorize a later stage.
-- docs/PRODUCT_SPEC.md describes accepted V2 behavior until a V3 slice is implemented
-  and verified.
-- V1 to V2过渡要求.md and V1/V2 validation documents are historical records.
+- docs/PRODUCT_SPEC.md describes the accepted current product behavior and user-facing
+  boundaries.
+- Obsolete M/V1/T/V2 milestone documents were removed from the current public tree;
+  Git history remains the historical record.
 - If a planning document conflicts with current architecture, follow
   docs/ARCHITECTURE.md for current code and report the inconsistency.
 

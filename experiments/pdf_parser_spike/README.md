@@ -23,6 +23,6 @@ backend, or network API. Timing is a local smoke measurement, not a universal
 benchmark. `peak_python_bytes` covers Python-tracked allocations only; native
 PyMuPDF memory is not included.
 
-OpenDataLoader-PDF results and the adoption decision are recorded in
-`docs/T2_PDF_MATHEMATICS_EVIDENCE.md`. Candidate output must not enter `src/` until
-that record explicitly adopts it and defines conversion into ResearchMind models.
+OpenDataLoader-PDF observations that informed the current layout boundary are summarized
+in `docs/ARCHITECTURE.md`. This experiment remains isolated; its candidate output does
+not enter production modules without an explicit architecture decision and model mapping.

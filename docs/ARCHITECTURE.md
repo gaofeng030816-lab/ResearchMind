@@ -1,6 +1,6 @@
 # ResearchMind 系统架构（3.0.0rc1 V3 Internal Accepted）
 
-版本：3.0.0rc1 V3 Internal Accepted · 同步日期：2026-09-21 · 状态：V3-G0–G7 Completed（用户确认），T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [G7 加固与验收](./V3_G7_HARDENING_ACCEPTANCE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
+版本：3.0.0rc1 V3 Internal Accepted · 同步日期：2026-09-21 · 状态：V3-G0–G7 Completed（用户确认），T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [G7 加固与验收](./V3_G7_HARDENING_ACCEPTANCE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md)
 
 > 验收口径：项目于 2026-09-01 完成 **V2 Internal Acceptance**。用户于 2026-08-31
 > 明确将自动公式区域识别、图片公式 OCR 和整页 PDF→LaTeX 排除在 V2 验收之外；
@@ -514,7 +514,7 @@ PDF 标注、高亮、书签、OCR、语义表格识别、图片公式识别、�
 设计要点：
 
 1. **页面图像与文本分离**：UI 显示"页面图像"（视觉对照）+ "该页提取文本"（可复制/检索）。这是 Streamlit 下 V1 选择体验的最优解，也为未来页面级划词留好数据基础（blocks 带坐标）；
-2. **布局感知阅读顺序**：`pdf/layout.py` 使用文本块 bbox 和递归空白切分处理常见双栏页面，并把视觉断行整理成复制友好的段落。设计参考了本地 OpenDataLoader PDF 的 XY-Cut++ 思路，但使用 ResearchMind 自己的 Python/PyMuPDF 实现，不引入其 Java/JAR 或混合服务；审查记录见 `OPENDATALOADER_PDF_REVIEW.md`；
+2. **布局感知阅读顺序**：`pdf/layout.py` 使用文本块 bbox 和递归空白切分处理常见双栏页面，并把视觉断行整理成复制友好的段落。设计受到 [OpenDataLoader PDF](https://github.com/opendataloader-project/opendataloader-pdf) 的 XY-Cut++ 思路启发，但使用 ResearchMind 自己的 Python/PyMuPDF 实现，不引入其 Java/JAR 或混合服务；
 3. **轻量文本角色**：`pdf/layout.py` 只以确定性文本模式标记高置信度 heading / caption / formula；formula 仅表示文字层公式候选，不等同于数学结构识别；不建立全文目录树，不声称理解图表或公式语义，也不新增模型或依赖；
 4. **文本块是上下文的基本单位**：解释一句话时取同页相邻块，并附加有界的最近章节/说明线索，而非整页/全文，控制 token 成本并保证相关性；
 5. **轻量图表区域**：`Page.figures` 只保存嵌入位图 bbox；页面查看时再从源 PDF 裁剪为 PNG，不把全部图片二进制长期留在会话模型中；
@@ -928,13 +928,13 @@ T6-A 改变的是入口和学习组织，不扩大工具权限：
 概览/解释路径不读取 README/requirements/环境文件，不安装依赖、不 import、
 不执行测试。源码写入只有第 8.2 节的 T5-B1 逐次确认例外。
 
-## 18. 项目文件结构（V1）
+## 18. 项目文件结构
 
 嵌套列表表述：
 
 - `AGENTS.md`：全局开发规则（已有）
 - `.agents/skills/`：项目 skills（已有）
-- `docs/`：PRODUCT_SPEC.md、ARCHITECTURE.md、DEVELOPMENT_PLAN.md
+- `docs/`：当前架构、产品规格与仍在使用的 V3 设计/安全证据
 - `.gitignore` / `.env.example`：忽略 .env、运行时数据、缓存；密钥占位模板
 - `pyproject.toml`：项目元数据与依赖
 - `README.md`：安装、配置（LLM Key、翻译目标语言、Obsidian Vault 路径）、启动与备份说明
@@ -1157,75 +1157,11 @@ Local API 只读来源、页面划词、持久草稿/证据、单公式识别和
 
 如果未来确实需要，再根据实际需求评估引入；不为了"看起来完整"而提前引入这些技术。
 
-## 22. 文档一致性状态
+## 22. 当前版本与文档边界
 
-PRODUCT_SPEC.md、ARCHITECTURE.md 与 V2→V3 过渡要求的当前实现口径为
-已验收 3.0.0rc1 V3 内部候选；2.0.0rc1 V2 基线与 V1→V2/DEVELOPMENT_PLAN
-继续保留历史状态；未来变更必须建立新的命名门禁：
+当前实现版本为 `3.0.0rc1`。本文与 `PRODUCT_SPEC.md` 描述当前代码事实；
+`V2 to V3过渡要求.md` 和 V3-G1–G7 文档保留仍在使用的架构决定、安全边界与可复核证据。
 
-- 当前内部实现为 V1.3.2 + T1/T3/T4/T5-A/T5-B1/T6-A/T6-B/T6-C 增量，仍不对外发布；
-- 产品定位统一为“AI 理解与知识沉淀工作台”，并以 Obsidian Vault 作为知识最终目的地；
-- 数据模型使用 `Document`、`ReadingSelection`、`ResearchContext`、
-  `KnowledgeNote`、独立 `CodeSelection` / `CodeContext`，以及双端点
-  `EvidenceLink`；
-- 模块结构新增 `database/` 管理工作资料库和 Zotero source link，
-  `integration/zotero/` 管理可选 GET-only Local API；`code/` 默认只读，T5-B1 narrow
-  writer 只适用于外部本地 Python 项目，托管修订不能写回；
-- V1.3.2 闭环统一为“打开本地 PDF → 阅读/选择 → 翻译、LaTeX 或解释 → 追问 → 生成结构化 Markdown → 写入 Obsidian Vault”。
-- 2026-08-29 的 T0 已封闭验证与评测基线，不改变本文件的技术栈、模块边界、
-  无数据库决定或 Streamlit 选择；验证证据见 `T0_BASELINE_CLOSURE.md`；
-- T1 已以增量方式完成 Selection 和 provenance，不包含 UI 重写、PDF 编辑或新依赖；
-- T2 隔离评估已决定保留 PyMuPDF、暂缓 OpenDataLoader-PDF；第三方 Parser/OCR 未进入本架构；
-- T3 已按 `T3_CODECONTEXT_ENTRY_DECISION.md` 的推荐值完成，验证见
-  `T3_CODECONTEXT_VALIDATION.md`；它没有代码执行/写入或论文自动链接；
-- T4 已以用户确认、内存态、无新增依赖的最小链接完成，验证见
-  `T4_EVIDENCE_LINK_VALIDATION.md`；没有自动关联、联合 prompt 或链接数据库；
-- T5-A 已按单独权限决策完成，验证见
-  `T5_READ_ONLY_ASSISTANT_VALIDATION.md`；它没有写入/执行、后台循环或持久化；
-- T6-A 已按 `T6_ARCHITECTURE_FINALIZATION_DECISION.md` 完成，验证见
-  `T6_A_CODE_WORKSPACE_VALIDATION.md`；
-- T6-B 安装、诊断、wheel 升级回滚和 Markdown 备份恢复验证见
-  `T6_B_INSTALL_RECOVERY_VALIDATION.md`；
-- T6-C 自动隐私、安全、依赖漏洞、性能和错误恢复证据见
-  `T6_C_PRIVACY_SECURITY_PERFORMANCE_VALIDATION.md`；用户已明确确认人工门禁通过；
-- T5-B1 已按 `T5_B_PERMISSION_DECISION.md` 的具体合同完成，实现与 261 项回归
-  证据见 `T5_B1_CONTROLLED_CODE_WRITE_VALIDATION.md`；T5-BX 执行沙箱未批准。
-
-后续若修改产品范围、架构边界或开发里程碑，必须同步检查这三份文档，避免再次出现术语或范围漂移。
-
-V3-G0/G1/G2/G3 已完成。G2 元数据/来源链接与批准目录内 Windows 单 PDF 复制已实现，
-用户于 2026-09-04 确认验收。G3 在隔离 CCv2/pdf.js 6.3.289 实验完成代表性语料、
-可信对账、跨行、双实例、滚轮/布局、长文档和安装 wheel 证据后，用户于
-2026-09-07 报告物理触控板验收通过并批准正式采用。生产组件位于
-`pdf/viewer_component/`：只接收 hash 绑定、上限 10 MiB 的本地 PDF bytes；浏览器
-事件经 `app/state.py` 暂存，再由当前页 PyMuPDF 文字/几何快照核对后映射为
-ReadingSelection。旧页面图像/文字块保留为回退；仅论文全宽、论文+代码分栏和
-输入安全 Ctrl+Shift+A 已接入正式工作台。Edge 152 正式验收 8/8 通过，0 page
-errors、0 external requests；1,041,404-byte wheel 含恰好一个 JS/CSS、组件清单与
-Apache-2.0 许可证，不含 node_modules/source maps。最终联合回归为 486 passed /
-1 个既有 Windows symlink 环境 skip。G4 已完成 schema v3 草稿/证据、翻译卡、显式证据篮、可编辑
-正文、同版预览和明确 Vault 输出；最终为 42 focused、425 passed / 1 skip，含
-G3 实验联合 524 passed / 1 skip，Edge 152 为 8/8 且用户已确认人工验收。
-完整 G3 证据见 [G3 验收记录](V3_G3_PDF_WORKSPACE_SPIKE.md)，G4 合同与验证见
-[G4 架构与验证](V3_G4_NOTE_COMPOSER_DECISION.md)。
-
-G5 已完成单公式生产链路：当前页本地 detector → 用户选一个 revision-bound
-region → PyMuPDF 生成一张受大小限制的内存 PNG → 精确外发预览/逐 crop 同意 →
-OpenAI-compatible FormulaRecognizer → 不可信可编辑 LaTeX → 严格校验/明确接受 →
-可选 G4 EvidenceSnapshot。20 条合成集达到 100% coverage、95% normalized exact、
-99.41% mean token similarity 和 100% structural exact；18 条授权真实 crop 为
-18/18 strict-valid、95.09% token similarity、100% structural exact，但 exact 仅
-11.11%，因此绝不称作原源码复原。生产回归为 474 passed / 1 skip，含 G3 实验为
-573 passed / 1 skip。完整证据见
-[G5 公式识别门禁](V3_G5_FORMULA_RECOGNITION_DECISION.md)。
-
-G6 已按用户确认的方案 A 完成：Python 保留标准库 AST，C/Java/Julia 使用独立
-Tree-sitter grammar wheel，R 使用保守词法 adapter；五语言共享原 CodeContext
-形状并显式携带 language/extraction_method。托管导入支持六种扩展名，全部代码
-仍不执行；非 Python 与托管修订只读，T5-B1 仍仅限外部 Python。退出证据为
-24 focused、22/22 AppTests、498 passed / 1 skip，含 G3 实验为 597 passed /
-1 skip，wheel 构建通过，2,000 次合成解析平均 0.1388 ms。G7 和 V3 内部验收
-现已完成：生产 500 passed / 1 skip，完整联合回归 599 passed / 1 skip，安全、
-恢复、性能、Edge、wheel 与隔离安装通过，用户于 2026-09-21 明确确认。详见
-[G6 多语言门禁](V3_G6_MULTILINGUAL_CODE_DECISION.md) 及
-[G7 加固与验收](V3_G7_HARDENING_ACCEPTANCE.md)。
+旧的 M/V1/T/V2 阶段日志、重复开发计划和上传操作记录已从当前源码树移除；
+历史过程仍可通过 Git 历史查阅。后续修改产品范围、架构、外部数据权限或依赖时，
+必须同步更新当前架构、产品规格、测试和对应开发规则。

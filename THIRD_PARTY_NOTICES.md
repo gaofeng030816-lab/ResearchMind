@@ -36,3 +36,14 @@ The current V3 candidate is for local internal acceptance only. Before any publi
 distribution, the project must select and document a PyMuPDF-compatible licensing
 route and repeat the complete dependency/license review. Internal acceptance is not
 a public-distribution license decision.
+## Research and design acknowledgements
+
+ResearchMind thanks the following open-source projects for publicly documenting ideas
+and evaluation approaches that informed design review:
+
+- LaTeX_OCR_PRO: https://github.com/LinXueyuanStdio/LaTeX_OCR_PRO
+- OpenDataLoader PDF: https://github.com/opendataloader-project/opendataloader-pdf
+
+ResearchMind does not copy or bundle their source code, model weights, Java packages,
+or binary assets. They are acknowledged as research, design, and comparison references,
+not as ResearchMind runtime dependencies.
