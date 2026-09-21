@@ -59,6 +59,12 @@ skip, and 597 tests / 1 skip with adopted G3 experiments. Preserve Python AST pa
 C/Java/Julia Tree-sitter mapping, conservative R lexical behavior, language
 provenance, no-execution sentinels, managed-import exclusions, wheel packaging and
 the Python-only T5-B1 boundary. Read docs/V3_G6_MULTILINGUAL_CODE_DECISION.md.
+G7 and V3 internal acceptance are Completed as 3.0.0rc1 after explicit user
+confirmation on 2026-09-21. Final evidence is 500 production tests / 1 existing
+Windows symlink environment skip, 599 tests / 1 skip with all adopted G3 experiments,
+passed security/recovery/performance/browser gates, and a verified wheel plus isolated
+installation. Keep automated and user-reported evidence distinct. This does not
+authorize a public release or relax any security, licensing or permission boundary.
 
 Protect this loop in proportion to the change:
 

@@ -127,9 +127,15 @@ still Python-only. Evidence is 24 focused G6 checks, 22 Streamlit AppTests,
 synthetic parses averaging 0.1388 ms. See
 docs/V3_G6_MULTILINGUAL_CODE_DECISION.md.
 
-V3-G7 remains Pending and is not started.
-Only one primary V3 stage may be Active. Preserve 2.0.0rc1 independently so every V3
-slice can be abandoned or rolled back without rewriting the accepted baseline.
+V3-G7 and V3 internal acceptance are Completed as local internal version 3.0.0rc1.
+The user explicitly confirmed “G7通过验收并提交最终V3” on 2026-09-21. The accepted
+evidence is 500 production tests and 599 production-plus-adopted-G3 tests with the
+existing Windows symlink environment skip, plus security, recovery, performance,
+Edge journeys, wheel inspection, isolated installation, diagnostics and health
+checks. See docs/V3_G7_HARDENING_ACCEPTANCE.md.
+No primary V3 stage is Active. This is not a public release: PyMuPDF licensing,
+release/tag/push decisions, Zotero writes, T5-BX and broader automation remain
+unapproved. Preserve the 2.0.0rc1 V2 baseline independently.
 
 ## Accepted V2 Boundary
 

@@ -1,15 +1,15 @@
-# ResearchMind 系统架构（V2 Accepted + V3-G1–G6 增量）
+# ResearchMind 系统架构（3.0.0rc1 V3 Internal Accepted）
 
-版本：2.0.0rc1 V2 Accepted + V3-G1–G6 source increment · 同步日期：2026-09-16 · 状态：V3-G0–G6 Completed；G7 Pending，T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
+版本：3.0.0rc1 V3 Internal Accepted · 同步日期：2026-09-21 · 状态：V3-G0–G7 Completed（用户确认），T5-BX 未批准，不对外发布 · 配套：[PRODUCT_SPEC.md](./PRODUCT_SPEC.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [G7 加固与验收](./V3_G7_HARDENING_ACCEPTANCE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
 
 > 验收口径：项目于 2026-09-01 完成 **V2 Internal Acceptance**。用户于 2026-08-31
 > 明确将自动公式区域识别、图片公式 OCR 和整页 PDF→LaTeX 排除在 V2 验收之外；
 > 它们只保留为 V3 需求讨论前的隔离 Spike 证据。V2 仍包含已实现的“用户选择
 > 数字文字层内容 → ResearchContext → 受限 LaTeX → 预览/知识笔记”能力。
 
-> 事实边界：本文主体保留 V1→V2 演进时的章节名称，但描述的是当前
-> 2.0.0rc1 已实现架构。V3 目标与候选选型只在 V2→V3 过渡要求中生效；在某一
-> V3 阶段完成实现、测试和验收前，不得把候选 schema、组件或依赖写成当前事实。
+> 事实边界：本文主体保留 V1→V2 演进时的章节名称，但描述的是已通过内部验收的
+> 3.0.0rc1 架构。V2→V3 过渡要求保留 G0–G7 的采用证据；任何未来候选 schema、
+> 组件、依赖或权限在新门禁完成前仍不得写成当前事实。
 >
 > 发布策略：V1 及当前中间版本只作为内部能力基线。T3 已加入只读、不可执行的
 > Python CodeContext；T4 已加入用户确认、会话内、可随 KnowledgeNote 导出的
@@ -88,7 +88,7 @@ ResearchMind 连接的是 Zotero 与 Obsidian 所代表的科研工作流：帮�
     通过语法/大小/改变行数校验并展示 unified diff 后，用户逐次确认应用或回滚。
 13. **代码知识沉淀（T6-D）**：无需 PDF，把当前代码选择、相对 locator、当前问题、
     可用解释和自己的理解预览为代码专用 Markdown，再显式保存到 Obsidian。
-14. **本地工作资料库（V3-G1）**：点击/拖放导入 PDF 或 Python 目录，跨重启列出
+14. **本地工作资料库（V3-G1/G6）**：点击/拖放导入 PDF 或受支持的代码目录，跨重启列出
     并重新打开，显式创建修订、软移除/恢复，并在单独确认后删除托管副本。
 15. **可选 Zotero 来源（V3-G2）**：用户显式启用并点击后，只读浏览个人资料库，
     把一个条目链接到已上传论文，或单独确认后复制批准目录内的一个 PDF。
@@ -146,7 +146,7 @@ V3-G1 因用户明确要求跨重启论文/代码工作资料库而触发持久�
 - `zotero_links` 每个论文最多一个来源，并对
   `server_id/library_type/library_id/item_key` 唯一；保存版本和有界元数据快照，
   不保存 Zotero 凭据、整库缓存或 PDF blob；
-- `assets/`：ResearchMind 托管的 PDF/Python 目录修订；SQLite 只存稳定 ID、
+- `assets/`：ResearchMind 托管的 PDF/代码目录修订；SQLite 只存稳定 ID、
   类型、哈希、大小、相对路径、修订和时间，不存文件 blob；
 - `.staging/`：仅用于受限导入/恢复暂存；资产原子完成与数据库提交使用补偿逻辑，
   不向用户暴露半记录；
@@ -1160,8 +1160,8 @@ Local API 只读来源、页面划词、持久草稿/证据、单公式识别和
 ## 22. 文档一致性状态
 
 PRODUCT_SPEC.md、ARCHITECTURE.md 与 V2→V3 过渡要求的当前实现口径为
-已验收 2.0.0rc1 加 V3-G1–G6 source increment。V1→V2 与 DEVELOPMENT_PLAN 保留
-历史状态；后续 V3 门禁由 V2 to V3过渡要求.md 管理：
+已验收 3.0.0rc1 V3 内部候选；2.0.0rc1 V2 基线与 V1→V2/DEVELOPMENT_PLAN
+继续保留历史状态；未来变更必须建立新的命名门禁：
 
 - 当前内部实现为 V1.3.2 + T1/T3/T4/T5-A/T5-B1/T6-A/T6-B/T6-C 增量，仍不对外发布；
 - 产品定位统一为“AI 理解与知识沉淀工作台”，并以 Obsidian Vault 作为知识最终目的地；
@@ -1224,5 +1224,8 @@ Tree-sitter grammar wheel，R 使用保守词法 adapter；五语言共享原 Co
 形状并显式携带 language/extraction_method。托管导入支持六种扩展名，全部代码
 仍不执行；非 Python 与托管修订只读，T5-B1 仍仅限外部 Python。退出证据为
 24 focused、22/22 AppTests、498 passed / 1 skip，含 G3 实验为 597 passed /
-1 skip，wheel 构建通过，2,000 次合成解析平均 0.1388 ms。G7 尚未启动。详见
-[G6 多语言门禁](V3_G6_MULTILINGUAL_CODE_DECISION.md)。
+1 skip，wheel 构建通过，2,000 次合成解析平均 0.1388 ms。G7 和 V3 内部验收
+现已完成：生产 500 passed / 1 skip，完整联合回归 599 passed / 1 skip，安全、
+恢复、性能、Edge、wheel 与隔离安装通过，用户于 2026-09-21 明确确认。详见
+[G6 多语言门禁](V3_G6_MULTILINGUAL_CODE_DECISION.md) 及
+[G7 加固与验收](V3_G7_HARDENING_ACCEPTANCE.md)。

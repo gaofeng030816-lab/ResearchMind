@@ -50,8 +50,11 @@ score forbids source-recovery claims. Read
 docs/V3_G5_FORMULA_RECOGNITION_DECISION.md before changing this contract. G6 is
 Completed under the user-approved hybrid scheme: Python AST, separate C/Java/Julia
 Tree-sitter wheels, and a conservative R lexical adapter. Read
-docs/V3_G6_MULTILINGUAL_CODE_DECISION.md before changing it. G7 and Zotero Web
-API/sync remain unapproved.
+docs/V3_G6_MULTILINGUAL_CODE_DECISION.md before changing it. G7 and V3 internal
+acceptance are Completed as 3.0.0rc1 following explicit user confirmation on
+2026-09-21. No primary V3 gate is Active. Any later feature, public release, dependency
+or permission expansion requires a new named gate. Read
+docs/V3_G7_HARDENING_ACCEPTANCE.md. Zotero Web API/sync remains unapproved.
 
 ## Product Test
 

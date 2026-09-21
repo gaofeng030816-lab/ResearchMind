@@ -34,8 +34,11 @@ FormulaRecognizer, editable/validated/accepted LaTeX and optional formula eviden
 Its real-paper exact score is low enough that it must be taught as assistance, not
 source recovery. G6 is Completed: Python keeps AST; C/Java/Julia use separate
 Tree-sitter grammars; R uses a conservative lexical adapter; every path is static
-and non-executing, and T5-B1 remains Python-only. G7 has not started. Read
-docs/V3_G6_MULTILINGUAL_CODE_DECISION.md for the exact evidence and limitations.
+and non-executing, and T5-B1 remains Python-only. G7 and V3 internal acceptance are
+Completed as local internal version 3.0.0rc1 after the user's 2026-09-21 confirmation.
+This is not a public release and does not relax PyMuPDF licensing, Zotero, code-write,
+execution or external-data boundaries. Read docs/V3_G7_HARDENING_ACCEPTANCE.md for
+exact evidence and limitations.
 
 ## Teaching Priorities
 

@@ -1,15 +1,15 @@
 # ResearchMind 产品规格说明书
 
-版本：2.0.0rc1 V2 Accepted + V3-G1–G6 source increment · 同步日期：2026-09-16 · 状态：V3-G0–G6 Completed；G7 Pending，T5-BX 未批准，不对外发布
-配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
+版本：3.0.0rc1 V3 Internal Accepted · 同步日期：2026-09-21 · 状态：V3-G0–G7 Completed（用户确认），T5-BX 未批准，不对外发布
+配套文档：[ARCHITECTURE.md](./ARCHITECTURE.md) · [V3-G1 验证](./V3_G1_LOCAL_LIBRARY_VALIDATION.md) · [V3-G2 验证](./V3_G2_ZOTERO_VALIDATION.md) · [V3-G3 验证](./V3_G3_PDF_WORKSPACE_SPIKE.md) · [V3-G4 决策与验证](./V3_G4_NOTE_COMPOSER_DECISION.md) · [V3-G5 门禁](./V3_G5_FORMULA_RECOGNITION_DECISION.md) · [V3-G6 门禁](./V3_G6_MULTILINGUAL_CODE_DECISION.md) · [G7 加固与验收](./V3_G7_HARDENING_ACCEPTANCE.md) · [V2→V3 过渡门禁](../V2%20to%20V3过渡要求.md) · [V2 验收记录](./V2_ACCEPTANCE_PREPARATION.md)
 
-> 本文件描述已验收 `2.0.0rc1` 和其上的 V3-G1–G6 当前已实现能力；这不是
-> 公开发布或稳定公共 API 承诺。G2 Zotero 只读复制和 G3 PDF 文字层的人工门禁
-> 已由用户确认；G4 的持久草稿/证据、点击翻译、可编辑 Markdown、同版预览和
-> 明确 Vault 输出也已于 2026-09-09 通过用户验收。G5 已完成本地单公式检测/crop、
-> 逐 crop 外发确认、可编辑/校验/接受和可选公式证据；G6 已完成五语言静态读取、
-> 语言 provenance 与托管导入，且不扩大 Python-only T5-B1。G7 尚未启动。后续
-> 状态和采用门禁由 V2→V3 过渡要求管理。
+> 本文件描述已通过内部验收的 `3.0.0rc1` V3 当前能力；这不是公开发布或稳定
+> 公共 API 承诺。G2 Zotero 只读复制、G3 PDF 文字层、G4 持久草稿/证据与明确
+> Vault 输出均有用户确认；G5 完成本地单公式检测/crop、逐 crop 外发确认、
+> 可编辑/校验/接受和可选公式证据；G6 完成五语言静态读取、语言 provenance 与
+> 托管导入，且不扩大 Python-only T5-B1；G7 完成安全、恢复、性能、浏览器、
+> wheel、隔离安装和联合回归。用户于 2026-09-21 明确确认 G7/V3 内部验收通过。
+> 未来状态和采用门禁仍由 V2→V3 过渡要求及后续新门禁管理。
 
 ## 1. 产品概述
 
@@ -454,7 +454,7 @@ T5-B1 在普通代码解释旁提供一条独立受控修改旅程：
 | V3-G4（Completed） | 划词翻译与显式笔记草稿 | schema v3、点击翻译、来源绑定、显式证据篮、可编辑正文、同版预览与确认式非覆盖 Vault 输出；425 passed / 1 skip，G3 联合 524 passed / 1 skip，Edge 8/8，用户确认通过 |
 | V3-G5（Completed） | 单公式识别与 LaTeX | 本地检测/crop、精确外发预览和逐次同意、provider-neutral recognizer、可编辑/严格校验/接受、可选 G4 证据；48 focused、474 production / 1 skip |
 | V3-G6（Completed） | 多语言 CodeContext | Python AST、C/Java/Julia Tree-sitter、R 保守词法；24 focused、22 AppTests、498 passed / 1 skip，联合 597 passed / 1 skip |
-| V3-G7 | 加固与内部验收 | 尚未启动 |
+| V3-G7（Completed，用户确认） | 加固与内部验收 | 500 production / 1 skip、599 combined / 1 skip、安全、恢复、性能、Edge、wheel、隔离安装及用户验收通过 |
 
 ## 8. V2 内部验收标准
 

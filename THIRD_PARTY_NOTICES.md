@@ -23,3 +23,16 @@ source code. Project documentation and license information are available from:
 - https://github.com/tree-sitter/tree-sitter-c
 - https://github.com/tree-sitter/tree-sitter-java
 - https://github.com/tree-sitter/tree-sitter-julia
+
+Other direct Python runtime dependencies are installed separately by the package
+manager rather than copied into the ResearchMind wheel. Their published licenses are:
+
+- `openai`: Apache-2.0;
+- `streamlit`: Apache-2.0;
+- `python-dotenv`: BSD-3-Clause;
+- `PyMuPDF`: dual licensed under AGPL-3.0 or an Artifex commercial license.
+
+The current V3 candidate is for local internal acceptance only. Before any public
+distribution, the project must select and document a PyMuPDF-compatible licensing
+route and repeat the complete dependency/license review. Internal acceptance is not
+a public-distribution license decision.

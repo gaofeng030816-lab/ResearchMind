@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "python": "3.12.14",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "inputs": {
+    "library_records": 250,
+    "note_drafts": 250
+  },
+  "passed": true,
+  "metrics": [
+    {
+      "name": "library_population",
+      "elapsed_seconds": 8.50968,
+      "limit_seconds": 20.0,
+      "passed": true
+    },
+    {
+      "name": "draft_population",
+      "elapsed_seconds": 2.889137,
+      "limit_seconds": 10.0,
+      "passed": true
+    },
+    {
+      "name": "library_and_draft_list",
+      "elapsed_seconds": 0.058741,
+      "limit_seconds": 2.0,
+      "passed": true
+    },
+    {
+      "name": "library_backup",
+      "elapsed_seconds": 0.611197,
+      "limit_seconds": 10.0,
+      "passed": true
+    },
+    {
+      "name": "library_restore",
+      "elapsed_seconds": 0.720743,
+      "limit_seconds": 10.0,
+      "passed": true
+    }
+  ]
+}
